@@ -1,0 +1,29 @@
+import { useQuery } from '@tanstack/react-query';
+import { apiClient, extractData } from '../api/client';
+import type { StandingWithTeam, FixtureWithTeams } from '@trytag/shared';
+
+export function useDivisionStandings(divisionId: number) {
+  return useQuery({
+    queryKey: ['divisions', divisionId, 'standings'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: StandingWithTeam[] }>(
+        `/divisions/${divisionId}/standings`
+      );
+      return extractData(response);
+    },
+    enabled: !!divisionId,
+  });
+}
+
+export function useDivisionFixtures(divisionId: number) {
+  return useQuery({
+    queryKey: ['divisions', divisionId, 'fixtures'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
+        `/divisions/${divisionId}/fixtures`
+      );
+      return extractData(response);
+    },
+    enabled: !!divisionId,
+  });
+}
