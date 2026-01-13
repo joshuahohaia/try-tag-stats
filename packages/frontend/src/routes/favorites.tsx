@@ -9,8 +9,9 @@ import {
   Center,
   ActionIcon,
   ScrollArea,
-  Box,
+  Container,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconTrash } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useFavoriteTeams } from '../hooks/useFavorites';
@@ -54,46 +55,51 @@ function FavoriteTeamCard({ team }: { team: { id: number, name: string } }) {
 
 function FavoritesPage() {
   const { favorites } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   return (
-    <Stack h="100%" gap="md" style={{ overflow: 'hidden' }}>
-      <Stack gap="lg" flex={0}>
-        <div>
-          <Title order={1} mb="xs">Favorites</Title>
-          <Text c="dimmed">Manage your favorite teams</Text>
-        </div>
-      </Stack>
+    <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
+      <Container size="xl" w="100%" p="md" flex={0}>
+        <Stack gap="lg">
+          <div>
+            <Title order={1} mb="xs">Favorites</Title>
+            <Text c="dimmed">Manage your favorite teams</Text>
+          </div>
+        </Stack>
+      </Container>
 
       <ScrollArea flex={1} type="auto">
-        {favorites.length > 0 ? (
-          <Stack gap="sm">
-            {favorites.map((team) => (
-              <FavoriteTeamCard key={team.id} team={team} />
-            ))}
-          </Stack>
-        ) : (
-          <Card withBorder>
-            <Center py="xl">
-              <Stack align="center">
-                <IconStar size={48} color="var(--mantine-color-gray-5)" />
-                <Title order={3}>No Favorites Yet</Title>
-                <Text c="dimmed" ta="center">
-                  Browse leagues and click the star icon next to a team to add it to your favorites.
-                </Text>
-                <Button component={Link} to="/leagues">
-                  Browse Leagues
-                </Button>
-              </Stack>
-            </Center>
-          </Card>
-        )}
+        <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+          {favorites.length > 0 ? (
+            <Stack gap="sm">
+              {favorites.map((team) => (
+                <FavoriteTeamCard key={team.id} team={team} />
+              ))}
+            </Stack>
+          ) : (
+            <Card withBorder>
+              <Center py="xl">
+                <Stack align="center">
+                  <IconStar size={48} color="var(--mantine-color-gray-5)" />
+                  <Title order={3}>No Favorites Yet</Title>
+                  <Text c="dimmed" ta="center">
+                    Browse leagues and click the star icon next to a team to add it to your favorites.
+                  </Text>
+                  <Button component={Link} to="/leagues">
+                    Browse Leagues
+                  </Button>
+                </Stack>
+              </Center>
+            </Card>
+          )}
+        </Container>
       </ScrollArea>
 
-      <Box flex={0}>
+      <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
           Showing {favorites.length} favorite teams
         </Text>
-      </Box>
+      </Container>
     </Stack>
   );
 }

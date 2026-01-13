@@ -7,8 +7,8 @@ import {
   Tooltip,
   UnstyledButton,
   rem,
-  Container,
   Center,
+  Box,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import {
@@ -82,13 +82,15 @@ function RootLayout() {
     >
       <AppShell.Navbar p="md">
         <Center>
-          <Image 
-             src="/logo.jpg" 
-             alt="Try Tag Stats" 
-             w={40} 
-             radius="md" 
-             mb="xl"
-          />
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <Image 
+               src="/logo.png" 
+               alt="Try Tag Stats" 
+               w={40} 
+               radius="md" 
+               mb="xl"
+            />
+          </Link>
         </Center>
         <Stack justify="center" gap={5}>
           {navItems.map((item) => (
@@ -102,16 +104,13 @@ function RootLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main h="100vh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Container
-           size="xl"
-           w="100%"
-           p="md"
-           pb={isMobile ? 80 : "md"}
+        <Box
+           flex={1}
            h="100%"
            style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         >
           <Outlet />
-        </Container>
+        </Box>
       </AppShell.Main>
 
       {/* Mobile Bottom Navigation */}

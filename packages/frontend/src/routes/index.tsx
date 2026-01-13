@@ -14,7 +14,9 @@ import {
   Loader,
   rem,
   ScrollArea,
+  Container,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
@@ -214,6 +216,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
   
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
@@ -261,163 +264,165 @@ function HomePage() {
 
   return (
     <ScrollArea h="100%" type="auto">
-    <Stack gap="xl" pb="md">
+      <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+        <Stack gap="xl" pb="md">
 
-      {hasFavorites && (
-        <>
-          {activeDivisions.length > 0 ? (
-            <ActiveLeaguesWidget divisions={activeDivisions} favoriteIds={favoriteIds} />
-          ) : isLoadingTeams ? (
-             <Card withBorder><Center h={100}><Loader /></Center></Card>
-          ) : null}
-        </>
-      )}
-
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <Card withBorder>
-          <Group justify="space-between" mb="md">
-            <Title order={3}>
-              <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-              Upcoming Fixtures
-            </Title>
-            <Button variant="subtle" component={Link} to="/fixtures" size="sm">
-              View All
-            </Button>
-          </Group>
-          {fixturesLoading ? (
-            <Text c="dimmed">Loading fixtures...</Text>
-          ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
-            <Stack gap="xs">
-              {upcomingFixtures.map((fixture) => (
-                <Card key={fixture.id} withBorder padding="xs">
-                  <Group justify="space-between">
-                    <div>
-                      <Group gap={4}>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.homeTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                           <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                        </Link>
-                        <Text size="sm" fw={500}>vs</Text>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.awayTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                           <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                        </Link>
-                      </Group>
-                      <Text size="xs" c="dimmed">
-                        {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
-                      </Text>
-                    </div>
-                    <Badge variant="light">{fixture.status}</Badge>
-                  </Group>
-                </Card>
-              ))}
-            </Stack>
-          ) : (
-            <Text c="dimmed">
-              {hasFavorites 
-                ? "No upcoming fixtures for your favorite teams." 
-                : "No upcoming fixtures found."}
-            </Text>
+          {hasFavorites && (
+            <>
+              {activeDivisions.length > 0 ? (
+                <ActiveLeaguesWidget divisions={activeDivisions} favoriteIds={favoriteIds} />
+              ) : isLoadingTeams ? (
+                <Card withBorder><Center h={100}><Loader /></Center></Card>
+              ) : null}
+            </>
           )}
-        </Card>
 
-        {hasFavorites && activeDivisions.length > 0 ? (
-           <PlayerStatsWidget divisions={activeDivisions} />
-        ) : (
-          <Card withBorder>
-            <Title order={3} mb="md">
-              <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-              Quick Links
-            </Title>
-            <Stack gap="sm">
-              <Button
-                variant="light"
-                fullWidth
-                leftSection={<IconTrophy size={18} />}
-                component={Link}
-                to="/leagues"
-              >
-                Browse All Leagues
-              </Button>
-              <Button
-                variant="light"
-                fullWidth
-                leftSection={<IconCalendar size={18} />}
-                component={Link}
-                to="/fixtures"
-              >
-                View All Fixtures
-              </Button>
-              <Button
-                variant="light"
-                fullWidth
-                leftSection={<IconStar size={18} />}
-                component={Link}
-                to="/favorites"
-              >
-                Manage Favorites
-              </Button>
-            </Stack>
-          </Card>
-        )}
-      </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            <Card withBorder>
+              <Group justify="space-between" mb="md">
+                <Title order={3}>
+                  <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                  Upcoming Fixtures
+                </Title>
+                <Button variant="subtle" component={Link} to="/fixtures" size="sm">
+                  View All
+                </Button>
+              </Group>
+              {fixturesLoading ? (
+                <Text c="dimmed">Loading fixtures...</Text>
+              ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
+                <Stack gap="xs">
+                  {upcomingFixtures.map((fixture) => (
+                    <Card key={fixture.id} withBorder padding="xs">
+                      <Group justify="space-between">
+                        <div>
+                          <Group gap={4}>
+                            <Link
+                              to="/teams/$teamId"
+                              params={{ teamId: String(fixture.homeTeam.id) }}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                            </Link>
+                            <Text size="sm" fw={500}>vs</Text>
+                            <Link
+                              to="/teams/$teamId"
+                              params={{ teamId: String(fixture.awayTeam.id) }}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                            </Link>
+                          </Group>
+                          <Text size="xs" c="dimmed">
+                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
+                          </Text>
+                        </div>
+                        <Badge variant="light">{fixture.status}</Badge>
+                      </Group>
+                    </Card>
+                  ))}
+                </Stack>
+              ) : (
+                <Text c="dimmed">
+                  {hasFavorites 
+                    ? "No upcoming fixtures for your favorite teams." 
+                    : "No upcoming fixtures found."}
+                </Text>
+              )}
+            </Card>
 
-      {hasFavorites && (
-        <Card withBorder>
-          <Group justify="space-between" mb="md">
-            <Title order={3}>
-              <IconStar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-              Your Favorite Teams
-            </Title>
-            <Button variant="subtle" component={Link} to="/favorites" size="sm">
-              Manage
-            </Button>
-          </Group>
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-            {favorites.map((team) => (
-              <Card key={team.id} withBorder padding="sm">
-                <Text fw={500}>{team.name}</Text>
-                <Link
-                  to="/teams/$teamId"
-                  params={{ teamId: String(team.id) }}
-                  style={{ textDecoration: 'none' }}
-                >
+            {hasFavorites && activeDivisions.length > 0 ? (
+              <PlayerStatsWidget divisions={activeDivisions} />
+            ) : (
+              <Card withBorder>
+                <Title order={3} mb="md">
+                  <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                  Quick Links
+                </Title>
+                <Stack gap="sm">
                   <Button
                     variant="light"
-                    size="xs"
-                    mt="xs"
-                    component="div"
+                    fullWidth
+                    leftSection={<IconTrophy size={18} />}
+                    component={Link}
+                    to="/leagues"
                   >
-                    View Team
+                    Browse All Leagues
                   </Button>
-                </Link>
+                  <Button
+                    variant="light"
+                    fullWidth
+                    leftSection={<IconCalendar size={18} />}
+                    component={Link}
+                    to="/fixtures"
+                  >
+                    View All Fixtures
+                  </Button>
+                  <Button
+                    variant="light"
+                    fullWidth
+                    leftSection={<IconStar size={18} />}
+                    component={Link}
+                    to="/favorites"
+                  >
+                    Manage Favorites
+                  </Button>
+                </Stack>
               </Card>
-            ))}
+            )}
           </SimpleGrid>
-        </Card>
-      )}
 
-      {!hasFavorites && (
-        <Card withBorder bg="green.0">
-          <Stack align="center" py="xl">
-            <IconStar size={48} color="var(--mantine-color-green-6)" />
-            <Title order={3}>Get Started</Title>
-            <Text c="dimmed" ta="center">
-              Browse leagues and add your favorite teams to track their fixtures and standings.
-            </Text>
-            <Button component={Link} to="/leagues">
-              Browse Leagues
-            </Button>
-          </Stack>
-        </Card>
-      )}
-    </Stack>
+          {hasFavorites && (
+            <Card withBorder>
+              <Group justify="space-between" mb="md">
+                <Title order={3}>
+                  <IconStar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                  Your Favorite Teams
+                </Title>
+                <Button variant="subtle" component={Link} to="/favorites" size="sm">
+                  Manage
+                </Button>
+              </Group>
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
+                {favorites.map((team) => (
+                  <Card key={team.id} withBorder padding="sm">
+                    <Text fw={500}>{team.name}</Text>
+                    <Link
+                      to="/teams/$teamId"
+                      params={{ teamId: String(team.id) }}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Button
+                        variant="light"
+                        size="xs"
+                        mt="xs"
+                        component="div"
+                      >
+                        View Team
+                      </Button>
+                    </Link>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            </Card>
+          )}
+
+          {!hasFavorites && (
+            <Card withBorder bg="green.0">
+              <Stack align="center" py="xl">
+                <IconStar size={48} color="var(--mantine-color-green-6)" />
+                <Title order={3}>Get Started</Title>
+                <Text c="dimmed" ta="center">
+                  Browse leagues and add your favorite teams to track their fixtures and standings.
+                </Text>
+                <Button component={Link} to="/leagues">
+                  Browse Leagues
+                </Button>
+              </Stack>
+            </Card>
+          )}
+        </Stack>
+      </Container>
     </ScrollArea>
   );
 }
