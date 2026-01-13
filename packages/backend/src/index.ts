@@ -3,6 +3,10 @@ import cors from 'cors';
 import { config } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { initializeSchema } from './database/index.js';
+
+// Initialize database
+initializeSchema();
 
 const app = express();
 
