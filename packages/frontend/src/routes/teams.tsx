@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Title, Text, Card, Stack, TextInput, Center, Loader } from '@mantine/core';
+import { Title, Text, Card, Stack, TextInput, Center } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useFavoriteTeams } from '../hooks/useFavorites';
@@ -36,16 +36,16 @@ function TeamsPage() {
           <Title order={3}>Your Favorite Teams</Title>
           {filteredFavorites.length > 0 ? (
             filteredFavorites.map((team) => (
-              <Card
+              <Link
                 key={team.id}
-                withBorder
-                component={Link}
                 to="/teams/$teamId"
                 params={{ teamId: String(team.id) }}
                 style={{ textDecoration: 'none', color: 'inherit' }}
               >
-                <Text fw={500}>{team.name}</Text>
-              </Card>
+                <Card withBorder>
+                  <Text fw={500}>{team.name}</Text>
+                </Card>
+              </Link>
             ))
           ) : (
             <Text c="dimmed">No teams match your search</Text>

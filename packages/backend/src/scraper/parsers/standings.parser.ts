@@ -65,8 +65,8 @@ export function parseStandings(html: string): ParsedStandings {
     const $rows = $table.find('tbody tr, tr').not(':has(th)');
     let position = 0;
 
-    $rows.each((_, row) => {
-      const $row = $(row);
+    $rows.each((_, element) => {
+      const $row = $(element);
       const $cells = $row.find('td');
 
       if ($cells.length < 3) return;

@@ -33,15 +33,19 @@ function FavoritesPage() {
                   <Text fw={500}>{team.name}</Text>
                 </Group>
                 <Group>
-                  <Button
-                    variant="light"
-                    size="sm"
-                    component={Link}
+                  <Link
                     to="/teams/$teamId"
                     params={{ teamId: String(team.id) }}
+                    style={{ textDecoration: 'none' }}
                   >
-                    View Team
-                  </Button>
+                    <Button
+                      variant="light"
+                      size="sm"
+                      component="div"
+                    >
+                      View Team
+                    </Button>
+                  </Link>
                   <ActionIcon
                     variant="subtle"
                     color="red"

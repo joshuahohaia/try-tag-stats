@@ -147,6 +147,6 @@ function TeamDetailPage() {
   );
 }
 
-export const Route = createFileRoute('/teams/$teamId')({
+export const Route = createFileRoute('/teams_/$teamId')({
   component: TeamDetailPage,
 });

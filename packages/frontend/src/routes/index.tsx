@@ -42,16 +42,20 @@ function HomePage() {
             {favorites.map((team) => (
               <Card key={team.id} withBorder padding="sm">
                 <Text fw={500}>{team.name}</Text>
-                <Button
-                  variant="light"
-                  size="xs"
-                  mt="xs"
-                  component={Link}
+                <Link
                   to="/teams/$teamId"
                   params={{ teamId: String(team.id) }}
+                  style={{ textDecoration: 'none' }}
                 >
-                  View Team
-                </Button>
+                  <Button
+                    variant="light"
+                    size="xs"
+                    mt="xs"
+                    component="div"
+                  >
+                    View Team
+                  </Button>
+                </Link>
               </Card>
             ))}
           </SimpleGrid>

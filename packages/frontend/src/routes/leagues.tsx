@@ -82,29 +82,31 @@ function LeaguesPage() {
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
           {filteredLeagues.map((league) => (
-            <Card
+            <Link
               key={league.id}
-              withBorder
-              component={Link}
               to="/leagues/$leagueId"
               params={{ leagueId: String(league.id) }}
               style={{ textDecoration: 'none', color: 'inherit' }}
             >
-              <Stack gap="xs">
-                <Text fw={600}>{league.name}</Text>
-                <Group gap="xs">
-                  {league.dayOfWeek && (
-                    <Badge variant="light" size="sm">{league.dayOfWeek}</Badge>
+              <Card
+                withBorder
+              >
+                <Stack gap="xs">
+                  <Text fw={600}>{league.name}</Text>
+                  <Group gap="xs">
+                    {league.dayOfWeek && (
+                      <Badge variant="light" size="sm">{league.dayOfWeek}</Badge>
+                    )}
+                    {league.format && (
+                      <Badge variant="outline" size="sm">{league.format}</Badge>
+                    )}
+                  </Group>
+                  {league.venueName && (
+                    <Text size="sm" c="dimmed">{league.venueName}</Text>
                   )}
-                  {league.format && (
-                    <Badge variant="outline" size="sm">{league.format}</Badge>
-                  )}
-                </Group>
-                {league.venueName && (
-                  <Text size="sm" c="dimmed">{league.venueName}</Text>
-                )}
-              </Stack>
-            </Card>
+                </Stack>
+              </Card>
+            </Link>
           ))}
         </SimpleGrid>
       )}

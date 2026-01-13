@@ -156,6 +156,6 @@ function LeagueDetailPage() {
   );
 }
 
-export const Route = createFileRoute('/leagues/$leagueId')({
+export const Route = createFileRoute('/leagues_/$leagueId')({
   component: LeagueDetailPage,
 });
