@@ -1,11 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
-import type { Team, StandingWithDivision, FixtureWithTeams } from '@trytag/shared';
+import type {
+  Team,
+  StandingWithDivision,
+  FixtureWithTeams,
+  TeamPositionHistory,
+  TeamSeasonStats,
+  TeamPreviousSeason,
+  PlayerAwardWithDetails,
+} from '@trytag/shared';
 
-interface TeamProfile extends Team {
+export interface TeamProfile extends Team {
   standings: StandingWithDivision[];
   upcomingFixtures: FixtureWithTeams[];
   recentFixtures: FixtureWithTeams[];
+  positionHistory?: TeamPositionHistory[];
+  seasonStats?: TeamSeasonStats[];
+  previousSeasons?: TeamPreviousSeason[];
+  playerAwards?: PlayerAwardWithDetails[];
 }
 
 export function useTeam(id: number) {

@@ -12,6 +12,8 @@ import {
   Group,
   Button,
   Select,
+  ScrollArea,
+  Box,
 } from '@mantine/core';
 import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -23,7 +25,7 @@ import { useFavoriteTeams } from '../hooks/useFavorites';
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
   const parsedLeagueId = parseInt(leagueId, 10);
-  
+
   return (
     <LeagueContent leagueId={parsedLeagueId} />
   );
@@ -33,9 +35,10 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
   const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
-  
+
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>('standings');
 
   // Set default season (current one or last one)
   useEffect(() => {
@@ -52,7 +55,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   }, [seasons, selectedSeasonId]);
 
   const { data: divisions, isLoading: divisionsLoading } = useLeagueDivisions(
-    leagueId, 
+    leagueId,
     selectedSeasonId ? parseInt(selectedSeasonId, 10) : 0
   );
 
@@ -105,9 +108,10 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   }
 
   return (
-    <Stack gap="lg">
-      <div>
-        <Group justify="space-between" align="flex-start">
+    <Stack gap={0} h="100%" style={{ overflow: 'hidden' }}>
+      {/* Sticky Header */}
+      <Box pb="sm" style={{ flexShrink: 0 }}>
+        <Group justify="space-between" align="flex-start" mb="md">
           <div>
             <Title order={1} mb="xs">{league.name}</Title>
             <Group gap="xs">
@@ -133,8 +137,19 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
              />
           </Group>
         </Group>
-      </div>
 
+        {selectedDivisionId && (
+          <Tabs value={activeTab} onChange={setActiveTab}>
+            <Tabs.List>
+              <Tabs.Tab value="standings">Standings</Tabs.Tab>
+              <Tabs.Tab value="fixtures">Fixtures</Tabs.Tab>
+              <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
+            </Tabs.List>
+          </Tabs>
+        )}
+      </Box>
+
+      {/* Scrollable Content */}
       {!selectedDivisionId ? (
          <Card withBorder>
            <Text c="dimmed" ta="center" py="xl">
@@ -142,164 +157,179 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
            </Text>
          </Card>
       ) : (
-      <Tabs defaultValue="standings">
-        <Tabs.List>
-          <Tabs.Tab value="standings">Standings</Tabs.Tab>
-          <Tabs.Tab value="fixtures">Fixtures</Tabs.Tab>
-          <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
-        </Tabs.List>
+        <ScrollArea flex={1} type="auto">
+          <Box pt="md" pb="md">
+            {activeTab === 'standings' && (
+              <>
+                {standingsLoading ? (
+                  <Center h={200}><Loader /></Center>
+                ) : standings && standings.length > 0 ? (
+                  <Card withBorder>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Pos</Table.Th>
+                          <Table.Th>Team</Table.Th>
+                          <Table.Th>Pld</Table.Th>
+                          <Table.Th>W</Table.Th>
+                          <Table.Th>L</Table.Th>
+                          <Table.Th>D</Table.Th>
+                          <Table.Th>FF</Table.Th>
+                          <Table.Th>FA</Table.Th>
+                          <Table.Th>F</Table.Th>
+                          <Table.Th>A</Table.Th>
+                          <Table.Th>Dif</Table.Th>
+                          <Table.Th>B</Table.Th>
+                          <Table.Th>Pts</Table.Th>
+                          <Table.Th></Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {standings.map((standing) => (
+                          <Table.Tr key={standing.id}>
+                            <Table.Td fw={600}>{standing.position}</Table.Td>
+                            <Table.Td>
+                              <Link
+                                to="/teams/$teamId"
+                                params={{ teamId: String(standing.team.id) }}
+                                style={{ color: 'inherit', textDecoration: 'none' }}
+                              >
+                                <Text span fw={500} c="blue">{standing.team.name}</Text>
+                              </Link>
+                            </Table.Td>
+                            <Table.Td>{standing.played}</Table.Td>
+                            <Table.Td>{standing.wins}</Table.Td>
+                            <Table.Td>{standing.losses}</Table.Td>
+                            <Table.Td>{standing.draws}</Table.Td>
+                            <Table.Td>{standing.forfeitsFor}</Table.Td>
+                            <Table.Td>{standing.forfeitsAgainst}</Table.Td>
+                            <Table.Td>{standing.pointsFor}</Table.Td>
+                            <Table.Td>{standing.pointsAgainst}</Table.Td>
+                            <Table.Td>{standing.pointDifference}</Table.Td>
+                            <Table.Td>{standing.bonusPoints}</Table.Td>
+                            <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
+                            <Table.Td>
+                              <Button
+                                variant="subtle"
+                                size="xs"
+                                p={4}
+                                onClick={() => toggleFavorite(standing.team)}
+                              >
+                                {isFavorite(standing.team.id) ? (
+                                  <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
+                                ) : (
+                                  <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
+                                )}
+                              </Button>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Card>
+                ) : (
+                  <Text c="dimmed">No standings data available</Text>
+                )}
+              </>
+            )}
 
-        <Tabs.Panel value="standings" pt="md">
-          {standingsLoading ? (
-            <Center h={200}><Loader /></Center>
-          ) : standings && standings.length > 0 ? (
-            <Card withBorder>
-              <Table striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Pos</Table.Th>
-                    <Table.Th>Team</Table.Th>
-                    <Table.Th>P</Table.Th>
-                    <Table.Th>W</Table.Th>
-                    <Table.Th>L</Table.Th>
-                    <Table.Th>D</Table.Th>
-                    <Table.Th>Pts</Table.Th>
-                    <Table.Th></Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {standings.map((standing) => (
-                    <Table.Tr key={standing.id}>
-                      <Table.Td fw={600}>{standing.position}</Table.Td>
-                      <Table.Td>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(standing.team.id) }}
-                          style={{ color: 'inherit', textDecoration: 'none' }}
-                        >
-                          <Text span fw={500} c="blue">{standing.team.name}</Text>
-                        </Link>
-                      </Table.Td>
-                      <Table.Td>{standing.played}</Table.Td>
-                      <Table.Td>{standing.wins}</Table.Td>
-                      <Table.Td>{standing.losses}</Table.Td>
-                      <Table.Td>{standing.draws}</Table.Td>
-                      <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
-                      <Table.Td>
-                        <Button
-                          variant="subtle"
-                          size="xs"
-                          p={4}
-                          onClick={() => toggleFavorite(standing.team)}
-                        >
-                          {isFavorite(standing.team.id) ? (
-                            <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
-                          ) : (
-                            <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
-                          )}
-                        </Button>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Card>
-          ) : (
-            <Text c="dimmed">No standings data available</Text>
-          )}
-        </Tabs.Panel>
-
-        <Tabs.Panel value="fixtures" pt="md">
-          {fixturesLoading ? (
-            <Center h={200}><Loader /></Center>
-          ) : fixtures && fixtures.length > 0 ? (
-            <Stack gap="sm">
-              {fixtures.map((fixture) => (
-                <Card key={fixture.id} withBorder padding="sm">
-                  <Group justify="space-between">
-                    <Stack gap={2}>
-                      <Group gap="xs">
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.homeTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                        </Link>
-                        <Text fw={500}>vs</Text>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.awayTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                        </Link>
-                      </Group>
-                      <Text size="sm" c="dimmed">
-                        {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
-                        {fixture.pitch && ` - ${fixture.pitch}`}
-                      </Text>
-                    </Stack>
-                    <div>
-                      {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                        <Badge size="lg" variant="filled">
-                          {fixture.homeScore} - {fixture.awayScore}
-                        </Badge>
-                      ) : (
-                        <Badge variant="light">{fixture.status}</Badge>
-                      )}
-                    </div>
-                  </Group>
-                </Card>
-              ))}
-            </Stack>
-          ) : (
-            <Text c="dimmed">No fixtures data available</Text>
-          )}
-        </Tabs.Panel>
-        <Tabs.Panel value="statistics" pt="md">
-          {statsLoading ? (
-            <Center h={200}><Loader /></Center>
-          ) : statistics && statistics.length > 0 ? (
-            <Card withBorder>
-              <Title order={3} mb="md">Player of the Match Awards</Title>
-              <Table striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Player</Table.Th>
-                    <Table.Th>Team</Table.Th>
-                    <Table.Th>Awards</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {statistics.map((stat) => (
-                    <Table.Tr key={stat.id}>
-                      <Table.Td fw={500}>{stat.player.name}</Table.Td>
-                      <Table.Td>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(stat.team.id) }}
-                          style={{ color: 'inherit', textDecoration: 'none' }}
-                        >
-                          <Text span c="blue">{stat.team.name}</Text>
-                        </Link>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={4}>
-                          <IconAward size={18} style={{ color: 'gold' }} />
-                          <Text fw={700}>{stat.awardCount}</Text>
+            {activeTab === 'fixtures' && (
+              <>
+                {fixturesLoading ? (
+                  <Center h={200}><Loader /></Center>
+                ) : fixtures && fixtures.length > 0 ? (
+                  <Stack gap="sm">
+                    {fixtures.map((fixture) => (
+                      <Card key={fixture.id} withBorder padding="sm">
+                        <Group justify="space-between">
+                          <Stack gap={2}>
+                            <Group gap="xs">
+                              <Link
+                                to="/teams/$teamId"
+                                params={{ teamId: String(fixture.homeTeam.id) }}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                              >
+                                <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                              </Link>
+                              <Text fw={500}>vs</Text>
+                              <Link
+                                to="/teams/$teamId"
+                                params={{ teamId: String(fixture.awayTeam.id) }}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                              >
+                                <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                              </Link>
+                            </Group>
+                            <Text size="sm" c="dimmed">
+                              {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
+                              {fixture.pitch && ` - ${fixture.pitch}`}
+                            </Text>
+                          </Stack>
+                          <div>
+                            {fixture.status === 'completed' && fixture.homeScore !== null ? (
+                              <Badge size="lg" variant="filled">
+                                {fixture.homeScore} - {fixture.awayScore}
+                              </Badge>
+                            ) : (
+                              <Badge variant="light">{fixture.status}</Badge>
+                            )}
+                          </div>
                         </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Card>
-          ) : (
-            <Text c="dimmed">No statistics available for this division.</Text>
-          )}
-        </Tabs.Panel>
-      </Tabs>
+                      </Card>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text c="dimmed">No fixtures data available</Text>
+                )}
+              </>
+            )}
+
+            {activeTab === 'statistics' && (
+              <>
+                {statsLoading ? (
+                  <Center h={200}><Loader /></Center>
+                ) : statistics && statistics.length > 0 ? (
+                  <Card withBorder>
+                    <Title order={3} mb="md">Player of the Match Awards</Title>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Player</Table.Th>
+                          <Table.Th>Team</Table.Th>
+                          <Table.Th>Awards</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {statistics.map((stat) => (
+                          <Table.Tr key={stat.id}>
+                            <Table.Td fw={500}>{stat.player.name}</Table.Td>
+                            <Table.Td>
+                              <Link
+                                to="/teams/$teamId"
+                                params={{ teamId: String(stat.team.id) }}
+                                style={{ color: 'inherit', textDecoration: 'none' }}
+                              >
+                                <Text span c="blue">{stat.team.name}</Text>
+                              </Link>
+                            </Table.Td>
+                            <Table.Td>
+                              <Group gap={4}>
+                                <IconAward size={18} style={{ color: 'gold' }} />
+                                <Text fw={700}>{stat.awardCount}</Text>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Card>
+                ) : (
+                  <Text c="dimmed">No statistics available for this division.</Text>
+                )}
+              </>
+            )}
+          </Box>
+        </ScrollArea>
       )}
     </Stack>
   );

@@ -1,10 +1,12 @@
 import { ENDPOINTS } from '@trytag/shared';
+import type { TeamPositionHistory, TeamSeasonStats, TeamPreviousSeason, ScrapedPlayerAward, ScrapedFixture } from '@trytag/shared';
 import { scraperClient } from './client.js';
 import {
   parseLeagueList,
   parseStandings,
   parseFixtures,
   parseStatistics,
+  parseTeamProfile,
 } from './parsers/index.js';
 import {
   regionRepository,
@@ -350,6 +352,44 @@ class ScraperOrchestrator {
     const errorMessage = err instanceof Error ? err.message : String(err);
     logger.error({ error: errorMessage }, message);
     this.errors.push(`${message}: ${errorMessage}`);
+  }
+
+  async fetchTeamProfile(externalTeamId: number): Promise<{
+    positionHistory: TeamPositionHistory[];
+    seasonStats: TeamSeasonStats[];
+    previousSeasons: TeamPreviousSeason[];
+    playerAwards: ScrapedPlayerAward[];
+    fixtureHistory: ScrapedFixture[];
+  } | null> {
+    try {
+      logger.info({ externalTeamId }, 'Fetching team profile from website...');
+
+      const html = await scraperClient.fetchWithParams(ENDPOINTS.TEAM_PROFILE, {
+        TeamId: externalTeamId,
+      });
+
+      const profile = parseTeamProfile(html, externalTeamId);
+
+      logger.info({
+        externalTeamId,
+        positionHistoryCount: profile.positionHistory.length,
+        seasonStatsCount: profile.seasonStats.length,
+        previousSeasonsCount: profile.previousSeasons.length,
+        playerAwardsCount: profile.playerAwards.length,
+        fixtureHistoryCount: profile.fixtureHistory.length,
+      }, 'Team profile fetched successfully');
+
+      return {
+        positionHistory: profile.positionHistory,
+        seasonStats: profile.seasonStats,
+        previousSeasons: profile.previousSeasons,
+        playerAwards: profile.playerAwards,
+        fixtureHistory: profile.fixtureHistory,
+      };
+    } catch (err) {
+      this.logError(`Failed to fetch team profile for ${externalTeamId}`, err);
+      return null;
+    }
   }
 }
 

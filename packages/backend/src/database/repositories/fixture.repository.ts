@@ -133,6 +133,7 @@ export const fixtureRepository = {
     const db = getDatabase();
     const today = new Date().toISOString().split('T')[0];
 
+    // Show all past fixtures, prioritizing completed ones with scores
     let query = `
       SELECT f.*,
         ht.name as home_team_name, ht.external_team_id as home_team_external_id,
@@ -140,7 +141,7 @@ export const fixtureRepository = {
       FROM fixtures f
       INNER JOIN teams ht ON f.home_team_id = ht.id
       INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date < ? AND f.status = 'completed'
+      WHERE f.fixture_date <= ?
     `;
 
     const params: (string | number)[] = [today];
@@ -150,7 +151,8 @@ export const fixtureRepository = {
       params.push(teamId, teamId);
     }
 
-    query += ' ORDER BY f.fixture_date DESC, f.fixture_time DESC LIMIT ?';
+    // Order by date descending, with completed fixtures first
+    query += ' ORDER BY f.fixture_date DESC, (f.status = \'completed\') DESC, f.fixture_time DESC LIMIT ?';
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
@@ -189,6 +191,7 @@ export const fixtureRepository = {
     const today = new Date().toISOString().split('T')[0];
     const placeholders = teamIds.map(() => '?').join(',');
 
+    // Show all past fixtures for favorite teams, prioritizing completed ones
     const query = `
       SELECT f.*,
         ht.name as home_team_name, ht.external_team_id as home_team_external_id,
@@ -196,9 +199,9 @@ export const fixtureRepository = {
       FROM fixtures f
       INNER JOIN teams ht ON f.home_team_id = ht.id
       INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date < ? AND f.status = 'completed'
+      WHERE f.fixture_date <= ?
       AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
-      ORDER BY f.fixture_date DESC, f.fixture_time DESC LIMIT ?
+      ORDER BY f.fixture_date DESC, (f.status = 'completed') DESC, f.fixture_time DESC LIMIT ?
     `;
 
     const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];

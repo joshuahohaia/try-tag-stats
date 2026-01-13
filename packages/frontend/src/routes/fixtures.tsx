@@ -10,6 +10,8 @@ import {
   Group,
   SegmentedControl,
   Button,
+  ScrollArea,
+  Box,
 } from '@mantine/core';
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
@@ -38,96 +40,98 @@ function FixturesPage() {
   const fixtures = view === 'upcoming' ? upcomingFixtures : recentFixtures;
   const isLoading = view === 'upcoming' ? upcomingLoading : recentLoading;
 
-  // We need to filter client side if the backend returns everything when passed empty array
-  // BUT, we are handling the "no favorites" case explicitly below.
-  // However, if we pass `[]` to the hook, the hook sends NO param, and backend returns ALL.
-  // So `fixtures` will contain ALL fixtures if `hasFavorites` is false.
-  // This is fine because we won't render `fixtures` if `!hasFavorites`.
-  
-  // Double check: If `hasFavorites` is true, we send IDs. Backend filters. Correct.
-
   return (
-    <Stack gap="lg">
-      <div>
-        <Title order={1} mb="xs">Fixtures</Title>
-        <Text c="dimmed">View upcoming matches and recent results for your favorite teams</Text>
-      </div>
+    <Stack h="100%" gap="md" style={{ overflow: 'hidden' }}>
+      <Stack gap="lg" flex={0}>
+        <div>
+          <Title order={1} mb="xs">Fixtures</Title>
+          <Text c="dimmed">View upcoming matches and recent results for your favorite teams</Text>
+        </div>
 
-      <SegmentedControl
-        value={view}
-        onChange={setView}
-        data={[
-          { value: 'upcoming', label: 'Upcoming' },
-          { value: 'recent', label: 'Recent Results' },
-        ]}
-      />
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          data={[
+            { value: 'upcoming', label: 'Upcoming' },
+            { value: 'recent', label: 'Recent Results' },
+          ]}
+        />
+      </Stack>
 
-      {!hasFavorites ? (
-         <Card withBorder>
-            <Stack align="center" py="xl">
-               <Text c="dimmed">You haven't added any favorite teams yet.</Text>
-               <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
-            </Stack>
-         </Card>
-      ) : isLoading ? (
-        <Center h={300}>
-          <Loader size="lg" />
-        </Center>
-      ) : fixtures && fixtures.length > 0 ? (
-        <Stack gap="sm">
-          {fixtures.map((fixture) => (
-            <Card key={fixture.id} withBorder padding="md">
-              <Group justify="space-between" align="flex-start">
-                <Stack gap={4}>
-                  <Link
-                    to="/teams/$teamId"
-                    params={{ teamId: String(fixture.homeTeam.id) }}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    <Text fw={600} size="lg" c="blue">
-                      {fixture.homeTeam.name}
+      <ScrollArea flex={1} type="auto">
+        {!hasFavorites ? (
+           <Card withBorder>
+              <Stack align="center" py="xl">
+                 <Text c="dimmed">You haven't added any favorite teams yet.</Text>
+                 <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
+              </Stack>
+           </Card>
+        ) : isLoading ? (
+          <Center h="100%">
+            <Loader size="lg" />
+          </Center>
+        ) : fixtures && fixtures.length > 0 ? (
+          <Stack gap="sm">
+            {fixtures.map((fixture) => (
+              <Card key={fixture.id} withBorder padding="md">
+                <Group justify="space-between" align="flex-start">
+                  <Stack gap={4}>
+                    <Link
+                      to="/teams/$teamId"
+                      params={{ teamId: String(fixture.homeTeam.id) }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <Text fw={600} size="lg" c="blue">
+                        {fixture.homeTeam.name}
+                      </Text>
+                    </Link>
+                    <Text c="dimmed" size="sm">vs</Text>
+                    <Link
+                      to="/teams/$teamId"
+                      params={{ teamId: String(fixture.awayTeam.id) }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <Text fw={600} size="lg" c="blue">
+                        {fixture.awayTeam.name}
+                      </Text>
+                    </Link>
+                  </Stack>
+                  <Stack align="flex-end" gap={4}>
+                    {fixture.status === 'completed' && fixture.homeScore !== null ? (
+                      <Badge size="xl" variant="filled" color="green">
+                        {fixture.homeScore} - {fixture.awayScore}
+                      </Badge>
+                    ) : (
+                      <Badge size="lg" variant="light">{fixture.status}</Badge>
+                    )}
+                    <Text size="sm" c="dimmed">
+                      {fixture.fixtureDate}
                     </Text>
-                  </Link>
-                  <Text c="dimmed" size="sm">vs</Text>
-                  <Link
-                    to="/teams/$teamId"
-                    params={{ teamId: String(fixture.awayTeam.id) }}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    <Text fw={600} size="lg" c="blue">
-                      {fixture.awayTeam.name}
-                    </Text>
-                  </Link>
-                </Stack>
-                <Stack align="flex-end" gap={4}>
-                  {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                    <Badge size="xl" variant="filled" color="green">
-                      {fixture.homeScore} - {fixture.awayScore}
-                    </Badge>
-                  ) : (
-                    <Badge size="lg" variant="light">{fixture.status}</Badge>
-                  )}
-                  <Text size="sm" c="dimmed">
-                    {fixture.fixtureDate}
-                  </Text>
-                  {fixture.fixtureTime && (
-                    <Text size="sm" c="dimmed">{fixture.fixtureTime}</Text>
-                  )}
-                  {fixture.pitch && (
-                    <Text size="xs" c="dimmed">{fixture.pitch}</Text>
-                  )}
-                </Stack>
-              </Group>
-            </Card>
-          ))}
-        </Stack>
-      ) : (
-        <Card withBorder>
-          <Text c="dimmed" ta="center" py="xl">
-            No {view} fixtures found for your favorite teams
-          </Text>
-        </Card>
-      )}
+                    {fixture.fixtureTime && (
+                      <Text size="sm" c="dimmed">{fixture.fixtureTime}</Text>
+                    )}
+                    {fixture.pitch && (
+                      <Text size="xs" c="dimmed">{fixture.pitch}</Text>
+                    )}
+                  </Stack>
+                </Group>
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <Card withBorder>
+            <Text c="dimmed" ta="center" py="xl">
+              No {view} fixtures found for your favorite teams
+            </Text>
+          </Card>
+        )}
+      </ScrollArea>
+
+      <Box flex={0}>
+        <Text c="dimmed" size="sm">
+          Showing {fixtures?.length || 0} {view} fixtures
+        </Text>
+      </Box>
     </Stack>
   );
 }

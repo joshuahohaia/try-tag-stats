@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
-import { Route as StatisticsRouteImport } from './routes/statistics'
 import { Route as LeaguesRouteImport } from './routes/leagues'
 import { Route as FixturesRouteImport } from './routes/fixtures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
@@ -21,11 +20,6 @@ import { Route as LeaguesLeagueIdRouteImport } from './routes/leagues_.$leagueId
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatisticsRoute = StatisticsRouteImport.update({
-  id: '/statistics',
-  path: '/statistics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaguesRoute = LeaguesRouteImport.update({
@@ -64,7 +58,6 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof FavoritesRoute
   '/fixtures': typeof FixturesRoute
   '/leagues': typeof LeaguesRoute
-  '/statistics': typeof StatisticsRoute
   '/teams': typeof TeamsRoute
   '/leagues/$leagueId': typeof LeaguesLeagueIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
@@ -74,7 +67,6 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/fixtures': typeof FixturesRoute
   '/leagues': typeof LeaguesRoute
-  '/statistics': typeof StatisticsRoute
   '/teams': typeof TeamsRoute
   '/leagues/$leagueId': typeof LeaguesLeagueIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
@@ -85,7 +77,6 @@ export interface FileRoutesById {
   '/favorites': typeof FavoritesRoute
   '/fixtures': typeof FixturesRoute
   '/leagues': typeof LeaguesRoute
-  '/statistics': typeof StatisticsRoute
   '/teams': typeof TeamsRoute
   '/leagues_/$leagueId': typeof LeaguesLeagueIdRoute
   '/teams_/$teamId': typeof TeamsTeamIdRoute
@@ -97,7 +88,6 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/fixtures'
     | '/leagues'
-    | '/statistics'
     | '/teams'
     | '/leagues/$leagueId'
     | '/teams/$teamId'
@@ -107,7 +97,6 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/fixtures'
     | '/leagues'
-    | '/statistics'
     | '/teams'
     | '/leagues/$leagueId'
     | '/teams/$teamId'
@@ -117,7 +106,6 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/fixtures'
     | '/leagues'
-    | '/statistics'
     | '/teams'
     | '/leagues_/$leagueId'
     | '/teams_/$teamId'
@@ -128,7 +116,6 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   FixturesRoute: typeof FixturesRoute
   LeaguesRoute: typeof LeaguesRoute
-  StatisticsRoute: typeof StatisticsRoute
   TeamsRoute: typeof TeamsRoute
   LeaguesLeagueIdRoute: typeof LeaguesLeagueIdRoute
   TeamsTeamIdRoute: typeof TeamsTeamIdRoute
@@ -141,13 +128,6 @@ declare module '@tanstack/react-router' {
       path: '/teams'
       fullPath: '/teams'
       preLoaderRoute: typeof TeamsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/statistics': {
-      id: '/statistics'
-      path: '/statistics'
-      fullPath: '/statistics'
-      preLoaderRoute: typeof StatisticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leagues': {
@@ -200,7 +180,6 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   FixturesRoute: FixturesRoute,
   LeaguesRoute: LeaguesRoute,
-  StatisticsRoute: StatisticsRoute,
   TeamsRoute: TeamsRoute,
   LeaguesLeagueIdRoute: LeaguesLeagueIdRoute,
   TeamsTeamIdRoute: TeamsTeamIdRoute,

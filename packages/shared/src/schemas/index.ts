@@ -224,6 +224,38 @@ export const ScrapedPlayerAwardSchema = z.object({
   awardType: z.string(),
 });
 
+export const TeamPositionHistorySchema = z.object({
+  week: z.number(),
+  position: z.number(),
+});
+
+export const TeamSeasonStatsSchema = z.object({
+  period: z.enum(['last3', 'season', 'allTime']),
+  avgScored: z.number(),
+  avgConceded: z.number(),
+  avgPoints: z.number(),
+  biggestWin: z.string().nullable(),
+  biggestLoss: z.string().nullable(),
+});
+
+export const TeamPreviousSeasonSchema = z.object({
+  leagueName: z.string(),
+  seasonName: z.string(),
+  divisionName: z.string(),
+  leagueId: z.number().optional(),
+  seasonId: z.number().optional(),
+  divisionId: z.number().optional(),
+});
+
+export const ScrapedTeamProfileSchema = z.object({
+  teamId: z.number(),
+  teamName: z.string(),
+  positionHistory: z.array(TeamPositionHistorySchema),
+  seasonStats: z.array(TeamSeasonStatsSchema),
+  previousSeasons: z.array(TeamPreviousSeasonSchema),
+  playerAwards: z.array(ScrapedPlayerAwardSchema),
+});
+
 // ============================================
 // ARRAY SCHEMAS FOR API RESPONSES
 // ============================================

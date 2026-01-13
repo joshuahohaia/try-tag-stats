@@ -11,6 +11,8 @@ import {
   Badge,
   Loader,
   Center,
+  ScrollArea,
+  Box,
 } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -42,78 +44,84 @@ function LeaguesPage() {
 
   if (leaguesLoading || regionsLoading) {
     return (
-      <Center h={400}>
+      <Center h="100%">
         <Loader size="lg" />
       </Center>
     );
   }
 
   return (
-    <Stack gap="lg">
-      <div>
-        <Title order={1} mb="xs">Leagues</Title>
-        <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>
-      </div>
+    <Stack h="100%" gap="md" style={{ overflow: 'hidden' }}>
+      <Stack gap="lg" flex={0}>
+        <div>
+          <Title order={1} mb="xs">Leagues</Title>
+          <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>
+        </div>
 
-      <Group>
-        <TextInput
-          placeholder="Search leagues..."
-          leftSection={<IconSearch size={16} />}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, maxWidth: 300 }}
-        />
-        <Select
-          placeholder="Filter by region"
-          data={regionOptions}
-          value={regionFilter}
-          onChange={setRegionFilter}
-          clearable
-          style={{ width: 200 }}
-        />
-      </Group>
+        <Group>
+          <TextInput
+            placeholder="Search leagues..."
+            leftSection={<IconSearch size={16} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, maxWidth: 300 }}
+          />
+          <Select
+            placeholder="Filter by region"
+            data={regionOptions}
+            value={regionFilter}
+            onChange={setRegionFilter}
+            clearable
+            style={{ width: 200 }}
+          />
+        </Group>
+      </Stack>
 
-      {filteredLeagues.length === 0 ? (
-        <Card withBorder>
-          <Text c="dimmed" ta="center" py="xl">
-            No leagues found. Try adjusting your filters.
-          </Text>
-        </Card>
-      ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-          {filteredLeagues.map((league) => (
-            <Link
-              key={league.id}
-              to="/leagues/$leagueId"
-              params={{ leagueId: String(league.id) }}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <Card
-                withBorder
+      <ScrollArea flex={1} type="auto">
+        {filteredLeagues.length === 0 ? (
+          <Card withBorder>
+            <Text c="dimmed" ta="center" py="xl">
+              No leagues found. Try adjusting your filters.
+            </Text>
+          </Card>
+        ) : (
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+            {filteredLeagues.map((league) => (
+              <Link
+                key={league.id}
+                to="/leagues/$leagueId"
+                params={{ leagueId: String(league.id) }}
+                style={{ textDecoration: 'none', color: 'inherit' }}
               >
-                <Stack gap="xs">
-                  <Text fw={600}>{league.name}</Text>
-                  <Group gap="xs">
-                    {league.dayOfWeek && (
-                      <Badge variant="light" size="sm">{league.dayOfWeek}</Badge>
+                <Card
+                  withBorder
+                >
+                  <Stack gap="xs">
+                    <Text fw={600}>{league.name}</Text>
+                    <Group gap="xs">
+                      {league.dayOfWeek && (
+                        <Badge variant="light" size="sm">{league.dayOfWeek}</Badge>
+                      )}
+                      {league.format && (
+                        <Badge variant="outline" size="sm">{league.format}</Badge>
+                      )}
+                    </Group>
+                    {league.venueName && (
+                      <Text size="sm" c="dimmed">{league.venueName}</Text>
                     )}
-                    {league.format && (
-                      <Badge variant="outline" size="sm">{league.format}</Badge>
-                    )}
-                  </Group>
-                  {league.venueName && (
-                    <Text size="sm" c="dimmed">{league.venueName}</Text>
-                  )}
-                </Stack>
-              </Card>
-            </Link>
-          ))}
-        </SimpleGrid>
-      )}
+                  </Stack>
+                </Card>
+              </Link>
+            ))}
+          </SimpleGrid>
+        )}
+      </ScrollArea>
 
-      <Text c="dimmed" size="sm">
-        Showing {filteredLeagues.length} of {leagues?.length || 0} leagues
-      </Text>
+      <Box flex={0}>
+        <Text c="dimmed" size="sm">
+          Showing {filteredLeagues.length} of {leagues?.length || 0} leagues
+        </Text>
+      </Box>
     </Stack>
   );
 }

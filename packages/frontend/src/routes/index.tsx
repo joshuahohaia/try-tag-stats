@@ -12,6 +12,8 @@ import {
   ActionIcon,
   Center,
   Loader,
+  rem,
+  ScrollArea,
 } from '@mantine/core';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -83,31 +85,49 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
             <Table striped highlightOnHover withTableBorder>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>Pos</Table.Th>
-                  <Table.Th>Team</Table.Th>
-                  <Table.Th>P</Table.Th>
-                  <Table.Th>Pts</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Team</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pld</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>W</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>L</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>D</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>FF</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>FA</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>F</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>A</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Dif</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>B</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pts</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {standings?.map((row) => {
                   const isFavorite = favoriteIds.includes(row.teamId);
                   return (
-                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-green-0)' : undefined}>
-                      <Table.Td fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
-                      <Table.Td>
+                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-brand-0)' : undefined}>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
                         <Link
                           to="/teams/$teamId"
                           params={{ teamId: String(row.teamId) }}
                           style={{ color: 'inherit', textDecoration: 'none' }}
                         >
-                          <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'green.9' : 'inherit'}>
+                          <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
                             {row.team.name} {isFavorite && '⭐'}
                           </Text>
                         </Link>
                       </Table.Td>
-                      <Table.Td>{row.played}</Table.Td>
-                      <Table.Td fw={700}>{row.totalPoints}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.played}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.wins}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.losses}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.draws}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.forfeitsFor}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.forfeitsAgainst}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointsFor}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointsAgainst}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointDifference}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.bonusPoints}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={700}>{row.totalPoints}</Table.Td>
                     </Table.Tr>
                   );
                 })}
@@ -240,13 +260,8 @@ function HomePage() {
   );
 
   return (
-    <Stack gap="xl">
-      <div>
-        <Title order={1} mb="xs">Welcome to Try Tag Stats</Title>
-        <Text c="dimmed" size="lg">
-          Track your favorite Try Tag Rugby teams, view fixtures, and follow league standings.
-        </Text>
-      </div>
+    <ScrollArea h="100%" type="auto">
+    <Stack gap="xl" pb="md">
 
       {hasFavorites && (
         <>
@@ -403,6 +418,7 @@ function HomePage() {
         </Card>
       )}
     </Stack>
+    </ScrollArea>
   );
 }
 

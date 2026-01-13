@@ -1,5 +1,13 @@
 import * as cheerio from 'cheerio';
-import type { ScrapedFixture, ScrapedPlayerAward, FixtureStatus } from '@trytag/shared';
+import type {
+  ScrapedFixture,
+  ScrapedPlayerAward,
+  ScrapedTeamProfile,
+  TeamPositionHistory,
+  TeamSeasonStats,
+  TeamPreviousSeason,
+  FixtureStatus,
+} from '@trytag/shared';
 import { logger } from '../../utils/logger.js';
 
 interface ParsedTeamProfile {
@@ -16,6 +24,10 @@ interface ParsedTeamProfile {
     seasonName: string;
     divisionId: number;
   }>;
+  // New detailed stats
+  positionHistory: TeamPositionHistory[];
+  seasonStats: TeamSeasonStats[];
+  previousSeasons: TeamPreviousSeason[];
 }
 
 // Extract IDs from href
@@ -42,6 +54,218 @@ function parseDate(dateStr: string): string | null {
   }
 
   return null;
+}
+
+// Parse position history from Google Charts JavaScript
+function parsePositionHistory(html: string): TeamPositionHistory[] {
+  const positionHistory: TeamPositionHistory[] = [];
+
+  // Look for google.visualization.arrayToDataTable pattern
+  // Format: [['Week Number', 'Position'], ['1', 3], ['2', 4], ...]
+  const chartDataMatch = html.match(/arrayToDataTable\s*\(\s*\[([\s\S]*?)\]\s*\)/);
+
+  if (chartDataMatch) {
+    const dataContent = chartDataMatch[1];
+    // Match each data row like ['1', 3] or ['2', 4]
+    const rowMatches = dataContent.matchAll(/\[\s*['"](\d+)['"]\s*,\s*(\d+)\s*\]/g);
+
+    for (const match of rowMatches) {
+      const week = parseInt(match[1], 10);
+      const position = parseInt(match[2], 10);
+      if (!isNaN(week) && !isNaN(position)) {
+        positionHistory.push({ week, position });
+      }
+    }
+  }
+
+  return positionHistory;
+}
+
+// Parse statistics table
+function parseSeasonStats($: cheerio.CheerioAPI): TeamSeasonStats[] {
+  const stats: TeamSeasonStats[] = [];
+
+  // Find table that contains "Average Scored" or similar
+  $('table').each((_, table) => {
+    const $table = $(table);
+    const tableText = $table.text();
+
+    if (!tableText.includes('Average Scored') && !tableText.includes('Average Conceded')) {
+      return;
+    }
+
+    // Map row labels to data
+    const rowData: Record<string, string[]> = {};
+    const headerRow = $table.find('tr').first();
+    const headers: string[] = [];
+
+    headerRow.find('td, th').each((i, cell) => {
+      const text = $(cell).text().trim();
+      if (i > 0 && text) headers.push(text);
+    });
+
+    $table.find('tr').each((_, row) => {
+      const $row = $(row);
+      const $cells = $row.find('td, th');
+
+      if ($cells.length < 2) return;
+
+      const label = $cells.first().text().trim().toLowerCase();
+      const values: string[] = [];
+
+      $cells.slice(1).each((_, cell) => {
+        values.push($(cell).text().trim());
+      });
+
+      if (label && values.length > 0) {
+        rowData[label] = values;
+      }
+    });
+
+    // Build stats for each period
+    const periods: Array<'last3' | 'season' | 'allTime'> = ['last3', 'season', 'allTime'];
+    const periodNames = ['last 3 games', 'this season', 'all time'];
+
+    for (let i = 0; i < 3; i++) {
+      const periodStat: TeamSeasonStats = {
+        period: periods[i],
+        avgScored: 0,
+        avgConceded: 0,
+        avgPoints: 0,
+        biggestWin: null,
+        biggestLoss: null,
+      };
+
+      // Try to extract each stat
+      for (const [label, values] of Object.entries(rowData)) {
+        const value = values[i];
+        if (!value) continue;
+
+        if (label.includes('average scored') || label === 'average scored :') {
+          periodStat.avgScored = parseFloat(value) || 0;
+        } else if (label.includes('average conceded') || label === 'average conceded :') {
+          periodStat.avgConceded = parseFloat(value) || 0;
+        } else if (label.includes('average points') || label === 'average points :') {
+          periodStat.avgPoints = parseFloat(value) || 0;
+        } else if (label.includes('biggest win') || label === 'biggest win :') {
+          periodStat.biggestWin = value !== '-' && value !== '' ? value : null;
+        } else if (label.includes('biggest loss') || label === 'biggest loss :') {
+          periodStat.biggestLoss = value !== '-' && value !== '' ? value : null;
+        }
+      }
+
+      stats.push(periodStat);
+    }
+  });
+
+  return stats;
+}
+
+// Parse previous seasons
+function parsePreviousSeasons($: cheerio.CheerioAPI): TeamPreviousSeason[] {
+  const previousSeasons: TeamPreviousSeason[] = [];
+
+  // Find section with "Previous Seasons" heading
+  const pageText = $('body').text();
+  const hasPreviousSeasons = pageText.includes('Previous Seasons');
+
+  if (!hasPreviousSeasons) return previousSeasons;
+
+  // Look for links with Standings URL pattern
+  $('a[href*="Standings"]').each((_, link) => {
+    const $link = $(link);
+    const href = $link.attr('href') || '';
+    const text = $link.text().trim();
+
+    // Skip if not a season link (should have LeagueId, SeasonId, DivisionId)
+    if (!href.includes('LeagueId') || !href.includes('SeasonId')) return;
+
+    const leagueId = extractParam(href, 'LeagueId');
+    const seasonId = extractParam(href, 'SeasonId');
+    const divisionId = extractParam(href, 'DivisionId');
+
+    // Parse text format: "League Name - Season - Division"
+    // Example: "Battersea Park Astro (Monday - 5-a-side) - Autumn 2025 - Open Grade"
+    const parts = text.split(' - ');
+
+    if (parts.length >= 2) {
+      // Handle case where league name contains " - " (e.g., "Monday - 5-a-side")
+      let leagueName = parts[0];
+      let seasonName = '';
+      let divisionName = '';
+
+      // Work backwards: last part is usually division, second-to-last is season
+      if (parts.length >= 3) {
+        divisionName = parts[parts.length - 1];
+        seasonName = parts[parts.length - 2];
+        // Everything else is the league name
+        leagueName = parts.slice(0, parts.length - 2).join(' - ');
+      } else if (parts.length === 2) {
+        seasonName = parts[1];
+      }
+
+      // Check if this is already added (might be in the "Current Season" section)
+      const exists = previousSeasons.some(
+        (s) => s.leagueName === leagueName && s.seasonName === seasonName && s.divisionName === divisionName
+      );
+
+      if (!exists && (seasonName || leagueName)) {
+        previousSeasons.push({
+          leagueName,
+          seasonName,
+          divisionName,
+          leagueId: leagueId || undefined,
+          seasonId: seasonId || undefined,
+          divisionId: divisionId || undefined,
+        });
+      }
+    }
+  });
+
+  return previousSeasons;
+}
+
+// Parse player awards from statistics table
+function parsePlayerAwards($: cheerio.CheerioAPI, teamName: string, teamId: number): ScrapedPlayerAward[] {
+  const playerAwards: ScrapedPlayerAward[] = [];
+
+  $('table').each((_, table) => {
+    const $table = $(table);
+    const headerText = $table.find('th, tr:first-child td').text().toLowerCase();
+
+    // Look for Player of the Match table
+    if (!headerText.includes('player') || (!headerText.includes('award') && !headerText.includes('match'))) {
+      return;
+    }
+
+    $table.find('tr').each((_, row) => {
+      const $row = $(row);
+      const $cells = $row.find('td');
+
+      if ($cells.length < 2) return;
+
+      // Skip header row
+      const firstCellText = $cells.eq(0).text().trim().toLowerCase();
+      if (firstCellText === 'player') return;
+
+      const playerName = $cells.eq(0).text().trim();
+      // Award count is usually last column
+      const awardCountText = $cells.last().text().trim();
+      const awardCount = parseInt(awardCountText, 10) || 1;
+
+      if (playerName && awardCount > 0) {
+        playerAwards.push({
+          playerName,
+          teamName,
+          teamId,
+          awardCount,
+          awardType: 'player_of_match',
+        });
+      }
+    });
+  });
+
+  return playerAwards;
 }
 
 export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfile {
@@ -72,7 +296,19 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
   const drawnMatch = pageText.match(/drawn?[:\s]+(\d+)/i);
   if (drawnMatch) draws = parseInt(drawnMatch[1], 10);
 
-  // Parse fixture history from tables
+  // Parse position history from Google Charts JavaScript
+  const positionHistory = parsePositionHistory(html);
+
+  // Parse season stats
+  const seasonStats = parseSeasonStats($);
+
+  // Parse previous seasons
+  const previousSeasons = parsePreviousSeasons($);
+
+  // Parse player awards
+  const playerAwards = parsePlayerAwards($, teamName, teamId);
+
+  // Parse fixture history from tables (keep existing logic)
   const fixtureHistory: ScrapedFixture[] = [];
 
   $('table').each((_, table) => {
@@ -86,7 +322,6 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
 
     $table.find('tbody tr, tr').not(':has(th)').each((_, row) => {
       const $row = $(row);
-      const $cells = $row.find('td');
       const rowText = $row.text();
 
       // Skip bye weeks
@@ -116,14 +351,11 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       let status: FixtureStatus = 'scheduled';
 
       if (scoreMatch) {
-        // Assuming the first number is this team's score
         homeScore = parseInt(scoreMatch[1], 10);
         awayScore = parseInt(scoreMatch[2], 10);
         status = 'completed';
       }
 
-      // We don't know if this team is home or away, so we'll assume home
-      // The actual home/away will be determined by the fixture in the database
       fixtureHistory.push({
         date,
         time: null,
@@ -139,40 +371,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
     });
   });
 
-  // Parse player awards
-  const playerAwards: ScrapedPlayerAward[] = [];
-
-  $('table').each((_, table) => {
-    const $table = $(table);
-    const headerText = $table.find('th').text().toLowerCase();
-
-    if (!headerText.includes('player') || !headerText.includes('award')) {
-      return;
-    }
-
-    $table.find('tbody tr, tr').not(':has(th)').each((_, row) => {
-      const $row = $(row);
-      const $cells = $row.find('td');
-
-      if ($cells.length < 2) return;
-
-      const playerName = $cells.eq(0).text().trim();
-      const awardCountText = $cells.eq(1).text().trim();
-      const awardCount = parseInt(awardCountText, 10) || 1;
-
-      if (playerName) {
-        playerAwards.push({
-          playerName,
-          teamName,
-          teamId,
-          awardCount,
-          awardType: 'player_of_match',
-        });
-      }
-    });
-  });
-
-  // Parse historical seasons from links
+  // Parse historical seasons from links (keep for backward compatibility)
   const historicalSeasons: Array<{ seasonId: number; seasonName: string; divisionId: number }> = [];
 
   $('a[href*="SeasonId"]').each((_, link) => {
@@ -186,7 +385,6 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
 
     const seasonName = $link.text().trim();
 
-    // Avoid duplicates
     const exists = historicalSeasons.some((s) => s.seasonId === seasonId && s.divisionId === divisionId);
     if (!exists && seasonName) {
       historicalSeasons.push({ seasonId, seasonName, divisionId });
@@ -199,6 +397,9 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       fixtureCount: fixtureHistory.length,
       awardCount: playerAwards.length,
       historicalCount: historicalSeasons.length,
+      positionHistoryCount: positionHistory.length,
+      statsCount: seasonStats.length,
+      previousSeasonsCount: previousSeasons.length,
     },
     'Parsed team profile'
   );
@@ -213,5 +414,8 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
     fixtureHistory,
     playerAwards,
     historicalSeasons,
+    positionHistory,
+    seasonStats,
+    previousSeasons,
   };
 }

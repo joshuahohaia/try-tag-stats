@@ -1,67 +1,146 @@
 import { createRootRoute, Outlet } from '@tanstack/react-router';
-import { AppShell, Burger, Group, Title, NavLink, ScrollArea } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import {
+  AppShell,
+  Image,
+  Group,
+  Stack,
+  Tooltip,
+  UnstyledButton,
+  rem,
+  Container,
+  Center,
+} from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   IconHome,
   IconTrophy,
   IconUsers,
   IconCalendar,
-  IconChartBar,
   IconStar,
 } from '@tabler/icons-react';
 import { Link, useRouterState } from '@tanstack/react-router';
 
+interface NavbarLinkProps {
+  icon: typeof IconHome;
+  label: string;
+  active?: boolean;
+  to: string;
+}
+
+function NavbarLink({ icon: Icon, label, active, to }: NavbarLinkProps) {
+  return (
+    <Tooltip label={label} position="right" transitionProps={{ duration: 0 }}>
+      <UnstyledButton
+        component={Link}
+        to={to}
+        style={(theme) => ({
+          width: rem(50),
+          height: rem(50),
+          borderRadius: theme.radius.md,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: active ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
+          backgroundColor: active ? 'var(--mantine-color-brand-0)' : 'transparent',
+          '&:hover': {
+            backgroundColor: active ? 'var(--mantine-color-brand-0)' : 'var(--mantine-color-gray-0)',
+            color: active ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-black)',
+          },
+        })}
+      >
+        <Icon style={{ width: rem(22), height: rem(22) }} stroke={1.5} />
+      </UnstyledButton>
+    </Tooltip>
+  );
+}
+
 function RootLayout() {
-  const [opened, { toggle }] = useDisclosure();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const navItems = [
     { to: '/', label: 'Home', icon: IconHome },
     { to: '/leagues', label: 'Leagues', icon: IconTrophy },
     { to: '/teams', label: 'Teams', icon: IconUsers },
     { to: '/fixtures', label: 'Fixtures', icon: IconCalendar },
-    { to: '/statistics', label: 'Statistics', icon: IconChartBar },
     { to: '/favorites', label: 'Favorites', icon: IconStar },
   ];
 
   return (
     <AppShell
-      header={{ height: 60 }}
-      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
+      navbar={{
+        width: 80,
+        breakpoint: 'sm',
+        collapsed: { mobile: true },
+      }}
+      footer={{
+        height: 65,
+        collapsed: !isMobile,
+      }}
+      padding="0"
     >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={3} c="green">Try Tag Stats</Title>
-          </Group>
-        </Group>
-      </AppShell.Header>
-
       <AppShell.Navbar p="md">
-        <AppShell.Section grow component={ScrollArea}>
+        <Center>
+          <Image 
+             src="/logo.jpg" 
+             alt="Try Tag Stats" 
+             w={40} 
+             radius="md" 
+             mb="xl"
+          />
+        </Center>
+        <Stack justify="center" gap={5}>
           {navItems.map((item) => (
-            <NavLink
+            <NavbarLink
               key={item.to}
-              component={Link}
-              to={item.to}
-              label={item.label}
-              leftSection={<item.icon size={20} />}
+              {...item}
               active={currentPath === item.to}
-              onClick={() => opened && toggle()}
             />
           ))}
-        </AppShell.Section>
+        </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main>
-        <Outlet />
+      <AppShell.Main h="100vh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Container
+           size="xl"
+           w="100%"
+           p="md"
+           pb={isMobile ? 80 : "md"}
+           h="100%"
+           style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        >
+          <Outlet />
+        </Container>
       </AppShell.Main>
+
+      {/* Mobile Bottom Navigation */}
+      <AppShell.Footer p={0} hiddenFrom="sm" style={{ display: 'flex', alignItems: 'center' }}>
+        <Group justify="space-around" w="100%" px="xs" gap={0}>
+           {navItems.map((item) => (
+             <UnstyledButton
+               key={item.to}
+               component={Link}
+               to={item.to}
+               style={{
+                 flex: 1,
+                 display: 'flex',
+                 flexDirection: 'column',
+                 alignItems: 'center',
+                 padding: '8px 0',
+                 color: currentPath === item.to ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
+               }}
+             >
+               <item.icon size={24} stroke={1.5} />
+             </UnstyledButton>
+           ))}
+        </Group>
+      </AppShell.Footer>
     </AppShell>
   );
 }
+
+// Helper component for centering the logo removed as we import Center from mantine
 
 export const Route = createRootRoute({
   component: RootLayout,

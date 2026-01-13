@@ -3,7 +3,9 @@ import {
   teamRepository,
   standingRepository,
   fixtureRepository,
+  playerAwardRepository,
 } from '../database/repositories/index.js';
+import { scraperOrchestrator } from '../scraper/index.js';
 
 const router = Router();
 
@@ -29,9 +31,14 @@ router.get('/batch', (req, res) => {
 });
 
 // GET /api/v1/teams/:id - Get team profile
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const team = teamRepository.findById(id);
+
+  // Try to find by internal ID first, then fall back to external ID
+  let team = teamRepository.findById(id);
+  if (!team) {
+    team = teamRepository.findByExternalId(id);
+  }
 
   if (!team) {
     res.status(404).json({
@@ -41,9 +48,56 @@ router.get('/:id', (req, res) => {
     return;
   }
 
-  const standings = standingRepository.findByTeam(id);
-  const upcomingFixtures = fixtureRepository.findUpcoming(id, 5);
-  const recentFixtures = fixtureRepository.findRecent(id, 5);
+  const teamId = team.id; // Use internal ID for all lookups
+  const standings = standingRepository.findByTeam(teamId);
+  const upcomingFixtures = fixtureRepository.findUpcoming(teamId, 5);
+  let recentFixtures = fixtureRepository.findRecent(teamId, 10);
+  const playerAwards = playerAwardRepository.findByTeam(teamId);
+
+  // Fetch live profile data from website (position history, stats, previous seasons, fixture history)
+  let positionHistory: any[] = [];
+  let seasonStats: any[] = [];
+  let previousSeasons: any[] = [];
+
+  // Only fetch if we have an external team ID
+  if (team.externalTeamId) {
+    const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId);
+    if (profileData) {
+      positionHistory = profileData.positionHistory;
+      seasonStats = profileData.seasonStats;
+      previousSeasons = profileData.previousSeasons;
+
+      // If no recent fixtures from DB, use fixture history from scraped profile
+      if (recentFixtures.length === 0 && profileData.fixtureHistory.length > 0) {
+        // Transform scraped fixtures to match FixtureWithTeams format
+        recentFixtures = profileData.fixtureHistory.map((f, idx) => ({
+          id: -idx - 1, // Negative IDs to indicate these are from scraper
+          externalFixtureId: null,
+          divisionId: 0,
+          homeTeamId: f.homeTeamId,
+          awayTeamId: f.awayTeamId,
+          fixtureDate: f.date,
+          fixtureTime: f.time,
+          pitch: f.pitch,
+          roundNumber: null,
+          homeScore: f.homeScore,
+          awayScore: f.awayScore,
+          status: f.status,
+          isForfeit: false,
+          homeTeam: {
+            id: f.homeTeamId,
+            externalTeamId: f.homeTeamId,
+            name: f.homeTeamName,
+          },
+          awayTeam: {
+            id: f.awayTeamId,
+            externalTeamId: f.awayTeamId,
+            name: f.awayTeamName,
+          },
+        }));
+      }
+    }
+  }
 
   res.json({
     success: true,
@@ -52,6 +106,10 @@ router.get('/:id', (req, res) => {
       standings,
       upcomingFixtures,
       recentFixtures,
+      playerAwards,
+      positionHistory,
+      seasonStats,
+      previousSeasons,
     },
   });
 });

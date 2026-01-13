@@ -29,7 +29,21 @@ declare module '@tanstack/react-router' {
 
 // Create Mantine theme
 const theme = createTheme({
-  primaryColor: 'green',
+  primaryColor: 'brand',
+  colors: {
+    brand: [
+      '#eef1f6',
+      '#dce3ec',
+      '#b8c6da',
+      '#92a8c9',
+      '#728eb9',
+      '#5677ab',
+      '#23304a', // Primary shade (6)
+      '#1c263b',
+      '#131a29',
+      '#0a0e18',
+    ],
+  },
   fontFamily: 'Inter, system-ui, sans-serif',
   headings: {
     fontFamily: 'Inter, system-ui, sans-serif',

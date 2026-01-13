@@ -46,12 +46,38 @@ export interface Team {
   name: string;
 }
 
+export interface TeamPositionHistory {
+  week: number;
+  position: number;
+}
+
+export interface TeamSeasonStats {
+  period: 'last3' | 'season' | 'allTime';
+  avgScored: number;
+  avgConceded: number;
+  avgPoints: number;
+  biggestWin: string | null; // "10 - 0"
+  biggestLoss: string | null; // "3 - 17"
+}
+
+export interface TeamPreviousSeason {
+  leagueName: string;
+  seasonName: string;
+  divisionName: string;
+  leagueId?: number;
+  seasonId?: number;
+  divisionId?: number;
+}
+
 export interface TeamProfile extends Team {
   currentDivision?: Division;
   currentStanding?: Standing;
   recentFixtures?: Fixture[];
   upcomingFixtures?: Fixture[];
   playerAwards?: PlayerAward[];
+  positionHistory?: TeamPositionHistory[];
+  seasonStats?: TeamSeasonStats[];
+  previousSeasons?: TeamPreviousSeason[];
 }
 
 // ============================================
@@ -225,6 +251,15 @@ export interface ScrapedPlayerAward {
   teamId?: number;
   awardCount: number;
   awardType: string;
+}
+
+export interface ScrapedTeamProfile {
+  teamId: number;
+  teamName: string;
+  positionHistory: TeamPositionHistory[];
+  seasonStats: TeamSeasonStats[];
+  previousSeasons: TeamPreviousSeason[];
+  playerAwards: ScrapedPlayerAward[];
 }
 
 // ============================================
