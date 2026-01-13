@@ -8,9 +8,16 @@ build/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
 *.sqlite3
-packages/backend/data/*.db
+packages/backend/data/*.db*
+!packages/backend/data/.gitkeep
 
 # Environment variables
 .env
@@ -20,6 +27,7 @@ packages/backend/data/*.db
 # IDE
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
