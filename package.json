@@ -2,6 +2,7 @@
   "name": "try-tag-stats",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Try Tag Rugby statistics API and frontend",
   "workspaces": [
     "packages/*"
@@ -10,13 +11,22 @@
     "dev": "npm run dev --workspaces --if-present",
     "dev:backend": "npm run dev -w packages/backend",
     "dev:frontend": "npm run dev -w packages/frontend",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build:shared && npm run build --workspaces --if-present",
     "build:shared": "npm run build -w packages/shared",
     "build:backend": "npm run build -w packages/backend",
     "build:frontend": "npm run build -w packages/frontend",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "eslint packages/*/src/**/*.ts packages/*/src/**/*.tsx",
+    "lint:fix": "eslint packages/*/src/**/*.ts packages/*/src/**/*.tsx --fix",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx}\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.4",
+    "typescript-eslint": "^7.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
