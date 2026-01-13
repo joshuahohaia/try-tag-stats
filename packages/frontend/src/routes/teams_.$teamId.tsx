@@ -13,6 +13,7 @@ import {
   Table,
 } from '@mantine/core';
 import { IconStar, IconStarFilled } from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
 import { useTeam } from '../hooks/useTeams';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 
@@ -57,27 +58,56 @@ function TeamDetailPage() {
       </Group>
 
       {teamProfile.standings && teamProfile.standings.length > 0 && (
-        <Card withBorder>
-          <Title order={3} mb="md">Current Standings</Title>
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            <div>
-              <Text size="sm" c="dimmed">Position</Text>
-              <Text size="xl" fw={700}>{teamProfile.standings[0].position}</Text>
-            </div>
-            <div>
-              <Text size="sm" c="dimmed">Played</Text>
-              <Text size="xl" fw={700}>{teamProfile.standings[0].played}</Text>
-            </div>
-            <div>
-              <Text size="sm" c="dimmed">Won</Text>
-              <Text size="xl" fw={700} c="green">{teamProfile.standings[0].wins}</Text>
-            </div>
-            <div>
-              <Text size="sm" c="dimmed">Points</Text>
-              <Text size="xl" fw={700}>{teamProfile.standings[0].totalPoints}</Text>
-            </div>
-          </SimpleGrid>
-        </Card>
+        <Stack gap="md">
+          <Title order={2}>Leagues & Standings</Title>
+          {teamProfile.standings.map((standing) => (
+            <Card key={standing.id} withBorder>
+              <Group justify="space-between" mb="md">
+                <div>
+                   {standing.leagueId ? (
+                      <Link
+                        to="/leagues/$leagueId"
+                        params={{ leagueId: String(standing.leagueId) }}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                         <Text fw={700} size="lg" c="blue" style={{ cursor: 'pointer' }}>
+                           {standing.leagueName}
+                         </Text>
+                      </Link>
+                   ) : (
+                      <Text fw={700} size="lg">{standing.leagueName || 'Unknown League'}</Text>
+                   )}
+                   <Text c="dimmed">
+                     {standing.divisionName} • {standing.seasonName}
+                   </Text>
+                </div>
+                <Group>
+                   <Text fw={600}>Pos</Text>
+                   <Badge size="xl" circle>{standing.position}</Badge>
+                </Group>
+              </Group>
+              
+              <SimpleGrid cols={{ base: 2, sm: 4 }}>
+                <div>
+                  <Text size="sm" c="dimmed">Played</Text>
+                  <Text size="xl" fw={700}>{standing.played}</Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Won</Text>
+                  <Text size="xl" fw={700} c="green">{standing.wins}</Text>
+                </div>
+                 <div>
+                  <Text size="sm" c="dimmed">Lost</Text>
+                  <Text size="xl" fw={700} c="red">{standing.losses}</Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Points</Text>
+                  <Text size="xl" fw={700}>{standing.totalPoints}</Text>
+                </div>
+              </SimpleGrid>
+            </Card>
+          ))}
+        </Stack>
       )}
 
       {teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 && (

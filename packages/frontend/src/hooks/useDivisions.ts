@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
-import type { StandingWithTeam, FixtureWithTeams } from '@trytag/shared';
+import type { StandingWithTeam, FixtureWithTeams, PlayerAwardWithDetails } from '@trytag/shared';
 
 export function useDivisionStandings(divisionId: number) {
   return useQuery({
@@ -21,6 +21,19 @@ export function useDivisionFixtures(divisionId: number) {
     queryFn: async () => {
       const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
         `/divisions/${divisionId}/fixtures`
+      );
+      return extractData(response);
+    },
+    enabled: !!divisionId,
+  });
+}
+
+export function useDivisionStatistics(divisionId: number) {
+  return useQuery({
+    queryKey: ['divisions', divisionId, 'statistics'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: PlayerAwardWithDetails[] }>(
+        `/divisions/${divisionId}/statistics`
       );
       return extractData(response);
     },

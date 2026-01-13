@@ -3,6 +3,7 @@ import {
   divisionRepository,
   standingRepository,
   fixtureRepository,
+  playerAwardRepository,
 } from '../database/repositories/index.js';
 
 const router = Router();
@@ -35,6 +36,18 @@ router.get('/:id/standings', (req, res) => {
     success: true,
     data: standings,
     meta: { total: standings.length },
+  });
+});
+
+// GET /api/v1/divisions/:id/statistics - Get player statistics
+router.get('/:id/statistics', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const stats = playerAwardRepository.findByDivision(id);
+
+  res.json({
+    success: true,
+    data: stats,
+    meta: { total: stats.length },
   });
 });
 

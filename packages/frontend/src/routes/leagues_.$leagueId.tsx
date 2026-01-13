@@ -11,21 +11,84 @@ import {
   Badge,
   Group,
   Button,
+  Select,
 } from '@mantine/core';
-import { IconStar, IconStarFilled } from '@tabler/icons-react';
+import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
-import { useLeague } from '../hooks/useLeagues';
-import { useDivisionStandings, useDivisionFixtures } from '../hooks/useDivisions';
+import { useState, useEffect, useMemo } from 'react';
+import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
+import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
-  const { data: league, isLoading: leagueLoading } = useLeague(parseInt(leagueId, 10));
-  const { data: standings, isLoading: standingsLoading } = useDivisionStandings(parseInt(leagueId, 10));
-  const { data: fixtures, isLoading: fixturesLoading } = useDivisionFixtures(parseInt(leagueId, 10));
-  const { isFavorite, toggleFavorite } = useFavoriteTeams();
+  const parsedLeagueId = parseInt(leagueId, 10);
+  
+  return (
+    <LeagueContent leagueId={parsedLeagueId} />
+  );
+}
 
-  if (leagueLoading) {
+function LeagueContent({ leagueId }: { leagueId: number }) {
+  const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
+  const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
+  const { isFavorite, toggleFavorite } = useFavoriteTeams();
+  
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
+
+  // Set default season (current one or last one)
+  useEffect(() => {
+    if (seasons && seasons.length > 0 && !selectedSeasonId) {
+      const current = seasons.find(s => s.isCurrent);
+      if (current) {
+        setSelectedSeasonId(String(current.id));
+      } else {
+        // Fallback to the last season (assuming higher ID is newer)
+        const sorted = [...seasons].sort((a, b) => b.id - a.id);
+        setSelectedSeasonId(String(sorted[0].id));
+      }
+    }
+  }, [seasons, selectedSeasonId]);
+
+  const { data: divisions, isLoading: divisionsLoading } = useLeagueDivisions(
+    leagueId, 
+    selectedSeasonId ? parseInt(selectedSeasonId, 10) : 0
+  );
+
+  // Set default division
+  useEffect(() => {
+    if (divisions && divisions.length > 0) {
+       // Try to keep the same division selection if switching seasons, otherwise default to first
+       // For now just default to first if not set or invalid
+       const exists = divisions.some(d => String(d.id) === selectedDivisionId);
+       if (!selectedDivisionId || !exists) {
+         setSelectedDivisionId(String(divisions[0].id));
+       }
+    } else if (divisions && divisions.length === 0) {
+      setSelectedDivisionId(null);
+    }
+  }, [divisions, selectedDivisionId]);
+
+  const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
+    selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
+  );
+  const { data: fixtures, isLoading: fixturesLoading } = useDivisionFixtures(
+    selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
+  );
+  const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(
+    selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
+  );
+
+  const divisionOptions = useMemo(() => {
+    return divisions?.map(d => ({ value: String(d.id), label: d.name })) || [];
+  }, [divisions]);
+
+  const seasonOptions = useMemo(() => {
+    return seasons?.map(s => ({ value: String(s.id), label: s.name })) || [];
+  }, [seasons]);
+
+  if (leagueLoading || seasonsLoading) {
     return (
       <Center h={400}>
         <Loader size="lg" />
@@ -44,17 +107,46 @@ function LeagueDetailPage() {
   return (
     <Stack gap="lg">
       <div>
-        <Title order={1} mb="xs">{league.name}</Title>
-        <Group gap="xs">
-          {league.dayOfWeek && <Badge variant="light">{league.dayOfWeek}</Badge>}
-          {league.format && <Badge variant="outline">{league.format}</Badge>}
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Title order={1} mb="xs">{league.name}</Title>
+            <Group gap="xs">
+              {league.dayOfWeek && <Badge variant="light">{league.dayOfWeek}</Badge>}
+              {league.format && <Badge variant="outline">{league.format}</Badge>}
+            </Group>
+          </div>
+          <Group>
+             <Select
+              data={seasonOptions}
+              value={selectedSeasonId}
+              onChange={setSelectedSeasonId}
+              placeholder="Select Season"
+              w={160}
+             />
+             <Select
+              data={divisionOptions}
+              value={selectedDivisionId}
+              onChange={setSelectedDivisionId}
+              placeholder="Select Division"
+              disabled={!divisions || divisions.length === 0}
+              w={200}
+             />
+          </Group>
         </Group>
       </div>
 
+      {!selectedDivisionId ? (
+         <Card withBorder>
+           <Text c="dimmed" ta="center" py="xl">
+             {divisionsLoading ? 'Loading divisions...' : 'No divisions found for this season.'}
+           </Text>
+         </Card>
+      ) : (
       <Tabs defaultValue="standings">
         <Tabs.List>
           <Tabs.Tab value="standings">Standings</Tabs.Tab>
           <Tabs.Tab value="fixtures">Fixtures</Tabs.Tab>
+          <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="standings" pt="md">
@@ -83,9 +175,9 @@ function LeagueDetailPage() {
                         <Link
                           to="/teams/$teamId"
                           params={{ teamId: String(standing.team.id) }}
-                          style={{ color: 'inherit' }}
+                          style={{ color: 'inherit', textDecoration: 'none' }}
                         >
-                          {standing.team.name}
+                          <Text span fw={500} c="blue">{standing.team.name}</Text>
                         </Link>
                       </Table.Td>
                       <Table.Td>{standing.played}</Table.Td>
@@ -101,9 +193,9 @@ function LeagueDetailPage() {
                           onClick={() => toggleFavorite(standing.team)}
                         >
                           {isFavorite(standing.team.id) ? (
-                            <IconStarFilled size={16} color="gold" />
+                            <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
                           ) : (
-                            <IconStar size={16} />
+                            <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
                           )}
                         </Button>
                       </Table.Td>
@@ -126,9 +218,23 @@ function LeagueDetailPage() {
                 <Card key={fixture.id} withBorder padding="sm">
                   <Group justify="space-between">
                     <Stack gap={2}>
-                      <Text fw={500}>
-                        {fixture.homeTeam.name} vs {fixture.awayTeam.name}
-                      </Text>
+                      <Group gap="xs">
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.homeTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                        </Link>
+                        <Text fw={500}>vs</Text>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.awayTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                        </Link>
+                      </Group>
                       <Text size="sm" c="dimmed">
                         {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
                         {fixture.pitch && ` - ${fixture.pitch}`}
@@ -151,7 +257,50 @@ function LeagueDetailPage() {
             <Text c="dimmed">No fixtures data available</Text>
           )}
         </Tabs.Panel>
+        <Tabs.Panel value="statistics" pt="md">
+          {statsLoading ? (
+            <Center h={200}><Loader /></Center>
+          ) : statistics && statistics.length > 0 ? (
+            <Card withBorder>
+              <Title order={3} mb="md">Player of the Match Awards</Title>
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Player</Table.Th>
+                    <Table.Th>Team</Table.Th>
+                    <Table.Th>Awards</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {statistics.map((stat) => (
+                    <Table.Tr key={stat.id}>
+                      <Table.Td fw={500}>{stat.player.name}</Table.Td>
+                      <Table.Td>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(stat.team.id) }}
+                          style={{ color: 'inherit', textDecoration: 'none' }}
+                        >
+                          <Text span c="blue">{stat.team.name}</Text>
+                        </Link>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap={4}>
+                          <IconAward size={18} style={{ color: 'gold' }} />
+                          <Text fw={700}>{stat.awardCount}</Text>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Card>
+          ) : (
+            <Text c="dimmed">No statistics available for this division.</Text>
+          )}
+        </Tabs.Panel>
       </Tabs>
+      )}
     </Stack>
   );
 }

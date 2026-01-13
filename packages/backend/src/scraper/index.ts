@@ -14,6 +14,8 @@ import {
   teamRepository,
   standingRepository,
   fixtureRepository,
+  playerRepository,
+  playerAwardRepository,
 } from '../database/repositories/index.js';
 import { getDatabase } from '../database/connection.js';
 import { logger } from '../utils/logger.js';
@@ -29,6 +31,7 @@ interface SyncResult {
     teams: number;
     standings: number;
     fixtures: number;
+    playerAwards: number;
   };
   errors: string[];
 }
@@ -58,6 +61,7 @@ class ScraperOrchestrator {
         teams: 0,
         standings: 0,
         fixtures: 0,
+        playerAwards: 0,
       },
       errors: [],
     };
@@ -179,10 +183,13 @@ class ScraperOrchestrator {
       logger.debug({ divisionId }, 'Fetching standings...');
       const standingsHtml = await scraperClient.fetchWithParams(ENDPOINTS.STANDINGS, params);
       const { standings } = parseStandings(standingsHtml);
+      
+      logger.info({ count: standings.length }, 'Standings parsed');
 
       const db = getDatabase();
       const transaction = db.transaction(() => {
         for (const standing of standings) {
+          logger.debug({ teamName: standing.teamName }, 'Processing standing');
           // Upsert team
           const team = teamRepository.upsert(standing.teamId, standing.teamName);
           teamRepository.linkToDivision(team.id, divisionId);
@@ -209,9 +216,11 @@ class ScraperOrchestrator {
         }
       });
       transaction();
+      logger.info('Standings transaction committed');
 
     } catch (err) {
       this.logError(`Failed to sync standings for division ${divisionId}`, err);
+      throw err; // Re-throw for debugging
     }
 
     // Sync fixtures
@@ -251,24 +260,90 @@ class ScraperOrchestrator {
       this.logError(`Failed to sync fixtures for division ${divisionId}`, err);
     }
 
+    // Sync statistics (Player Awards)
+    try {
+        logger.debug({ divisionId }, 'Fetching statistics...');
+        const statsHtml = await scraperClient.fetchWithParams(ENDPOINTS.STATISTICS, params);
+        const { playerAwards } = parseStatistics(statsHtml);
+
+        const db = getDatabase();
+        const transaction = db.transaction(() => {
+            for (const award of playerAwards) {
+                // Ensure team exists (if we have name, we can try to find/upsert)
+                // Note: scraped award teamId might be optional if parser fails to find link
+                // But we usually have teamName.
+                let teamId = 0;
+                if (award.teamId) {
+                    const team = teamRepository.upsert(award.teamId, award.teamName);
+                    teamId = team.id;
+                } else if (award.teamName) {
+                    // Try to find by name
+                    const team = teamRepository.findByName(award.teamName);
+                    if (team) {
+                        teamId = team.id;
+                    } else {
+                        logger.warn({ award }, 'Skipping award: Team not found by name');
+                        continue;
+                    }
+                }
+
+                // Ensure player exists
+                const player = playerRepository.upsert(award.playerName);
+                
+                // Link player to team/division
+                db.prepare(`
+                    INSERT OR IGNORE INTO player_teams (player_id, team_id, division_id)
+                    VALUES (?, ?, ?)
+                `).run(player.id, teamId, divisionId);
+
+                // Upsert award
+                playerAwardRepository.upsert({
+                    playerId: player.id,
+                    teamId: teamId,
+                    divisionId,
+                    fixtureId: null, // Scraper doesn't link to specific fixture yet
+                    awardType: award.awardType,
+                    awardCount: award.awardCount
+                });
+                
+                if (result.itemsProcessed.playerAwards !== undefined) {
+                    result.itemsProcessed.playerAwards++;
+                }
+            }
+        });
+        transaction();
+    } catch (err) {
+        this.logError(`Failed to sync statistics for division ${divisionId}`, err);
+    }
+
     // Update last scraped timestamp
     divisionRepository.updateLastScraped(divisionId);
   }
 
-  async syncSingleDivision(leagueId: number, seasonId: number, divisionId: number): Promise<void> {
-    const division = divisionRepository.findByExternalId(divisionId, leagueId, seasonId);
+  async syncSingleDivision(externalLeagueId: number, externalSeasonId: number, externalDivisionId: number): Promise<void> {
+    const league = leagueRepository.findByExternalId(externalLeagueId);
+    if (!league) {
+      throw new Error(`League not found: ${externalLeagueId}`);
+    }
+
+    const season = seasonRepository.findByExternalId(externalSeasonId);
+    if (!season) {
+      throw new Error(`Season not found: ${externalSeasonId}`);
+    }
+
+    const division = divisionRepository.findByExternalId(externalDivisionId, league.id, season.id);
     if (!division) {
-      throw new Error(`Division not found: ${divisionId}`);
+      throw new Error(`Division not found: ${externalDivisionId}`);
     }
 
     const result: SyncResult = {
       success: true,
       duration: 0,
-      itemsProcessed: { regions: 0, leagues: 0, seasons: 0, divisions: 0, teams: 0, standings: 0, fixtures: 0 },
+      itemsProcessed: { regions: 0, leagues: 0, seasons: 0, divisions: 0, teams: 0, standings: 0, fixtures: 0, playerAwards: 0 },
       errors: [],
     };
 
-    await this.syncDivisionData(division.id, leagueId, seasonId, divisionId, result);
+    await this.syncDivisionData(division.id, externalLeagueId, externalSeasonId, externalDivisionId, result);
   }
 
   private logError(message: string, err: unknown): void {

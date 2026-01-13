@@ -35,11 +35,26 @@ export function parseStandings(html: string): ParsedStandings {
 
   $tables.each((_, table) => {
     const $table = $(table);
-    const $headers = $table.find('th, thead td');
+    
+    // Find header row
+    let $headerRow = $table.find('thead tr').first();
+    if ($headerRow.length === 0) {
+      $headerRow = $table.find('tr.STHeaderRow').first();
+    }
+    if ($headerRow.length === 0) {
+      $headerRow = $table.find('tr').has('th').first();
+    }
+    
+    // If still no specific header row found, try the first row
+    if ($headerRow.length === 0) {
+        $headerRow = $table.find('tr').first();
+    }
+
+    const $headers = $headerRow.find('th, td');
     const headerText = $headers.text().toLowerCase();
 
     // Check if this looks like a standings table (has key columns)
-    if (!headerText.includes('team') && !headerText.includes('pld') && !headerText.includes('pts')) {
+    if (!headerText.includes('team') && !headerText.includes('pts')) {
       return;
     }
 
@@ -62,7 +77,7 @@ export function parseStandings(html: string): ParsedStandings {
     });
 
     // Process data rows
-    const $rows = $table.find('tbody tr, tr').not(':has(th)');
+    const $rows = $table.find('tr').not($headerRow);
     let position = 0;
 
     $rows.each((_, element) => {

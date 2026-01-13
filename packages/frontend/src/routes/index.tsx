@@ -8,15 +8,236 @@ import {
   Button,
   Group,
   Badge,
+  Table,
+  ActionIcon,
+  Center,
+  Loader,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconStar } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
+import { useQueries } from '@tanstack/react-query';
+import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
+import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
+import type { Team, StandingWithDivision } from '@trytag/shared';
+
+interface TeamProfile extends Team {
+  standings: StandingWithDivision[];
+}
+
+interface ActiveDivision {
+  id: number;
+  name: string;
+  leagueName: string;
+  seasonName: string;
+  leagueId: number;
+}
+
+function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivision[]; favoriteIds: number[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentDivision = divisions[currentIndex];
+
+  const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
+    currentDivision ? currentDivision.id : 0
+  );
+
+  if (divisions.length === 0) return null;
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % divisions.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + divisions.length) % divisions.length);
+  };
+
+  return (
+    <Card withBorder>
+      <Group justify="space-between" mb="md">
+        <Title order={3}>Active League Standings</Title>
+        {divisions.length > 1 && (
+          <Group gap="xs">
+            <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
+            <Text size="sm" fw={500}>
+              {currentIndex + 1} / {divisions.length}
+            </Text>
+            <ActionIcon variant="light" onClick={handleNext}><IconChevronRight size={18} /></ActionIcon>
+          </Group>
+        )}
+      </Group>
+
+      {currentDivision && (
+        <Stack gap="xs">
+          <div>
+             <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}> 
+                <Text size="lg" fw={700} c="blue">{currentDivision.leagueName}</Text>
+             </Link>
+             <Text c="dimmed" size="sm">{currentDivision.name} • {currentDivision.seasonName}</Text>
+          </div>
+
+          {standingsLoading ? (
+            <Center h={150}><Loader size="sm" /></Center>
+          ) : (
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Pos</Table.Th>
+                  <Table.Th>Team</Table.Th>
+                  <Table.Th>P</Table.Th>
+                  <Table.Th>Pts</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {standings?.map((row) => {
+                  const isFavorite = favoriteIds.includes(row.teamId);
+                  return (
+                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-green-0)' : undefined}>
+                      <Table.Td fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
+                      <Table.Td>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(row.teamId) }}
+                          style={{ color: 'inherit', textDecoration: 'none' }}
+                        >
+                          <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'green.9' : 'inherit'}>
+                            {row.team.name} {isFavorite && '⭐'}
+                          </Text>
+                        </Link>
+                      </Table.Td>
+                      <Table.Td>{row.played}</Table.Td>
+                      <Table.Td fw={700}>{row.totalPoints}</Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          )}
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
+function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentDivision = divisions[currentIndex];
+
+  const { data: stats, isLoading } = useDivisionStatistics(
+    currentDivision ? currentDivision.id : 0
+  );
+
+  if (divisions.length === 0) return null;
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % divisions.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + divisions.length) % divisions.length);
+  };
+
+  return (
+    <Card withBorder>
+      <Group justify="space-between" mb="md">
+        <Title order={3}>Top Players</Title>
+        {divisions.length > 1 && (
+          <Group gap="xs">
+            <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
+            <Text size="sm" fw={500}>
+              {currentIndex + 1} / {divisions.length}
+            </Text>
+            <ActionIcon variant="light" onClick={handleNext}><IconChevronRight size={18} /></ActionIcon>
+          </Group>
+        )}
+      </Group>
+
+      {currentDivision && (
+        <Stack gap="xs">
+          <div>
+             <Text fw={600}>{currentDivision.leagueName}</Text>
+             <Text c="dimmed" size="xs">{currentDivision.name}</Text>
+          </div>
+
+          {isLoading ? (
+            <Center h={150}><Loader size="sm" /></Center>
+          ) : stats && stats.length > 0 ? (
+            <Stack gap="sm">
+              {stats.slice(0, 5).map((stat) => (
+                <Group key={stat.id} justify="space-between" wrap="nowrap">
+                  <Stack gap={0} style={{ overflow: 'hidden' }}>
+                    <Text fw={500} truncate>{stat.player.name}</Text>
+                    <Link
+                      to="/teams/$teamId"
+                      params={{ teamId: String(stat.team.id) }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <Text size="xs" c="blue" truncate>{stat.team.name}</Text>
+                    </Link>
+                  </Stack>
+                  <Group gap={4} wrap="nowrap">
+                    <IconAward size={16} color="gold" />
+                    <Text fw={700}>{stat.awardCount}</Text>
+                  </Group>
+                </Group>
+              ))}
+            </Stack>
+          ) : (
+            <Text c="dimmed" size="sm">No stats available</Text>
+          )}
+        </Stack>
+      )}
+    </Card>
+  );
+}
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
-  const { data: upcomingFixtures, isLoading } = useUpcomingFixtures();
+  
+  const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
+  const hasFavorites = favorites.length > 0;
+  
+  // Fetch profiles for all favorites to find their active divisions
+  const teamQueries = useQueries({
+    queries: favoriteIds.map((id) => ({
+      queryKey: ['teams', id],
+      queryFn: async () => {
+        const response = await apiClient.get<{ success: boolean; data: TeamProfile }>(`/teams/${id}`);
+        return extractData(response);
+      },
+    })),
+  });
+
+  // Extract unique active divisions from loaded profiles
+  const activeDivisions = useMemo(() => {
+    const divisions = new Map<number, ActiveDivision>();
+    
+    teamQueries.forEach((query) => {
+      if (query.data && query.data.standings.length > 0) {
+        // Assume first standing is current/active
+        const standing = query.data.standings[0];
+        if (!divisions.has(standing.divisionId)) {
+          divisions.set(standing.divisionId, {
+            id: standing.divisionId,
+            name: standing.divisionName,
+            leagueName: standing.leagueName,
+            seasonName: standing.seasonName,
+            leagueId: standing.leagueId,
+          });
+        }
+      }
+    });
+    return Array.from(divisions.values());
+  }, [teamQueries]);
+
+  const isLoadingTeams = teamQueries.some(q => q.isLoading);
+  
+  // If user has favorites, only fetch for those. Otherwise fetch global (top 5).
+  const { data: upcomingFixtures, isLoading: fixturesLoading } = useUpcomingFixtures(
+    hasFavorites ? favoriteIds : undefined, 
+    5
+  );
 
   return (
     <Stack gap="xl">
@@ -27,7 +248,112 @@ function HomePage() {
         </Text>
       </div>
 
-      {favorites.length > 0 && (
+      {hasFavorites && (
+        <>
+          {activeDivisions.length > 0 ? (
+            <ActiveLeaguesWidget divisions={activeDivisions} favoriteIds={favoriteIds} />
+          ) : isLoadingTeams ? (
+             <Card withBorder><Center h={100}><Loader /></Center></Card>
+          ) : null}
+        </>
+      )}
+
+      <SimpleGrid cols={{ base: 1, md: 2 }}>
+        <Card withBorder>
+          <Group justify="space-between" mb="md">
+            <Title order={3}>
+              <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              Upcoming Fixtures
+            </Title>
+            <Button variant="subtle" component={Link} to="/fixtures" size="sm">
+              View All
+            </Button>
+          </Group>
+          {fixturesLoading ? (
+            <Text c="dimmed">Loading fixtures...</Text>
+          ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
+            <Stack gap="xs">
+              {upcomingFixtures.map((fixture) => (
+                <Card key={fixture.id} withBorder padding="xs">
+                  <Group justify="space-between">
+                    <div>
+                      <Group gap={4}>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.homeTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                           <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                        </Link>
+                        <Text size="sm" fw={500}>vs</Text>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.awayTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                           <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                        </Link>
+                      </Group>
+                      <Text size="xs" c="dimmed">
+                        {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
+                      </Text>
+                    </div>
+                    <Badge variant="light">{fixture.status}</Badge>
+                  </Group>
+                </Card>
+              ))}
+            </Stack>
+          ) : (
+            <Text c="dimmed">
+              {hasFavorites 
+                ? "No upcoming fixtures for your favorite teams." 
+                : "No upcoming fixtures found."}
+            </Text>
+          )}
+        </Card>
+
+        {hasFavorites && activeDivisions.length > 0 ? (
+           <PlayerStatsWidget divisions={activeDivisions} />
+        ) : (
+          <Card withBorder>
+            <Title order={3} mb="md">
+              <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              Quick Links
+            </Title>
+            <Stack gap="sm">
+              <Button
+                variant="light"
+                fullWidth
+                leftSection={<IconTrophy size={18} />}
+                component={Link}
+                to="/leagues"
+              >
+                Browse All Leagues
+              </Button>
+              <Button
+                variant="light"
+                fullWidth
+                leftSection={<IconCalendar size={18} />}
+                component={Link}
+                to="/fixtures"
+              >
+                View All Fixtures
+              </Button>
+              <Button
+                variant="light"
+                fullWidth
+                leftSection={<IconStar size={18} />}
+                component={Link}
+                to="/favorites"
+              >
+                Manage Favorites
+              </Button>
+            </Stack>
+          </Card>
+        )}
+      </SimpleGrid>
+
+      {hasFavorites && (
         <Card withBorder>
           <Group justify="space-between" mb="md">
             <Title order={3}>
@@ -62,80 +388,7 @@ function HomePage() {
         </Card>
       )}
 
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <Card withBorder>
-          <Group justify="space-between" mb="md">
-            <Title order={3}>
-              <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-              Upcoming Fixtures
-            </Title>
-            <Button variant="subtle" component={Link} to="/fixtures" size="sm">
-              View All
-            </Button>
-          </Group>
-          {isLoading ? (
-            <Text c="dimmed">Loading fixtures...</Text>
-          ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
-            <Stack gap="xs">
-              {upcomingFixtures.slice(0, 5).map((fixture) => (
-                <Card key={fixture.id} withBorder padding="xs">
-                  <Group justify="space-between">
-                    <div>
-                      <Text size="sm" fw={500}>
-                        {fixture.homeTeam.name} vs {fixture.awayTeam.name}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
-                      </Text>
-                    </div>
-                    <Badge variant="light">{fixture.status}</Badge>
-                  </Group>
-                </Card>
-              ))}
-            </Stack>
-          ) : (
-            <Text c="dimmed">No upcoming fixtures</Text>
-          )}
-        </Card>
-
-        <Card withBorder>
-          <Title order={3} mb="md">
-            <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            Quick Links
-          </Title>
-          <Stack gap="sm">
-            <Button
-              variant="light"
-              fullWidth
-              leftSection={<IconTrophy size={18} />}
-              component={Link}
-              to="/leagues"
-            >
-              Browse All Leagues
-            </Button>
-            <Button
-              variant="light"
-              fullWidth
-              leftSection={<IconCalendar size={18} />}
-              component={Link}
-              to="/fixtures"
-            >
-              View All Fixtures
-            </Button>
-            <Button
-              variant="light"
-              fullWidth
-              leftSection={<IconStar size={18} />}
-              component={Link}
-              to="/favorites"
-            >
-              Manage Favorites
-            </Button>
-          </Stack>
-        </Card>
-      </SimpleGrid>
-
-      {favorites.length === 0 && (
+      {!hasFavorites && (
         <Card withBorder bg="green.0">
           <Stack align="center" py="xl">
             <IconStar size={48} color="var(--mantine-color-green-6)" />

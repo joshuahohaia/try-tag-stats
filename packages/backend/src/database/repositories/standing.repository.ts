@@ -26,6 +26,20 @@ interface StandingWithTeamRow extends StandingRow {
   external_team_id: number;
 }
 
+interface StandingWithDivisionRow extends StandingRow {
+  division_name: string;
+  league_id: number;
+  league_name: string;
+  season_name: string;
+}
+
+export interface StandingWithDivision extends Standing {
+  divisionName: string;
+  leagueId: number;
+  leagueName: string;
+  seasonName: string;
+}
+
 function rowToStanding(row: StandingRow): Standing {
   return {
     id: row.id,
@@ -58,6 +72,16 @@ function rowToStandingWithTeam(row: StandingWithTeamRow): StandingWithTeam {
   };
 }
 
+function rowToStandingWithDivision(row: StandingWithDivisionRow): StandingWithDivision {
+  return {
+    ...rowToStanding(row),
+    divisionName: row.division_name,
+    leagueId: row.league_id,
+    leagueName: row.league_name,
+    seasonName: row.season_name,
+  };
+}
+
 export const standingRepository = {
   findByDivision(divisionId: number): StandingWithTeam[] {
     const db = getDatabase();
@@ -75,12 +99,24 @@ export const standingRepository = {
     return rows.map(rowToStandingWithTeam);
   },
 
-  findByTeam(teamId: number): Standing[] {
+  findByTeam(teamId: number): StandingWithDivision[] {
     const db = getDatabase();
     const rows = db
-      .prepare('SELECT * FROM standings WHERE team_id = ? ORDER BY division_id')
-      .all(teamId) as StandingRow[];
-    return rows.map(rowToStanding);
+      .prepare(`
+        SELECT s.*, 
+               d.name as division_name, 
+               l.id as league_id, 
+               l.name as league_name,
+               se.name as season_name
+        FROM standings s
+        INNER JOIN divisions d ON s.division_id = d.id
+        INNER JOIN leagues l ON d.league_id = l.id
+        INNER JOIN seasons se ON d.season_id = se.id
+        WHERE s.team_id = ? 
+        ORDER BY se.id DESC
+      `)
+      .all(teamId) as StandingWithDivisionRow[];
+    return rows.map(rowToStandingWithDivision);
   },
 
   findByTeamAndDivision(teamId: number, divisionId: number): Standing | null {

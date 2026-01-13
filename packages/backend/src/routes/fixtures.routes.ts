@@ -3,12 +3,30 @@ import { fixtureRepository } from '../database/repositories/index.js';
 
 const router = Router();
 
-// GET /api/v1/fixtures - List fixtures
+// GET /api/v1/fixtures - List fixtures (upcoming or recent)
 router.get('/', (req, res) => {
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+  const type = (req.query.type as string) || 'upcoming';
+  const teamIdsParam = req.query.teamIds as string;
 
-  // For now, return upcoming fixtures across all divisions
-  const fixtures = fixtureRepository.findUpcoming(undefined, limit);
+  let fixtures = [];
+
+  if (teamIdsParam) {
+    const teamIds = teamIdsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+    
+    if (type === 'recent') {
+      fixtures = fixtureRepository.findRecentByTeams(teamIds, limit);
+    } else {
+      fixtures = fixtureRepository.findUpcomingByTeams(teamIds, limit);
+    }
+  } else {
+    // Global list
+    if (type === 'recent') {
+      fixtures = fixtureRepository.findRecent(undefined, limit);
+    } else {
+      fixtures = fixtureRepository.findUpcoming(undefined, limit);
+    }
+  }
 
   res.json({
     success: true,

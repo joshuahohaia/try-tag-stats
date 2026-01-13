@@ -157,6 +157,56 @@ export const fixtureRepository = {
     return rows.map(rowToFixtureWithTeams);
   },
 
+  findUpcomingByTeams(teamIds: number[], limit = 50): FixtureWithTeams[] {
+    if (teamIds.length === 0) return [];
+    
+    const db = getDatabase();
+    const today = new Date().toISOString().split('T')[0];
+    const placeholders = teamIds.map(() => '?').join(',');
+
+    const query = `
+      SELECT f.*,
+        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
+        at.name as away_team_name, at.external_team_id as away_team_external_id
+      FROM fixtures f
+      INNER JOIN teams ht ON f.home_team_id = ht.id
+      INNER JOIN teams at ON f.away_team_id = at.id
+      WHERE f.fixture_date >= ? AND f.status = 'scheduled'
+      AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
+      ORDER BY f.fixture_date, f.fixture_time LIMIT ?
+    `;
+
+    const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];
+    
+    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
+    return rows.map(rowToFixtureWithTeams);
+  },
+
+  findRecentByTeams(teamIds: number[], limit = 50): FixtureWithTeams[] {
+    if (teamIds.length === 0) return [];
+
+    const db = getDatabase();
+    const today = new Date().toISOString().split('T')[0];
+    const placeholders = teamIds.map(() => '?').join(',');
+
+    const query = `
+      SELECT f.*,
+        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
+        at.name as away_team_name, at.external_team_id as away_team_external_id
+      FROM fixtures f
+      INNER JOIN teams ht ON f.home_team_id = ht.id
+      INNER JOIN teams at ON f.away_team_id = at.id
+      WHERE f.fixture_date < ? AND f.status = 'completed'
+      AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
+      ORDER BY f.fixture_date DESC, f.fixture_time DESC LIMIT ?
+    `;
+
+    const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];
+
+    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
+    return rows.map(rowToFixtureWithTeams);
+  },
+
   upsert(data: Omit<Fixture, 'id'>): Fixture {
     const db = getDatabase();
     const stmt = db.prepare(`

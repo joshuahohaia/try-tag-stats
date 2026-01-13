@@ -21,7 +21,24 @@ export function parseStatistics(html: string, level: 'division' | 'season' = 'di
   // Find tables that look like player statistics
   $('table').each((_, table) => {
     const $table = $(table);
-    const $headers = $table.find('th, thead td');
+    
+    // Find header row (robust strategy)
+    let $headerRow = $table.find('thead tr').first();
+    if ($headerRow.length === 0) {
+      $headerRow = $table.find('tr.STHeaderRow').first();
+    }
+    if ($headerRow.length === 0) {
+      $headerRow = $table.find('tr').has('th').first();
+    }
+    // If still no specific header row found, try the first row if it has 'Player'
+    if ($headerRow.length === 0) {
+       const firstRow = $table.find('tr').first();
+       if (firstRow.text().toLowerCase().includes('player')) {
+           $headerRow = firstRow;
+       }
+    }
+
+    const $headers = $headerRow.find('th, td');
     const headerText = $headers.text().toLowerCase();
 
     // Check if this looks like a player awards table
@@ -33,13 +50,32 @@ export function parseStatistics(html: string, level: 'division' | 'season' = 'di
     const headerMap: Record<string, number> = {};
     $headers.each((idx, th) => {
       const text = $(th).text().trim().toLowerCase();
-      if (text.includes('player')) headerMap['player'] = idx;
-      else if (text.includes('team')) headerMap['team'] = idx;
-      else if (text.includes('award') || text.includes('pom') || text.includes('match')) headerMap['awards'] = idx;
+      
+      if (text === 'player' || text === 'name') {
+        headerMap['player'] = idx;
+      } else if (text === 'team') {
+        headerMap['team'] = idx;
+      } else if (text.includes('award') || text.includes('pom') || text.includes('match')) {
+        headerMap['awards'] = idx;
+      }
     });
 
     // Process data rows
-    const $rows = $table.find('tbody tr, tr').not(':has(th)');
+    // Exclude header rows explicitly if possible
+    let $rows = $table.find('tr');
+    
+    // Filter out rows that are headers
+    $rows = $rows.filter((_, row) => {
+        const $row = $(row);
+        // If it has th, it's a header
+        if ($row.find('th').length > 0) return false;
+        // If it has class STHeaderRow
+        if ($row.hasClass('STHeaderRow')) return false;
+        // If text matches header
+        const firstCell = $row.find('td').first().text().trim().toLowerCase();
+        if (firstCell === 'player' || firstCell === 'team') return false;
+        return true;
+    });
 
     $rows.each((_, row) => {
       const $row = $(row);

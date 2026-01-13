@@ -5,3 +5,5 @@ export { divisionRepository } from './division.repository.js';
 export { teamRepository } from './team.repository.js';
 export { standingRepository } from './standing.repository.js';
 export { fixtureRepository } from './fixture.repository.js';
+export { playerRepository } from './player.repository.js';
+export { playerAwardRepository } from './player-award.repository.js';

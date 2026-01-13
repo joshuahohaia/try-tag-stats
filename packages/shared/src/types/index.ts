@@ -76,6 +76,13 @@ export interface Standing {
   totalPoints: number;
 }
 
+export interface StandingWithDivision extends Standing {
+  divisionName: string;
+  leagueId: number;
+  leagueName: string;
+  seasonName: string;
+}
+
 export interface StandingWithTeam extends Standing {
   team: Team;
 }

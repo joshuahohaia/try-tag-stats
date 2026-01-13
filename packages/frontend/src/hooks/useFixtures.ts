@@ -2,32 +2,47 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import type { FixtureWithTeams } from '@trytag/shared';
 
-export function useUpcomingFixtures(teamId?: number, limit = 20) {
+export function useUpcomingFixtures(teamIds?: number | number[], limit = 20) {
   return useQuery({
-    queryKey: ['fixtures', 'upcoming', teamId, limit],
+    queryKey: ['fixtures', 'upcoming', teamIds, limit],
     queryFn: async () => {
-      const endpoint = teamId
-        ? `/teams/${teamId}/fixtures/upcoming`
-        : '/fixtures';
+      // If single team ID provided, use the optimized endpoint (optional, but good for consistency)
+      // Actually, let's just use the main endpoint for everything to keep it simple
+      // unless we want to preserve the specific /teams/id endpoints.
+      // The previous code used /teams/:id/fixtures/upcoming for single team.
+      
+      const params: Record<string, any> = { limit, type: 'upcoming' };
+      
+      if (typeof teamIds === 'number') {
+        params.teamIds = String(teamIds);
+      } else if (Array.isArray(teamIds) && teamIds.length > 0) {
+        params.teamIds = teamIds.join(',');
+      }
+
       const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
-        endpoint,
-        { params: { limit } }
+        '/fixtures',
+        { params }
       );
       return extractData(response);
     },
   });
 }
 
-export function useRecentFixtures(teamId?: number, limit = 20) {
+export function useRecentFixtures(teamIds?: number | number[], limit = 20) {
   return useQuery({
-    queryKey: ['fixtures', 'recent', teamId, limit],
+    queryKey: ['fixtures', 'recent', teamIds, limit],
     queryFn: async () => {
-      const endpoint = teamId
-        ? `/teams/${teamId}/fixtures/results`
-        : '/fixtures';
+      const params: Record<string, any> = { limit, type: 'recent' };
+      
+      if (typeof teamIds === 'number') {
+        params.teamIds = String(teamIds);
+      } else if (Array.isArray(teamIds) && teamIds.length > 0) {
+        params.teamIds = teamIds.join(',');
+      }
+
       const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
-        endpoint,
-        { params: { limit } }
+        '/fixtures',
+        { params }
       );
       return extractData(response);
     },

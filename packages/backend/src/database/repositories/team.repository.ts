@@ -38,6 +38,12 @@ export const teamRepository = {
     return row ? rowToTeam(row) : null;
   },
 
+  findByName(name: string): Team | null {
+    const db = getDatabase();
+    const row = db.prepare('SELECT * FROM teams WHERE name = ?').get(name) as TeamRow | undefined;
+    return row ? rowToTeam(row) : null;
+  },
+
   findByIds(ids: number[]): Team[] {
     if (ids.length === 0) return [];
     const db = getDatabase();

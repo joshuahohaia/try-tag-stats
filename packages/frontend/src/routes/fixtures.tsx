@@ -9,23 +9,48 @@ import {
   Badge,
   Group,
   SegmentedControl,
+  Button,
 } from '@mantine/core';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
+import { useFavoriteTeams } from '../hooks/useFavorites';
 
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
-  const { data: upcomingFixtures, isLoading: upcomingLoading } = useUpcomingFixtures();
-  const { data: recentFixtures, isLoading: recentLoading } = useRecentFixtures();
+  const { favorites } = useFavoriteTeams();
+  
+  const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
+  const hasFavorites = favorites.length > 0;
 
+  // Only fetch if we have favorites
+  const { data: upcomingFixtures, isLoading: upcomingLoading } = useUpcomingFixtures(
+    hasFavorites ? favoriteIds : [], 
+    50
+  );
+  
+  const { data: recentFixtures, isLoading: recentLoading } = useRecentFixtures(
+    hasFavorites ? favoriteIds : [], 
+    50
+  );
+
+  // If no favorites, we don't even use the data
   const fixtures = view === 'upcoming' ? upcomingFixtures : recentFixtures;
   const isLoading = view === 'upcoming' ? upcomingLoading : recentLoading;
+
+  // We need to filter client side if the backend returns everything when passed empty array
+  // BUT, we are handling the "no favorites" case explicitly below.
+  // However, if we pass `[]` to the hook, the hook sends NO param, and backend returns ALL.
+  // So `fixtures` will contain ALL fixtures if `hasFavorites` is false.
+  // This is fine because we won't render `fixtures` if `!hasFavorites`.
+  
+  // Double check: If `hasFavorites` is true, we send IDs. Backend filters. Correct.
 
   return (
     <Stack gap="lg">
       <div>
         <Title order={1} mb="xs">Fixtures</Title>
-        <Text c="dimmed">View upcoming matches and recent results</Text>
+        <Text c="dimmed">View upcoming matches and recent results for your favorite teams</Text>
       </div>
 
       <SegmentedControl
@@ -37,7 +62,14 @@ function FixturesPage() {
         ]}
       />
 
-      {isLoading ? (
+      {!hasFavorites ? (
+         <Card withBorder>
+            <Stack align="center" py="xl">
+               <Text c="dimmed">You haven't added any favorite teams yet.</Text>
+               <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
+            </Stack>
+         </Card>
+      ) : isLoading ? (
         <Center h={300}>
           <Loader size="lg" />
         </Center>
@@ -47,13 +79,25 @@ function FixturesPage() {
             <Card key={fixture.id} withBorder padding="md">
               <Group justify="space-between" align="flex-start">
                 <Stack gap={4}>
-                  <Text fw={600} size="lg">
-                    {fixture.homeTeam.name}
-                  </Text>
+                  <Link
+                    to="/teams/$teamId"
+                    params={{ teamId: String(fixture.homeTeam.id) }}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <Text fw={600} size="lg" c="blue">
+                      {fixture.homeTeam.name}
+                    </Text>
+                  </Link>
                   <Text c="dimmed" size="sm">vs</Text>
-                  <Text fw={600} size="lg">
-                    {fixture.awayTeam.name}
-                  </Text>
+                  <Link
+                    to="/teams/$teamId"
+                    params={{ teamId: String(fixture.awayTeam.id) }}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <Text fw={600} size="lg" c="blue">
+                      {fixture.awayTeam.name}
+                    </Text>
+                  </Link>
                 </Stack>
                 <Stack align="flex-end" gap={4}>
                   {fixture.status === 'completed' && fixture.homeScore !== null ? (
@@ -80,7 +124,7 @@ function FixturesPage() {
       ) : (
         <Card withBorder>
           <Text c="dimmed" ta="center" py="xl">
-            No fixtures available
+            No {view} fixtures found for your favorite teams
           </Text>
         </Card>
       )}
