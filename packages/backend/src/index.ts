@@ -4,6 +4,7 @@ import { config } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { initializeSchema } from './database/index.js';
+import { apiRouter } from './routes/index.js';
 
 // Initialize database
 initializeSchema();
@@ -26,7 +27,7 @@ app.get('/api/v1/health', (_req, res) => {
   });
 });
 
-// Placeholder for routes (to be implemented)
+// API info endpoint
 app.get('/api/v1', (_req, res) => {
   res.json({
     success: true,
@@ -40,11 +41,13 @@ app.get('/api/v1', (_req, res) => {
         divisions: '/api/v1/divisions',
         teams: '/api/v1/teams',
         fixtures: '/api/v1/fixtures',
-        statistics: '/api/v1/statistics',
       },
     },
   });
 });
+
+// API routes
+app.use('/api/v1', apiRouter);
 
 // Error handler (must be last)
 app.use(errorHandler);
