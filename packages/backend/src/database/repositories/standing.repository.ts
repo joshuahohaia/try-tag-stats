@@ -1,0 +1,142 @@
+import { getDatabase } from '../connection.js';
+import type { Standing, StandingWithTeam, Team } from '@trytag/shared';
+
+interface StandingRow {
+  id: number;
+  team_id: number;
+  division_id: number;
+  position: number;
+  played: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  forfeits_for: number;
+  forfeits_against: number;
+  points_for: number;
+  points_against: number;
+  point_difference: number;
+  bonus_points: number;
+  total_points: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface StandingWithTeamRow extends StandingRow {
+  team_name: string;
+  external_team_id: number;
+}
+
+function rowToStanding(row: StandingRow): Standing {
+  return {
+    id: row.id,
+    teamId: row.team_id,
+    divisionId: row.division_id,
+    position: row.position,
+    played: row.played,
+    wins: row.wins,
+    losses: row.losses,
+    draws: row.draws,
+    forfeitsFor: row.forfeits_for,
+    forfeitsAgainst: row.forfeits_against,
+    pointsFor: row.points_for,
+    pointsAgainst: row.points_against,
+    pointDifference: row.point_difference,
+    bonusPoints: row.bonus_points,
+    totalPoints: row.total_points,
+  };
+}
+
+function rowToStandingWithTeam(row: StandingWithTeamRow): StandingWithTeam {
+  const team: Team = {
+    id: row.team_id,
+    externalTeamId: row.external_team_id,
+    name: row.team_name,
+  };
+  return {
+    ...rowToStanding(row),
+    team,
+  };
+}
+
+export const standingRepository = {
+  findByDivision(divisionId: number): StandingWithTeam[] {
+    const db = getDatabase();
+    const rows = db
+      .prepare(
+        `
+        SELECT s.*, t.name as team_name, t.external_team_id
+        FROM standings s
+        INNER JOIN teams t ON s.team_id = t.id
+        WHERE s.division_id = ?
+        ORDER BY s.position
+      `
+      )
+      .all(divisionId) as StandingWithTeamRow[];
+    return rows.map(rowToStandingWithTeam);
+  },
+
+  findByTeam(teamId: number): Standing[] {
+    const db = getDatabase();
+    const rows = db
+      .prepare('SELECT * FROM standings WHERE team_id = ? ORDER BY division_id')
+      .all(teamId) as StandingRow[];
+    return rows.map(rowToStanding);
+  },
+
+  findByTeamAndDivision(teamId: number, divisionId: number): Standing | null {
+    const db = getDatabase();
+    const row = db
+      .prepare('SELECT * FROM standings WHERE team_id = ? AND division_id = ?')
+      .get(teamId, divisionId) as StandingRow | undefined;
+    return row ? rowToStanding(row) : null;
+  },
+
+  upsert(data: Omit<Standing, 'id'>): Standing {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      INSERT INTO standings (
+        team_id, division_id, position, played, wins, losses, draws,
+        forfeits_for, forfeits_against, points_for, points_against,
+        point_difference, bonus_points, total_points, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(team_id, division_id) DO UPDATE SET
+        position = excluded.position,
+        played = excluded.played,
+        wins = excluded.wins,
+        losses = excluded.losses,
+        draws = excluded.draws,
+        forfeits_for = excluded.forfeits_for,
+        forfeits_against = excluded.forfeits_against,
+        points_for = excluded.points_for,
+        points_against = excluded.points_against,
+        point_difference = excluded.point_difference,
+        bonus_points = excluded.bonus_points,
+        total_points = excluded.total_points,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `);
+    const row = stmt.get(
+      data.teamId,
+      data.divisionId,
+      data.position,
+      data.played,
+      data.wins,
+      data.losses,
+      data.draws,
+      data.forfeitsFor,
+      data.forfeitsAgainst,
+      data.pointsFor,
+      data.pointsAgainst,
+      data.pointDifference,
+      data.bonusPoints,
+      data.totalPoints
+    ) as StandingRow;
+    return rowToStanding(row);
+  },
+
+  deleteByDivision(divisionId: number): void {
+    const db = getDatabase();
+    db.prepare('DELETE FROM standings WHERE division_id = ?').run(divisionId);
+  },
+};
