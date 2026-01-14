@@ -9,8 +9,8 @@ COPY packages/shared/package*.json ./packages/shared/
 COPY packages/backend/package*.json ./packages/backend/
 COPY packages/frontend/package*.json ./packages/frontend/
 
-# Install dependencies (--include=optional fixes rollup native bindings on Alpine)
-RUN npm ci --include=optional
+# Install dependencies (npm install handles optional deps better than npm ci)
+RUN npm install
 
 # Copy source code
 COPY . .
