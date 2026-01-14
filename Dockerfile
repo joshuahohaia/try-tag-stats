@@ -15,6 +15,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Run tests
+RUN npm run test
+
 # Build all packages
 RUN npm run build
 

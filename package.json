@@ -16,6 +16,8 @@
     "build:backend": "npm run build -w packages/backend",
     "build:frontend": "npm run build -w packages/frontend",
     "start": "node packages/backend/dist/index.js",
+    "test": "npm run test -w packages/backend",
+    "test:coverage": "npm run test:coverage -w packages/backend",
     "lint": "eslint packages/*/src/**/*.ts packages/*/src/**/*.tsx",
     "lint:fix": "eslint packages/*/src/**/*.ts packages/*/src/**/*.tsx --fix",
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
