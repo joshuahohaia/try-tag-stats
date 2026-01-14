@@ -1,16 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { apiRouter } from './routes/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+interface AppOptions {
+  staticPath?: string;
+}
 
-export function createApp() {
+export function createApp(options: AppOptions = {}) {
   const app = express();
 
   // Middleware
@@ -53,13 +53,12 @@ export function createApp() {
   app.use('/api/v1', apiRouter);
 
   // Serve frontend static files in production
-  if (config.nodeEnv === 'production') {
-    const frontendPath = path.join(__dirname, '../../frontend/dist');
-    app.use(express.static(frontendPath));
+  if (config.nodeEnv === 'production' && options.staticPath) {
+    app.use(express.static(options.staticPath));
 
     // Handle SPA routing - serve index.html for all non-API routes
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(frontendPath, 'index.html'));
+      res.sendFile(path.join(options.staticPath!, 'index.html'));
     });
   }
 

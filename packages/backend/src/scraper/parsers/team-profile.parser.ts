@@ -2,7 +2,6 @@ import * as cheerio from 'cheerio';
 import type {
   ScrapedFixture,
   ScrapedPlayerAward,
-  ScrapedTeamProfile,
   TeamPositionHistory,
   TeamSeasonStats,
   TeamPreviousSeason,
@@ -124,7 +123,6 @@ function parseSeasonStats($: cheerio.CheerioAPI): TeamSeasonStats[] {
 
     // Build stats for each period
     const periods: Array<'last3' | 'season' | 'allTime'> = ['last3', 'season', 'allTime'];
-    const periodNames = ['last 3 games', 'this season', 'all time'];
 
     for (let i = 0; i < 3; i++) {
       const periodStat: TeamSeasonStats = {

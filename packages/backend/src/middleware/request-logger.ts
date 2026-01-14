@@ -34,12 +34,3 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 
   next();
 }
-
-// Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      requestId?: string;
-    }
-  }
-}

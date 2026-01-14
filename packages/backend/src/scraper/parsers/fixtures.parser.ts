@@ -20,7 +20,7 @@ function parseDate(dateStr: string): string | null {
     // "Monday 19 Jan 2026"
     /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i,
     // "19/01/2026" or "19-01-2026"
-    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+    /(\d{1,2})[/-](\d{1,2})[/-](\d{4})/,
     // "2026-01-19"
     /(\d{4})-(\d{2})-(\d{2})/,
   ];

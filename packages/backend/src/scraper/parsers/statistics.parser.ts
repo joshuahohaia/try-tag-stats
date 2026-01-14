@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 import { ScrapedPlayerAwardSchema } from '@trytag/shared';
 import type { ScrapedPlayerAward } from '@trytag/shared';
 import { logger } from '../../utils/logger.js';
@@ -28,7 +29,7 @@ export function parseStatistics(html: string, level: 'division' | 'season' = 'di
       $headerRow = $table.find('tr.STHeaderRow').first();
     }
     if ($headerRow.length === 0) {
-      $headerRow = $table.find('tr').has('th').first();
+      $headerRow = $table.find('tr').has('th').first() as cheerio.Cheerio<Element>;
     }
     // If still no specific header row found, try the first row if it has 'Player'
     if ($headerRow.length === 0) {
