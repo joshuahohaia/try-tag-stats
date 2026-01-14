@@ -16,7 +16,6 @@ import {
   ScrollArea,
   Container,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';

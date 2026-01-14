@@ -11,7 +11,6 @@ import {
   ScrollArea,
   Container,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconTrash } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useFavoriteTeams } from '../hooks/useFavorites';

@@ -15,55 +15,13 @@ import {
   ScrollArea,
   Box,
   Container,
-  Tooltip,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import type { FixtureWithTeams } from '@trytag/shared';
-
-// Helper to get last 5 form results for a team
-function getTeamForm(teamId: number, fixtures: FixtureWithTeams[] | undefined) {
-  if (!fixtures) return [];
-
-  // Get completed fixtures for this team, sorted by date desc
-  const teamFixtures = fixtures
-    .filter(f =>
-      f.status === 'completed' &&
-      f.homeScore !== null &&
-      f.awayScore !== null &&
-      (f.homeTeam.id === teamId || f.awayTeam.id === teamId)
-    )
-    .sort((a, b) => new Date(b.fixtureDate).getTime() - new Date(a.fixtureDate).getTime())
-    .slice(0, 5)
-    .reverse(); // Oldest on left, newest on right
-
-  return teamFixtures.map((fixture, idx) => {
-    const isHome = fixture.homeTeam.id === teamId;
-    const teamScore = isHome ? fixture.homeScore! : fixture.awayScore!;
-    const oppScore = isHome ? fixture.awayScore! : fixture.homeScore!;
-    const opponent = isHome ? fixture.awayTeam.name : fixture.homeTeam.name;
-
-    let result: 'W' | 'L' | 'D' = 'D';
-    let color = 'gray';
-
-    if (teamScore > oppScore) {
-      result = 'W';
-      color = 'green';
-    } else if (teamScore < oppScore) {
-      result = 'L';
-      color = 'red';
-    }
-
-    const isMostRecent = idx === teamFixtures.length - 1;
-
-    return { result, color, teamScore, oppScore, opponent, isMostRecent, fixtureId: fixture.id };
-  });
-}
 
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
@@ -228,7 +186,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                               <Table.Th>A</Table.Th>
                               <Table.Th>Dif</Table.Th>
                               <Table.Th>Pts</Table.Th>
-                              <Table.Th>Form</Table.Th>
                             </Table.Tr>
                           </Table.Thead>
                           <Table.Tbody>
@@ -266,31 +223,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                 <Table.Td>{standing.pointsAgainst}</Table.Td>
                                 <Table.Td>{standing.pointDifference}</Table.Td>
                                 <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
-                                <Table.Td>
-                                  <Group gap={3} wrap="nowrap">
-                                    {getTeamForm(standing.team.id, fixtures).map((f, idx) => (
-                                      <Tooltip
-                                        key={f.fixtureId || idx}
-                                        label={`${f.isMostRecent ? '(Latest) ' : ''}${f.result === 'W' ? 'Won' : f.result === 'L' ? 'Lost' : 'Drew'} ${f.teamScore}-${f.oppScore} vs ${f.opponent}`}
-                                        withArrow
-                                      >
-                                        <Badge
-                                          color={f.color}
-                                          variant="filled"
-                                          size="sm"
-                                          style={{
-                                            minWidth: 22,
-                                            cursor: 'default',
-                                            outline: f.isMostRecent ? '2px solid var(--mantine-color-dark-3)' : 'none',
-                                            outlineOffset: '1px',
-                                          }}
-                                        >
-                                          {f.result}
-                                        </Badge>
-                                      </Tooltip>
-                                    ))}
-                                  </Group>
-                                </Table.Td>
                               </Table.Tr>
                             ))}
                           </Table.Tbody>

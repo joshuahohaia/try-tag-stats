@@ -15,7 +15,6 @@ import {
   Container,
   Box,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconStarFilled, IconMapPin, IconCalendar } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';

@@ -16,7 +16,6 @@ import {
   Container,
   Tooltip,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useTeam } from '../hooks/useTeams';

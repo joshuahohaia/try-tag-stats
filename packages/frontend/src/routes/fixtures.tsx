@@ -2,18 +2,17 @@ import { createFileRoute } from '@tanstack/react-router';
 import {
   Title,
   Text,
-  Card,
   Stack,
-  Loader,
-  Center,
-  Badge,
+  Card,
   Group,
-  SegmentedControl,
-  Button,
-  ScrollArea,
+  Badge,
+  Center,
+  Loader,
   Container,
+  SegmentedControl,
+  ScrollArea,
+  Button,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
