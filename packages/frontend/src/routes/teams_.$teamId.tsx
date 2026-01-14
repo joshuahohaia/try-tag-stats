@@ -293,7 +293,7 @@ function TeamDetailPage() {
               leftSection={isFav ? <IconStarFilled size={18} /> : <IconStar size={18} />}
               onClick={() => toggleFavorite(teamProfile, teamProfile.standings?.[0]?.leagueId)}
             >
-              {isFav ? 'Favorited' : 'Add to Favorites'}
+              {isFav ? 'Favourited' : 'Add to Favourites'}
             </Button>
           </Group>
 

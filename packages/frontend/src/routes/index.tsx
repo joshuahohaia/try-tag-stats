@@ -365,15 +365,7 @@ function HomePage() {
                   >
                     View All Fixtures
                   </Button>
-                  <Button
-                    variant="light"
-                    fullWidth
-                    leftSection={<IconStar size={18} />}
-                    component={Link}
-                    to="/favorites"
-                  >
-                    Manage Favorites
-                  </Button>
+          <Button component={Link} to="/favorites">Manage Favourites</Button>
                 </Stack>
               </Card>
             )}

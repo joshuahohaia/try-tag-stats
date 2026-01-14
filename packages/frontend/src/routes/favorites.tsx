@@ -60,7 +60,7 @@ function FavoritesPage() {
       <Container size="xl" w="100%" p="md" flex={0}>
         <Stack gap="lg">
           <div>
-            <Title order={1} mb="xs">Favorites</Title>
+            <Title order={1} mb="xs">Favourites</Title>
             <Text c="dimmed">Manage your favorite teams</Text>
           </div>
         </Stack>
@@ -79,7 +79,7 @@ function FavoritesPage() {
               <Center py="xl">
                 <Stack align="center">
                   <IconStar size={48} color="var(--mantine-color-gray-5)" />
-                  <Title order={3}>No Favorites Yet</Title>
+                  <Title order={3}>No Favourites Yet</Title>
                   <Text c="dimmed" ta="center">
                     Browse leagues and click the star icon next to a team to add it to your favorites.
                   </Text>

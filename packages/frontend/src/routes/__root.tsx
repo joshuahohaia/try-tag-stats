@@ -64,7 +64,7 @@ function RootLayout() {
     { to: '/leagues', label: 'Leagues', icon: IconTrophy },
     { to: '/teams', label: 'Teams', icon: IconUsers },
     { to: '/fixtures', label: 'Fixtures', icon: IconCalendar },
-    { to: '/favorites', label: 'Favorites', icon: IconStar },
+    { to: '/favorites', label: 'Favourites', icon: IconStar },
   ];
 
   return (
