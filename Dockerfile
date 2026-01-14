@@ -9,8 +9,8 @@ COPY packages/shared/package*.json ./packages/shared/
 COPY packages/backend/package*.json ./packages/backend/
 COPY packages/frontend/package*.json ./packages/frontend/
 
-# Install dependencies (npm install handles optional deps better than npm ci)
-RUN npm install
+# Install dependencies and rollup platform binary for Alpine
+RUN npm install && npm install @rollup/rollup-linux-x64-musl
 
 # Copy source code
 COPY . .
