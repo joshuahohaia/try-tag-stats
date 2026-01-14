@@ -6,14 +6,16 @@ interface FavoriteTeam {
   id: number;
   externalTeamId: number;
   name: string;
+  leagueId?: number;
 }
 
 interface FavoritesStore {
   favorites: FavoriteTeam[];
-  addTeam: (team: Team) => void;
+  addTeam: (team: Team, leagueId?: number) => void;
   removeTeam: (teamId: number) => void;
   isFavorite: (teamId: number) => boolean;
-  toggleFavorite: (team: Team) => void;
+  toggleFavorite: (team: Team, leagueId?: number) => void;
+  hasTeamInLeague: (leagueId: number) => boolean;
 }
 
 const useFavoritesStore = create<FavoritesStore>()(
@@ -21,7 +23,7 @@ const useFavoritesStore = create<FavoritesStore>()(
     (set, get) => ({
       favorites: [],
 
-      addTeam: (team) => {
+      addTeam: (team, leagueId) => {
         const { favorites } = get();
         if (!favorites.some((t) => t.id === team.id)) {
           set({
@@ -29,7 +31,15 @@ const useFavoritesStore = create<FavoritesStore>()(
               id: team.id,
               externalTeamId: team.externalTeamId,
               name: team.name,
+              leagueId,
             }],
+          });
+        } else if (leagueId) {
+          // Update leagueId if team exists but didn't have one
+          set({
+            favorites: favorites.map((t) =>
+              t.id === team.id && !t.leagueId ? { ...t, leagueId } : t
+            ),
           });
         }
       },
@@ -44,13 +54,17 @@ const useFavoritesStore = create<FavoritesStore>()(
         return get().favorites.some((t) => t.id === teamId);
       },
 
-      toggleFavorite: (team) => {
+      toggleFavorite: (team, leagueId) => {
         const { isFavorite, addTeam, removeTeam } = get();
         if (isFavorite(team.id)) {
           removeTeam(team.id);
         } else {
-          addTeam(team);
+          addTeam(team, leagueId);
         }
+      },
+
+      hasTeamInLeague: (leagueId) => {
+        return get().favorites.some((t) => t.leagueId === leagueId);
       },
     }),
     {
@@ -65,6 +79,7 @@ export function useFavoriteTeams() {
   const removeTeam = useFavoritesStore((state) => state.removeTeam);
   const isFavorite = useFavoritesStore((state) => state.isFavorite);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+  const hasTeamInLeague = useFavoritesStore((state) => state.hasTeamInLeague);
 
   return {
     favorites,
@@ -72,5 +87,6 @@ export function useFavoriteTeams() {
     removeTeam,
     isFavorite,
     toggleFavorite,
+    hasTeamInLeague,
   };
 }

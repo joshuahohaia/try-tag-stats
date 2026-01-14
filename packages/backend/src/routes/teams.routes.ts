@@ -70,31 +70,38 @@ router.get('/:id', async (req, res) => {
       // If no recent fixtures from DB, use fixture history from scraped profile
       if (recentFixtures.length === 0 && profileData.fixtureHistory.length > 0) {
         // Transform scraped fixtures to match FixtureWithTeams format
-        recentFixtures = profileData.fixtureHistory.map((f, idx) => ({
-          id: -idx - 1, // Negative IDs to indicate these are from scraper
-          externalFixtureId: null,
-          divisionId: 0,
-          homeTeamId: f.homeTeamId,
-          awayTeamId: f.awayTeamId,
-          fixtureDate: f.date,
-          fixtureTime: f.time,
-          pitch: f.pitch,
-          roundNumber: null,
-          homeScore: f.homeScore,
-          awayScore: f.awayScore,
-          status: f.status,
-          isForfeit: false,
-          homeTeam: {
-            id: f.homeTeamId,
-            externalTeamId: f.homeTeamId,
-            name: f.homeTeamName,
-          },
-          awayTeam: {
-            id: f.awayTeamId,
-            externalTeamId: f.awayTeamId,
-            name: f.awayTeamName,
-          },
-        }));
+        // The scraped fixtures have homeTeamId as the team we're viewing
+        // We need to use the INTERNAL team.id so frontend comparisons work
+        recentFixtures = profileData.fixtureHistory.map((f, idx) => {
+          // Try to find the opponent team in DB by external ID
+          const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
+
+          return {
+            id: -idx - 1, // Negative IDs to indicate these are from scraper
+            externalFixtureId: null,
+            divisionId: 0,
+            homeTeamId: team.id, // Use internal ID
+            awayTeamId: opponentTeam?.id || f.awayTeamId,
+            fixtureDate: f.date,
+            fixtureTime: f.time,
+            pitch: f.pitch,
+            roundNumber: null,
+            homeScore: f.homeScore,
+            awayScore: f.awayScore,
+            status: f.status,
+            isForfeit: false,
+            homeTeam: {
+              id: team.id, // Use internal ID so frontend comparison works
+              externalTeamId: team.externalTeamId,
+              name: team.name, // Use actual team name from DB
+            },
+            awayTeam: {
+              id: opponentTeam?.id || f.awayTeamId,
+              externalTeamId: f.awayTeamId,
+              name: opponentTeam?.name || f.awayTeamName, // Use DB name if available
+            },
+          };
+        });
       }
     }
   }

@@ -113,7 +113,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   return (
     <Stack gap={0} h="100%" style={{ overflow: 'hidden' }}>
       {/* Sticky Header */}
-      <Box pb="sm" style={{ flexShrink: 0 }}>
+      <Box style={{ flexShrink: 0 }}>
         <Container size="xl" p="md">
           <Group justify="space-between" align="flex-start" mb="md">
             <div>
@@ -165,8 +165,8 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
          </Container>
       ) : (
         <ScrollArea flex={1} type="auto">
-          <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
-            <Box pt="md" pb="md">
+          <Container size="xl" px="md" pt="xs" pb={isMobile ? 80 : "md"}>
+            <Box pb="md">
               {activeTab === 'standings' && (
                 <>
                   {standingsLoading ? (
@@ -221,7 +221,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                   variant="subtle"
                                   size="xs"
                                   p={4}
-                                  onClick={() => toggleFavorite(standing.team)}
+                                  onClick={() => toggleFavorite(standing.team, leagueId)}
                                 >
                                   {isFavorite(standing.team.id) ? (
                                     <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />

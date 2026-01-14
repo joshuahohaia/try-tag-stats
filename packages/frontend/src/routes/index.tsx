@@ -75,10 +75,10 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
       {currentDivision && (
         <Stack gap="xs">
           <div>
-             <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}> 
-                <Text size="lg" fw={700} c="blue">{currentDivision.leagueName}</Text>
-             </Link>
-             <Text c="dimmed" size="sm">{currentDivision.name} • {currentDivision.seasonName}</Text>
+            <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Text size="lg" fw={700} c="blue">{currentDivision.leagueName}</Text>
+            </Link>
+            <Text c="dimmed" size="sm">{currentDivision.name} • {currentDivision.seasonName}</Text>
           </div>
 
           {standingsLoading ? (
@@ -178,8 +178,8 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
       {currentDivision && (
         <Stack gap="xs">
           <div>
-             <Text fw={600}>{currentDivision.leagueName}</Text>
-             <Text c="dimmed" size="xs">{currentDivision.name}</Text>
+            <Text fw={600}>{currentDivision.leagueName}</Text>
+            <Text c="dimmed" size="xs">{currentDivision.name}</Text>
           </div>
 
           {isLoading ? (
@@ -217,10 +217,10 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 function HomePage() {
   const { favorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
-  
+
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
-  
+
   // Fetch profiles for all favorites to find their active divisions
   const teamQueries = useQueries({
     queries: favoriteIds.map((id) => ({
@@ -235,7 +235,7 @@ function HomePage() {
   // Extract unique active divisions from loaded profiles
   const activeDivisions = useMemo(() => {
     const divisions = new Map<number, ActiveDivision>();
-    
+
     teamQueries.forEach((query) => {
       if (query.data && query.data.standings.length > 0) {
         // Assume first standing is current/active
@@ -255,10 +255,10 @@ function HomePage() {
   }, [teamQueries]);
 
   const isLoadingTeams = teamQueries.some(q => q.isLoading);
-  
+
   // If user has favorites, only fetch for those. Otherwise fetch global (top 5).
   const { data: upcomingFixtures, isLoading: fixturesLoading } = useUpcomingFixtures(
-    hasFavorites ? favoriteIds : undefined, 
+    hasFavorites ? favoriteIds : undefined,
     5
   );
 
@@ -266,7 +266,20 @@ function HomePage() {
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
         <Stack gap="xl" pb="md">
-
+          {!hasFavorites && (
+            <Card withBorder bg="green.0">
+              <Stack align="center">
+                <IconStar size={48} color="var(--mantine-color-green-6)" />
+                <Title order={3}>Get Started</Title>
+                <Text c="dimmed" ta="center">
+                  Browse leagues and add your favorite teams to track their fixtures and standings.
+                </Text>
+                <Button component={Link} to="/leagues">
+                  Browse Leagues
+                </Button>
+              </Stack>
+            </Card>
+          )}
           {hasFavorites && (
             <>
               {activeDivisions.length > 0 ? (
@@ -324,8 +337,8 @@ function HomePage() {
                 </Stack>
               ) : (
                 <Text c="dimmed">
-                  {hasFavorites 
-                    ? "No upcoming fixtures for your favorite teams." 
+                  {hasFavorites
+                    ? "No upcoming fixtures for your favorite teams."
                     : "No upcoming fixtures found."}
                 </Text>
               )}
@@ -404,21 +417,6 @@ function HomePage() {
                   </Card>
                 ))}
               </SimpleGrid>
-            </Card>
-          )}
-
-          {!hasFavorites && (
-            <Card withBorder bg="green.0">
-              <Stack align="center" py="xl">
-                <IconStar size={48} color="var(--mantine-color-green-6)" />
-                <Title order={3}>Get Started</Title>
-                <Text c="dimmed" ta="center">
-                  Browse leagues and add your favorite teams to track their fixtures and standings.
-                </Text>
-                <Button component={Link} to="/leagues">
-                  Browse Leagues
-                </Button>
-              </Stack>
             </Card>
           )}
         </Stack>

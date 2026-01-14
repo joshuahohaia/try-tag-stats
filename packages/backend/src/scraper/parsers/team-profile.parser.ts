@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 import type {
   ScrapedFixture,
   ScrapedPlayerAward,
@@ -306,32 +307,87 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
   // Parse player awards
   const playerAwards = parsePlayerAwards($, teamName, teamId);
 
-  // Parse fixture history from tables (keep existing logic)
+  // Parse fixture history from tables
   const fixtureHistory: ScrapedFixture[] = [];
 
-  $('table').each((_, table) => {
-    const $table = $(table);
-    const headerText = $table.find('th').text().toLowerCase();
+  const tables = $('table');
 
-    // Look for fixture/results table
-    if (!headerText.includes('date') && !headerText.includes('opposition') && !headerText.includes('result')) {
+  tables.each((_, table) => {
+    const $table = $(table);
+    const $rows = $table.find('tr');
+    const rowArray = $rows.toArray();
+
+    // Find the header row - it may not be the first row (there could be a title row first)
+    let headerRowIndex = -1;
+
+    for (let rowIdx = 0; rowIdx < rowArray.length; rowIdx++) {
+      const rowText = $(rowArray[rowIdx]).text().toLowerCase();
+
+      // Check if this row has both "date" and "opposition" - this is our header row
+      const hasDate = rowText.includes('date');
+      const hasOpposition = rowText.includes('opposition') || rowText.includes('opponent');
+
+      if (hasDate && hasOpposition) {
+        headerRowIndex = rowIdx;
+        break;
+      }
+    }
+
+    if (headerRowIndex === -1) {
       return;
     }
 
-    $table.find('tbody tr, tr').not(':has(th)').each((_, row) => {
+    const $headerRow = $(rowArray[headerRowIndex]);
+
+    // Find column indices
+    const $headerCells = $headerRow.find('th, td');
+    let dateCol = -1;
+    let timeCol = -1;
+    let courtCol = -1;
+    let oppCol = -1;
+    let resultCol = -1;
+
+    $headerCells.each((idx: number, cell: Element) => {
+      const cellText = $(cell).text().toLowerCase().trim();
+      if (cellText.includes('date')) dateCol = idx;
+      else if (cellText.includes('time')) timeCol = idx;
+      else if (cellText.includes('court') || cellText.includes('pitch')) courtCol = idx;
+      else if (cellText.includes('opposition') || cellText.includes('opponent')) oppCol = idx;
+      else if (cellText.includes('result') || cellText.includes('score')) resultCol = idx;
+    });
+
+    // Process data rows (all rows after the header row)
+    const dataRows = $rows.slice(headerRowIndex + 1);
+
+    dataRows.each((_, row) => {
       const $row = $(row);
-      const rowText = $row.text();
+      const $cells = $row.find('td');
+      const rowText = $row.text().toLowerCase();
 
-      // Skip bye weeks
-      if (rowText.toLowerCase().includes('bye')) return;
+      // Skip bye weeks, headers, or empty rows
+      if (rowText.includes('bye') || $cells.length < 3) {
+        return;
+      }
 
-      // Try to extract date
-      const dateMatch = rowText.match(/\d{1,2}\s+\w{3}\s+\d{4}/);
+      // Extract date
+      const dateText = dateCol >= 0 ? $cells.eq(dateCol).text().trim() : '';
+      const dateMatch = dateText.match(/\d{1,2}\s+\w{3}\s+\d{4}/);
       const date = dateMatch ? parseDate(dateMatch[0]) : null;
-      if (!date) return;
+      if (!date) {
+        return;
+      }
 
-      // Try to find opposition team
-      const $oppLink = $row.find('a[href*="TeamId"]');
+      // Extract time
+      const timeText = timeCol >= 0 ? $cells.eq(timeCol).text().trim() : null;
+      const time = timeText?.match(/\d{1,2}:\d{2}/) ? timeText.match(/\d{1,2}:\d{2}/)?.[0] || null : null;
+
+      // Extract pitch/court
+      const pitch = courtCol >= 0 ? $cells.eq(courtCol).text().trim() || null : null;
+
+      // Find opposition team from link
+      const $oppCell = oppCol >= 0 ? $cells.eq(oppCol) : $row;
+      const $oppLink = $oppCell.find('a[href*="TeamId"]');
+
       let oppTeamId = 0;
       let oppTeamName = '';
 
@@ -340,30 +396,34 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
         oppTeamName = $oppLink.text().trim();
       }
 
-      if (!oppTeamId || !oppTeamName) return;
+      if (!oppTeamId || !oppTeamName) {
+        return;
+      }
 
-      // Try to parse score like "8-10" or "8 - 10"
-      const scoreMatch = rowText.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
-      let homeScore: number | null = null;
-      let awayScore: number | null = null;
+      // Extract result/score - first number is team's score, second is opponent's
+      const resultText = resultCol >= 0 ? $cells.eq(resultCol).text().trim() : $row.text();
+      const scoreMatch = resultText.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+
+      let teamScore: number | null = null;
+      let oppScore: number | null = null;
       let status: FixtureStatus = 'scheduled';
 
       if (scoreMatch) {
-        homeScore = parseInt(scoreMatch[1], 10);
-        awayScore = parseInt(scoreMatch[2], 10);
+        teamScore = parseInt(scoreMatch[1], 10);
+        oppScore = parseInt(scoreMatch[2], 10);
         status = 'completed';
       }
 
       fixtureHistory.push({
         date,
-        time: null,
-        pitch: null,
+        time,
+        pitch,
         homeTeamId: teamId,
         homeTeamName: teamName,
         awayTeamId: oppTeamId,
         awayTeamName: oppTeamName,
-        homeScore,
-        awayScore,
+        homeScore: teamScore,
+        awayScore: oppScore,
         status,
       });
     });
