@@ -36,7 +36,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
   if (completedFixtures.length === 0) return null;
 
   return (
-    <Group gap={4}>
+    <Group gap={8}>
       {completedFixtures.map((fixture, idx) => {
         const isHome = fixture.homeTeam?.id === teamId;
         const teamScore = isHome ? fixture.homeScore : fixture.awayScore;
@@ -65,13 +65,14 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
             withArrow
           >
             <Badge
+              circle
               color={color}
               variant="filled"
               size="lg"
               style={{
                 minWidth: 28,
                 cursor: 'default',
-                outline: isMostRecent ? '2px solid var(--mantine-color-dark-3)' : 'none',
+                outline: isMostRecent ? '2px solid var(--mantine-color-brand-3)' : 'none',
                 outlineOffset: '2px',
               }}
             >
@@ -209,7 +210,7 @@ function StatsTable({ seasonStats }: { seasonStats: TeamSeasonStats[] }) {
   return (
     <Card withBorder>
       <Title order={3} mb="md">Statistics</Title>
-      <Table striped withTableBorder>
+      <Table withTableBorder>
         <Table.Thead>
           <Table.Tr>
             <Table.Th></Table.Th>
@@ -281,7 +282,7 @@ function TeamDetailPage() {
 
   return (
     <ScrollArea h="100%" type="auto">
-      <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+      <Container size="xl" p="md">
         <Stack gap="lg" pb="md">
           <Group justify="space-between" align="flex-start">
             <div>
@@ -317,7 +318,7 @@ function TeamDetailPage() {
                   params={{ leagueId: String(teamProfile.standings[0].leagueId) }}
                   style={{ textDecoration: 'none' }}
                 >
-                  <Badge variant="light" size="lg">
+                  <Badge variant="light" size="lg" style={{ cursor: 'pointer' }}>
                     {teamProfile.standings[0].leagueName} - {teamProfile.standings[0].divisionName}
                   </Badge>
                 </Link>
@@ -387,7 +388,7 @@ function TeamDetailPage() {
             <Card withBorder>
               <Title order={3} mb="md">Recent Results</Title>
               {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
-                <Table striped>
+                <Table>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Date</Table.Th>
@@ -425,16 +426,17 @@ function TeamDetailPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
-                              <Badge
+                              <Badge fullWidth
                                 color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
                                 variant="filled"
+
                               >
                                 {result} {teamScore !== null && `${teamScore}-${oppScore}`}
                               </Badge>
                             </Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
+                          </Table.Tr>
+                        );
+                      })}
                   </Table.Tbody>
                 </Table>
               ) : (

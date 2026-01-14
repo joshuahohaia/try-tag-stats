@@ -206,7 +206,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
         </Container>
       ) : (
         <ScrollArea flex={1} type="auto">
-          <Container size="xl" px="md" pt="xs" pb={isMobile ? 80 : "md"}>
+          <Container size="xl" px="md" pt="xs">
             <Box pb="md">
               {activeTab === 'standings' && (
                 <>
@@ -215,7 +215,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   ) : standings && standings.length > 0 ? (
                     <Card withBorder p={0}>
                       <ScrollArea type="auto">
-                        <Table striped highlightOnHover>
+                        <Table highlightOnHover>
                           <Table.Thead>
                             <Table.Tr>
                               <Table.Th>Pos</Table.Th>
@@ -244,7 +244,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     onClick={() => toggleFavorite(standing.team, leagueId)}
                                   >
                                     {isFavorite(standing.team.id) ? (
-                                      <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
+                                      <IconStarFilled size={16} style={{ color: 'var(--mantine-warning-6)' }} />
                                     ) : (
                                       <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
                                     )}
@@ -362,7 +362,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   ) : statistics && statistics.length > 0 ? (
                     <Card withBorder>
                       <Title order={3} mb="md">Player of the Match Awards</Title>
-                      <Table striped highlightOnHover>
+                      <Table highlightOnHover>
                         <Table.Thead>
                           <Table.Tr>
                             <Table.Th>Player</Table.Th>

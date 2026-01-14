@@ -89,10 +89,11 @@ function LeaguesPage() {
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
       <Container size="xl" w="100%" p="md" flex={0}>
-        <Stack gap="lg">
+        <Stack >
           <div>
             <Title order={1} mb="xs">Leagues</Title>
             <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>
+
           </div>
 
           <Group>
@@ -101,7 +102,7 @@ function LeaguesPage() {
               leftSection={<IconSearch size={16} />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ flex: 1, maxWidth: 300 }}
+              style={{ flex: 1, maxWidth: 350 }}
             />
             <Select
               placeholder="Filter by region"
@@ -109,14 +110,14 @@ function LeaguesPage() {
               value={regionFilter}
               onChange={setRegionFilter}
               clearable
-              style={{ width: 200 }}
+              style={{ width: 150 }}
             />
           </Group>
         </Stack>
       </Container>
 
       <ScrollArea flex={1} type="auto">
-        <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+        <Container size="xl" p="md">
           {filteredLeagues.length === 0 ? (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
@@ -164,7 +165,7 @@ function LeaguesPage() {
                             {hasFavorite && (
                               <IconStarFilled
                                 size={20}
-                                style={{ color: 'var(--mantine-color-yellow-5)', flexShrink: 0 }}
+                                style={{ color: 'var(--mantine-color-warning-5)', flexShrink: 0 }}
                               />
                             )}
                           </Group>

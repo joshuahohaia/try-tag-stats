@@ -84,7 +84,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
           {standingsLoading ? (
             <Center h={150}><Loader size="sm" /></Center>
           ) : (
-            <Table striped highlightOnHover withTableBorder>
+            <Table highlightOnHover withTableBorder>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
@@ -103,7 +103,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                 {standings?.map((row) => {
                   const isFavorite = favoriteIds.includes(row.teamId);
                   return (
-                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-brand-0)' : undefined}>
+                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-warning-0)' : undefined}>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
                         <Link
@@ -112,7 +112,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                           style={{ color: 'inherit', textDecoration: 'none' }}
                         >
                           <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
-                            {row.team.name} {isFavorite && '⭐'}
+                            {row.team.name}
                           </Text>
                         </Link>
                       </Table.Td>
@@ -157,7 +157,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
   return (
     <Card withBorder>
       <Group justify="space-between" mb="md">
-        <Title order={3}>Top Players</Title>
+        <Title order={3}>Player of Match Leaders</Title>
         {divisions.length > 1 && (
           <Group gap="xs">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
@@ -179,11 +179,17 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
           {isLoading ? (
             <Center h={150}><Loader size="sm" /></Center>
           ) : stats && stats.length > 0 ? (
-            <Stack gap="sm">
-              {stats.slice(0, 5).map((stat) => (
-                <Group key={stat.id} justify="space-between" wrap="nowrap">
+            /* SimpleGrid creates the two-column layout automatically */
+            <SimpleGrid cols={2} spacing="xl" verticalSpacing="sm">
+              {stats.slice(0, 10).map((stat) => (
+                <Group key={stat.id} wrap="nowrap">
+                  <Group gap={4} wrap="nowrap">
+                    <IconAward size={16} color="gold" />
+                    <Text fw={700}>{stat.awardCount}</Text>
+                  </Group>
+
                   <Stack gap={0} style={{ overflow: 'hidden' }}>
-                    <Text fw={500} truncate>{stat.player.name}</Text>
+                    <Text fw={500} size="sm" truncate>{stat.player.name}</Text>
                     <Link
                       to="/teams/$teamId"
                       params={{ teamId: String(stat.team.id) }}
@@ -192,13 +198,9 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
                       <Text size="xs" c="blue" truncate>{stat.team.name}</Text>
                     </Link>
                   </Stack>
-                  <Group gap={4} wrap="nowrap">
-                    <IconAward size={16} color="gold" />
-                    <Text fw={700}>{stat.awardCount}</Text>
-                  </Group>
                 </Group>
               ))}
-            </Stack>
+            </SimpleGrid>
           ) : (
             <Text c="dimmed" size="sm">No stats available</Text>
           )}
@@ -258,12 +260,12 @@ function HomePage() {
 
   return (
     <ScrollArea h="100%" type="auto">
-      <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
-        <Stack gap="xl" pb="md">
+      <Container size="xl" p="md">
+        <Stack gap="lg">
           {!hasFavorites && (
             <Card withBorder bg="green.0">
               <Stack align="center">
-                <IconStar size={48} color="var(--mantine-color-green-6)" />
+                <IconStar size={48} color="var(--mantine-color-success-6)" />
                 <Title order={3}>Get Started</Title>
                 <Text c="dimmed" ta="center">
                   Browse leagues and add your favorite teams to track their fixtures and standings.

@@ -18,7 +18,7 @@ import { useFavoriteTeams } from '../hooks/useFavorites';
 
 function FavoriteTeamCard({ team }: { team: { id: number, name: string } }) {
   const { removeTeam } = useFavoriteTeams();
-  
+
   return (
     <Card withBorder padding="md">
       <Group justify="space-between">
@@ -69,7 +69,7 @@ function FavoritesPage() {
       </Container>
 
       <ScrollArea flex={1} type="auto">
-        <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+        <Container size="xl" p="md" >
           {favorites.length > 0 ? (
             <Stack gap="sm">
               {favorites.map((team) => (

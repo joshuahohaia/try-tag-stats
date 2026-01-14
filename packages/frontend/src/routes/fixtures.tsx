@@ -23,18 +23,18 @@ function FixturesPage() {
   const [view, setView] = useState('upcoming');
   const { favorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
-  
+
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
 
   // Only fetch if we have favorites
   const { data: upcomingFixtures, isLoading: upcomingLoading } = useUpcomingFixtures(
-    hasFavorites ? favoriteIds : [], 
+    hasFavorites ? favoriteIds : [],
     50
   );
-  
+
   const { data: recentFixtures, isLoading: recentLoading } = useRecentFixtures(
-    hasFavorites ? favoriteIds : [], 
+    hasFavorites ? favoriteIds : [],
     50
   );
 
@@ -63,13 +63,13 @@ function FixturesPage() {
       </Container>
 
       <ScrollArea flex={1} type="auto">
-        <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
+        <Container size="xl" p="md" >
           {!hasFavorites ? (
             <Card withBorder>
-                <Stack align="center" py="xl">
-                  <Text c="dimmed">You haven't added any favorite teams yet.</Text>
-                  <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
-                </Stack>
+              <Stack align="center" py="xl">
+                <Text c="dimmed">You haven't added any favorite teams yet.</Text>
+                <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
+              </Stack>
             </Card>
           ) : isLoading ? (
             <Center h={200}>
@@ -103,7 +103,7 @@ function FixturesPage() {
                     </Stack>
                     <Stack align="flex-end" gap={4}>
                       {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                        <Badge size="xl" variant="filled" color="green">
+                        <Badge size="xl" variant="filled" color="var(--mantine-color-success-6)">
                           {fixture.homeScore} - {fixture.awayScore}
                         </Badge>
                       ) : (
