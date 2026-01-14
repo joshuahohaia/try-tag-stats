@@ -65,12 +65,12 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   // Set default division
   useEffect(() => {
     if (divisions && divisions.length > 0) {
-       // Try to keep the same division selection if switching seasons, otherwise default to first
-       // For now just default to first if not set or invalid
-       const exists = divisions.some(d => String(d.id) === selectedDivisionId);
-       if (!selectedDivisionId || !exists) {
-         setSelectedDivisionId(String(divisions[0].id));
-       }
+      // Try to keep the same division selection if switching seasons, otherwise default to first
+      // For now just default to first if not set or invalid
+      const exists = divisions.some(d => String(d.id) === selectedDivisionId);
+      if (!selectedDivisionId || !exists) {
+        setSelectedDivisionId(String(divisions[0].id));
+      }
     } else if (divisions && divisions.length === 0) {
       setSelectedDivisionId(null);
     }
@@ -156,13 +156,13 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
       {/* Scrollable Content */}
       {!selectedDivisionId ? (
-         <Container size="xl" p="md">
+        <Container size="xl" p="md">
           <Card withBorder>
             <Text c="dimmed" ta="center" py="xl">
               {divisionsLoading ? 'Loading divisions...' : 'No divisions found for this season.'}
             </Text>
           </Card>
-         </Container>
+        </Container>
       ) : (
         <ScrollArea flex={1} type="auto">
           <Container size="xl" px="md" pt="xs" pb={isMobile ? 80 : "md"}>
@@ -177,6 +177,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                         <Table.Thead>
                           <Table.Tr>
                             <Table.Th>Pos</Table.Th>
+                            <Table.Th></Table.Th>
                             <Table.Th>Team</Table.Th>
                             <Table.Th>Pld</Table.Th>
                             <Table.Th>W</Table.Th>
@@ -197,6 +198,20 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                             <Table.Tr key={standing.id}>
                               <Table.Td fw={600}>{standing.position}</Table.Td>
                               <Table.Td>
+                                <Button
+                                  variant="subtle"
+                                  size="xs"
+                                  p={4}
+                                  onClick={() => toggleFavorite(standing.team, leagueId)}
+                                >
+                                  {isFavorite(standing.team.id) ? (
+                                    <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
+                                  ) : (
+                                    <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
+                                  )}
+                                </Button>
+                              </Table.Td>
+                              <Table.Td>
                                 <Link
                                   to="/teams/$teamId"
                                   params={{ teamId: String(standing.team.id) }}
@@ -216,20 +231,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                               <Table.Td>{standing.pointDifference}</Table.Td>
                               <Table.Td>{standing.bonusPoints}</Table.Td>
                               <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
-                              <Table.Td>
-                                <Button
-                                  variant="subtle"
-                                  size="xs"
-                                  p={4}
-                                  onClick={() => toggleFavorite(standing.team, leagueId)}
-                                >
-                                  {isFavorite(standing.team.id) ? (
-                                    <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
-                                  ) : (
-                                    <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
-                                  )}
-                                </Button>
-                              </Table.Td>
                             </Table.Tr>
                           ))}
                         </Table.Tbody>
