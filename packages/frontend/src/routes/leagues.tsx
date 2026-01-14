@@ -51,7 +51,6 @@ function getRegionColor(regionName: string): string {
 function LeaguesPage() {
   const [search, setSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const { data: leagues, isLoading: leaguesLoading } = useLeagues();
   const { data: regions, isLoading: regionsLoading } = useRegions();

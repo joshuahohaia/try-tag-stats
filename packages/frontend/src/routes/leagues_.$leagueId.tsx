@@ -78,7 +78,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
   const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);

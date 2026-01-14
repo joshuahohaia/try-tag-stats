@@ -212,7 +212,6 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;

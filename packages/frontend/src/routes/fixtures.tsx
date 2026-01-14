@@ -22,7 +22,6 @@ import { useFavoriteTeams } from '../hooks/useFavorites';
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
   const { favorites } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;

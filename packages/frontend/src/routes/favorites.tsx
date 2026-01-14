@@ -55,7 +55,6 @@ function FavoriteTeamCard({ team }: { team: { id: number, name: string } }) {
 
 function FavoritesPage() {
   const { favorites } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>

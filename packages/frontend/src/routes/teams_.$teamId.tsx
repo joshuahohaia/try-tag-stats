@@ -260,7 +260,6 @@ function TeamDetailPage() {
   const { teamId } = Route.useParams();
   const { data: teamProfile, isLoading } = useTeam(parseInt(teamId, 10));
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   if (isLoading) {
     return (
