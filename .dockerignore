@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Build outputs (will be rebuilt)
+packages/*/dist
+
+# Development files
+.env
+.env.local
+*.log
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data (handled by volume)
+data/
+*.db

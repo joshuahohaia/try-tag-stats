@@ -42,6 +42,37 @@ This is a monorepo managed with npm workspaces:
    npm run dev
    ```
 
+## Database & Data Synchronization
+
+The project uses SQLite with `better-sqlite3`. The database file location is configured in the backend environment variables (defaults to `packages/backend/data/trytag.db`).
+
+### Initialization
+The database schema is automatically initialized when the backend server starts for the first time.
+
+### Data Synchronization
+The application populates its database by scraping the Try Tag Rugby website.
+
+#### Automatic Sync
+The backend is designed to handle synchronization via internal triggers and API endpoints.
+
+#### Manual Sync (via API)
+You can trigger a full data synchronization by sending a POST request to the admin endpoint (no authentication currently implemented for development):
+
+```bash
+# Trigger a full sync of all regions, leagues, and current standings
+curl -X POST http://localhost:3000/api/v1/admin/sync/full
+```
+
+You can check the status of the synchronization:
+
+```bash
+# Get the status of the last or current sync
+curl http://localhost:3000/api/v1/admin/sync/status
+```
+
+#### Team Profiles
+Detailed team statistics and position history are fetched on-demand when a specific team profile is viewed and then cached in the database.
+
 ## Development Scripts
 
 From the root directory, you can run:
