@@ -93,12 +93,9 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>W</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>L</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>D</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>FF</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>FA</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>F</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>A</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Dif</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>B</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pts</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -123,12 +120,9 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.wins}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.losses}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.draws}</Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.forfeitsFor}</Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.forfeitsAgainst}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointsFor}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointsAgainst}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.pointDifference}</Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.bonusPoints}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={700}>{row.totalPoints}</Table.Td>
                     </Table.Tr>
                   );

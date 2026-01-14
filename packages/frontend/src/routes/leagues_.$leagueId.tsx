@@ -15,6 +15,7 @@ import {
   ScrollArea,
   Box,
   Container,
+  Tooltip,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
@@ -23,6 +24,46 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import type { FixtureWithTeams } from '@trytag/shared';
+
+// Helper to get last 5 form results for a team
+function getTeamForm(teamId: number, fixtures: FixtureWithTeams[] | undefined) {
+  if (!fixtures) return [];
+
+  // Get completed fixtures for this team, sorted by date desc
+  const teamFixtures = fixtures
+    .filter(f =>
+      f.status === 'completed' &&
+      f.homeScore !== null &&
+      f.awayScore !== null &&
+      (f.homeTeam.id === teamId || f.awayTeam.id === teamId)
+    )
+    .sort((a, b) => new Date(b.fixtureDate).getTime() - new Date(a.fixtureDate).getTime())
+    .slice(0, 5)
+    .reverse(); // Oldest on left, newest on right
+
+  return teamFixtures.map((fixture, idx) => {
+    const isHome = fixture.homeTeam.id === teamId;
+    const teamScore = isHome ? fixture.homeScore! : fixture.awayScore!;
+    const oppScore = isHome ? fixture.awayScore! : fixture.homeScore!;
+    const opponent = isHome ? fixture.awayTeam.name : fixture.homeTeam.name;
+
+    let result: 'W' | 'L' | 'D' = 'D';
+    let color = 'gray';
+
+    if (teamScore > oppScore) {
+      result = 'W';
+      color = 'green';
+    } else if (teamScore < oppScore) {
+      result = 'L';
+      color = 'red';
+    }
+
+    const isMostRecent = idx === teamFixtures.length - 1;
+
+    return { result, color, teamScore, oppScore, opponent, isMostRecent, fixtureId: fixture.id };
+  });
+}
 
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
@@ -172,69 +213,90 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   {standingsLoading ? (
                     <Center h={200}><Loader /></Center>
                   ) : standings && standings.length > 0 ? (
-                    <Card withBorder>
-                      <Table striped highlightOnHover>
-                        <Table.Thead>
-                          <Table.Tr>
-                            <Table.Th>Pos</Table.Th>
-                            <Table.Th></Table.Th>
-                            <Table.Th>Team</Table.Th>
-                            <Table.Th>Pld</Table.Th>
-                            <Table.Th>W</Table.Th>
-                            <Table.Th>L</Table.Th>
-                            <Table.Th>D</Table.Th>
-                            <Table.Th>FF</Table.Th>
-                            <Table.Th>FA</Table.Th>
-                            <Table.Th>F</Table.Th>
-                            <Table.Th>A</Table.Th>
-                            <Table.Th>Dif</Table.Th>
-                            <Table.Th>B</Table.Th>
-                            <Table.Th>Pts</Table.Th>
-                            <Table.Th></Table.Th>
-                          </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                          {standings.map((standing) => (
-                            <Table.Tr key={standing.id}>
-                              <Table.Td fw={600}>{standing.position}</Table.Td>
-                              <Table.Td>
-                                <Button
-                                  variant="subtle"
-                                  size="xs"
-                                  p={4}
-                                  onClick={() => toggleFavorite(standing.team, leagueId)}
-                                >
-                                  {isFavorite(standing.team.id) ? (
-                                    <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
-                                  ) : (
-                                    <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
-                                  )}
-                                </Button>
-                              </Table.Td>
-                              <Table.Td>
-                                <Link
-                                  to="/teams/$teamId"
-                                  params={{ teamId: String(standing.team.id) }}
-                                  style={{ color: 'inherit', textDecoration: 'none' }}
-                                >
-                                  <Text span fw={500} c="blue">{standing.team.name}</Text>
-                                </Link>
-                              </Table.Td>
-                              <Table.Td>{standing.played}</Table.Td>
-                              <Table.Td>{standing.wins}</Table.Td>
-                              <Table.Td>{standing.losses}</Table.Td>
-                              <Table.Td>{standing.draws}</Table.Td>
-                              <Table.Td>{standing.forfeitsFor}</Table.Td>
-                              <Table.Td>{standing.forfeitsAgainst}</Table.Td>
-                              <Table.Td>{standing.pointsFor}</Table.Td>
-                              <Table.Td>{standing.pointsAgainst}</Table.Td>
-                              <Table.Td>{standing.pointDifference}</Table.Td>
-                              <Table.Td>{standing.bonusPoints}</Table.Td>
-                              <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
+                    <Card withBorder p={0}>
+                      <ScrollArea type="auto">
+                        <Table striped highlightOnHover>
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>Pos</Table.Th>
+                              <Table.Th></Table.Th>
+                              <Table.Th>Team</Table.Th>
+                              <Table.Th>Pld</Table.Th>
+                              <Table.Th>W</Table.Th>
+                              <Table.Th>L</Table.Th>
+                              <Table.Th>D</Table.Th>
+                              <Table.Th>F</Table.Th>
+                              <Table.Th>A</Table.Th>
+                              <Table.Th>Dif</Table.Th>
+                              <Table.Th>Pts</Table.Th>
+                              <Table.Th>Form</Table.Th>
                             </Table.Tr>
-                          ))}
-                        </Table.Tbody>
-                      </Table>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {standings.map((standing) => (
+                              <Table.Tr key={standing.id}>
+                                <Table.Td fw={600}>{standing.position}</Table.Td>
+                                <Table.Td>
+                                  <Button
+                                    variant="subtle"
+                                    size="xs"
+                                    p={4}
+                                    onClick={() => toggleFavorite(standing.team, leagueId)}
+                                  >
+                                    {isFavorite(standing.team.id) ? (
+                                      <IconStarFilled size={16} style={{ color: 'var(--mantine-color-yellow-6)' }} />
+                                    ) : (
+                                      <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
+                                    )}
+                                  </Button>
+                                </Table.Td>
+                                <Table.Td>
+                                  <Link
+                                    to="/teams/$teamId"
+                                    params={{ teamId: String(standing.team.id) }}
+                                    style={{ color: 'inherit', textDecoration: 'none' }}
+                                  >
+                                    <Text span fw={500} c="blue">{standing.team.name}</Text>
+                                  </Link>
+                                </Table.Td>
+                                <Table.Td>{standing.played}</Table.Td>
+                                <Table.Td>{standing.wins}</Table.Td>
+                                <Table.Td>{standing.losses}</Table.Td>
+                                <Table.Td>{standing.draws}</Table.Td>
+                                <Table.Td>{standing.pointsFor}</Table.Td>
+                                <Table.Td>{standing.pointsAgainst}</Table.Td>
+                                <Table.Td>{standing.pointDifference}</Table.Td>
+                                <Table.Td fw={600}>{standing.totalPoints}</Table.Td>
+                                <Table.Td>
+                                  <Group gap={3} wrap="nowrap">
+                                    {getTeamForm(standing.team.id, fixtures).map((f, idx) => (
+                                      <Tooltip
+                                        key={f.fixtureId || idx}
+                                        label={`${f.isMostRecent ? '(Latest) ' : ''}${f.result === 'W' ? 'Won' : f.result === 'L' ? 'Lost' : 'Drew'} ${f.teamScore}-${f.oppScore} vs ${f.opponent}`}
+                                        withArrow
+                                      >
+                                        <Badge
+                                          color={f.color}
+                                          variant="filled"
+                                          size="sm"
+                                          style={{
+                                            minWidth: 22,
+                                            cursor: 'default',
+                                            outline: f.isMostRecent ? '2px solid var(--mantine-color-dark-3)' : 'none',
+                                            outlineOffset: '1px',
+                                          }}
+                                        >
+                                          {f.result}
+                                        </Badge>
+                                      </Tooltip>
+                                    ))}
+                                  </Group>
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </ScrollArea>
                     </Card>
                   ) : (
                     <Text c="dimmed">No standings data available</Text>

@@ -27,10 +27,11 @@ import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
 function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId: number }) {
   if (!fixtures || fixtures.length === 0) return null;
 
-  // Get last 5 completed fixtures, most recent first
+  // Get last 5 completed fixtures, most recent first, then reverse for display (oldest left, newest right)
   const completedFixtures = fixtures
     .filter(f => f.status === 'completed' && f.homeScore !== null && f.awayScore !== null)
-    .slice(0, 5);
+    .slice(0, 5)
+    .reverse(); // Reverse so oldest is on left, newest on right
 
   if (completedFixtures.length === 0) return null;
 
@@ -55,17 +56,24 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
           }
         }
 
+        const isMostRecent = idx === completedFixtures.length - 1; // Last item is most recent
+
         return (
           <Tooltip
             key={fixture.id || idx}
-            label={`${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'} ${teamScore}-${oppScore} vs ${opponent}`}
+            label={`${isMostRecent ? '(Latest) ' : ''}${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'} ${teamScore}-${oppScore} vs ${opponent}`}
             withArrow
           >
             <Badge
               color={color}
               variant="filled"
               size="lg"
-              style={{ minWidth: 28, cursor: 'default' }}
+              style={{
+                minWidth: 28,
+                cursor: 'default',
+                outline: isMostRecent ? '2px solid var(--mantine-color-dark-3)' : 'none',
+                outlineOffset: '2px',
+              }}
             >
               {result}
             </Badge>
