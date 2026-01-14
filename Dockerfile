@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Cache bust argument - change value to force rebuild
+ARG CACHE_BUST=2
+
 WORKDIR /app
 
 # Copy package files
@@ -10,7 +13,8 @@ COPY packages/backend/package*.json ./packages/backend/
 COPY packages/frontend/package*.json ./packages/frontend/
 
 # Install dependencies and rollup platform binary for Alpine
-RUN npm install && npm install @rollup/rollup-linux-x64-musl
+# CACHE_BUST reference forces layer rebuild when ARG changes
+RUN echo "Cache bust: $CACHE_BUST" && npm install && npm install @rollup/rollup-linux-x64-musl
 
 # Copy source code
 COPY . .
