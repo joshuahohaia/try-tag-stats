@@ -9,13 +9,16 @@ COPY packages/shared/package*.json ./packages/shared/
 COPY packages/backend/package*.json ./packages/backend/
 COPY packages/frontend/package*.json ./packages/frontend/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (with rebuild to fix optional native deps on Alpine)
+RUN npm ci && npm rebuild
 
 # Copy source code
 COPY . .
 
-# Run tests
+# Build shared package first (required for typecheck and tests)
+RUN npm run build:shared
+
+# Run tests (after shared is built so imports resolve)
 RUN npm run test
 
 # Build all packages
