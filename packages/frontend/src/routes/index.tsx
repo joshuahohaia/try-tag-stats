@@ -305,37 +305,55 @@ function HomePage() {
               ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
                 <Stack gap="xs">
                   {upcomingFixtures.map((fixture) => (
-                    <Card key={fixture.id} withBorder padding="xs">
-                      <Group justify="space-between">
-                        <div>
-                          <Group gap={4}>
-                            <Link
-                              to="/teams/$teamId"
-                              params={{ teamId: String(fixture.homeTeam.id) }}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                            </Link>
-                            <Text size="sm" fw={500}>vs</Text>
-                            <Link
-                              to="/teams/$teamId"
-                              params={{ teamId: String(fixture.awayTeam.id) }}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                            </Link>
-                          </Group>
-                          <Stack gap={0}>
-                            <Text size="xs" c="dimmed">
-                              {formatDate(fixture.fixtureDate)}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {formatTime(fixture.fixtureTime)}
-                            </Text>
-                          </Stack>
-                        </div>
-                        <Badge variant="light">{fixture.status}</Badge>
-                      </Group>
+                    <Card
+                      key={fixture.id}
+                      withBorder
+                      padding="xs"
+                      style={{ position: 'relative' }} // Required for absolute child positioning
+                    >
+                      {/* Absolute Anchored Badge */}
+                      <Badge
+                        variant="light"
+                        size="xs"
+                        style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px'
+                        }}
+                      >
+                        {fixture.status}
+                      </Badge>
+
+                      <div>
+                        <Group gap={4} mb={4} pr={60}> {/* Added padding-right to avoid overlapping text with the badge */}
+                          <Link
+                            to="/teams/$teamId"
+                            params={{ teamId: String(fixture.homeTeam.id) }}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                          >
+                            <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                          </Link>
+
+                          <Text size="sm" fw={500}>vs</Text>
+
+                          <Link
+                            to="/teams/$teamId"
+                            params={{ teamId: String(fixture.awayTeam.id) }}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                          >
+                            <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                          </Link>
+                        </Group>
+
+                        <Stack gap={0}>
+                          <Text size="xs" c="dimmed">
+                            {formatDate(fixture.fixtureDate)}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {formatTime(fixture.fixtureTime)}
+                          </Text>
+                        </Stack>
+                      </div>
                     </Card>
                   ))}
                 </Stack>

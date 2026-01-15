@@ -64,7 +64,7 @@ function TeamsPage() {
               <Center py="xl">
                 <Stack align="center">
                   <Text c="dimmed" ta="center">
-                    You haven't added anyfavouriteteams yet.
+                    You haven't added any favourite teams yet.
                   </Text>
                   <Text c="dimmed" ta="center" size="sm">
                     Browse leagues and click the star icon next to a team to add it to your favorites.
@@ -78,7 +78,7 @@ function TeamsPage() {
 
       <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
-          Showing {filteredFavorites.length} of {favorites.length}favouriteteams
+          Showing {filteredFavorites.length} of {favorites.length} favourite teams
         </Text>
       </Container>
     </Stack>

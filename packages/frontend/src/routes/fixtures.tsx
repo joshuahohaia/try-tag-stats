@@ -66,7 +66,7 @@ function FixturesPage() {
           {!hasFavorites ? (
             <Card withBorder>
               <Stack align="center" py="xl">
-                <Text c="dimmed">You haven't added anyfavouriteteams yet.</Text>
+                <Text c="dimmed">You haven't added any favourite teams yet.</Text>
                 <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
               </Stack>
             </Card>
@@ -96,44 +96,70 @@ function FixturesPage() {
                 }
 
                 return (
-                  <Card key={fixture.id} withBorder padding="md">
+                  <Card
+                    key={fixture.id}
+                    withBorder
+                    padding="md"
+                    style={{ position: 'relative' }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: 'var(--mantine-spacing-md)',
+                      right: 'var(--mantine-spacing-md)'
+                    }}>
+                      {fixture.status === 'completed' && fixture.homeScore !== null ? (
+                        <Badge size="lg" variant="filled" color={resultColor}>
+                          {fixture.homeScore} - {fixture.awayScore}
+                        </Badge>
+                      ) : (
+                        <Badge size="lg" variant="light">{fixture.status}</Badge>
+                      )}
+                    </div>
+
                     <Group justify="space-between" align="flex-start">
-                      <Stack gap={4}>
+                      <Stack gap={4} style={{ flex: 1, paddingRight: '120px' }}>
                         <Link
                           to="/teams/$teamId"
                           params={{ teamId: String(fixture.homeTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
+                          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                         >
-                          <Text fw={600} size="lg" c="blue">
+                          <Text
+                            fw={600}
+                            size="lg"
+                            c="blue"
+                            lineClamp={1}
+                            style={{ wordBreak: 'break-word' }}
+                          >
                             {fixture.homeTeam.name}
                           </Text>
                         </Link>
+
                         <Text c="dimmed" size="sm">vs</Text>
+
                         <Link
                           to="/teams/$teamId"
                           params={{ teamId: String(fixture.awayTeam.id) }}
                           style={{ textDecoration: 'none', color: 'inherit' }}
                         >
-                          <Text fw={600} size="lg" c="blue">
+                          <Text fw={600}
+                            size="lg"
+                            c="blue"
+                            lineClamp={1}
+                            style={{ wordBreak: 'break-word' }}>
                             {fixture.awayTeam.name}
                           </Text>
                         </Link>
-                      </Stack>
-                      <Stack align="flex-end" gap={4}>
-                        {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                          <Badge fullWidth size="xl" variant="filled" color={resultColor}>
-                            {fixture.homeScore} - {fixture.awayScore}
-                          </Badge>
-                        ) : (
-                          <Badge size="lg" variant="light">{fixture.status}</Badge>
-                        )}
-                        <Text size="sm" c="dimmed">
-                          {formatDate(fixture.fixtureDate)}
-                          {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
-                        </Text>
-                        {fixture.pitch && (
-                          <Text size="xs" c="dimmed">{fixture.pitch}</Text>
-                        )}
+
+                        {/* Date/Time and Pitch moved here to keep them clear of the badge area */}
+                        <Stack gap={0} mt="xs">
+                          <Text size="sm" c="dimmed">
+                            {formatDate(fixture.fixtureDate)}
+                            {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
+                          </Text>
+                          {fixture.pitch && (
+                            <Text size="xs" c="dimmed">{fixture.pitch}</Text>
+                          )}
+                        </Stack>
                       </Stack>
                     </Group>
                   </Card>
