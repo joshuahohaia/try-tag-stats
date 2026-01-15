@@ -20,6 +20,7 @@ import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-r
 import { Link } from '@tanstack/react-router';
 import { useTeam } from '../hooks/useTeams';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import { formatTime } from '../utils/format';
 import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
 
 // Form component showing last 5 results as W/L/D badges
@@ -281,7 +282,7 @@ function TeamDetailPage() {
   return (
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md">
-        <Stack gap="lg" pb="md">
+        <Stack gap="md">
           <Group justify="space-between" align="flex-start">
             <div>
               <Title order={1} mb="xs">{teamProfile.name}</Title>
@@ -409,7 +410,12 @@ function TeamDetailPage() {
 
                         return (
                           <Table.Tr key={fixture.id || idx}>
-                            <Table.Td>{fixture.fixtureDate}</Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{fixture.fixtureDate}</Text>
+                              {fixture.fixtureTime && (
+                                <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
+                              )}
+                            </Table.Td>
                             <Table.Td>
                               {opponent?.id && opponent.id > 0 ? (
                                 <Link
@@ -424,10 +430,9 @@ function TeamDetailPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
-                              <Badge fullWidth
+                              <Badge
                                 color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
                                 variant="filled"
-
                               >
                                 {result} {teamScore !== null && `${teamScore}-${oppScore}`}
                               </Badge>
@@ -455,7 +460,7 @@ function TeamDetailPage() {
                             {fixture.homeTeam?.name || 'TBD'} vs {fixture.awayTeam?.name || 'TBD'}
                           </Text>
                           <Text size="sm" c="dimmed">
-                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
+                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${formatTime(fixture.fixtureTime)}`}
                           </Text>
                         </div>
                         <Badge variant="light">{fixture.status}</Badge>

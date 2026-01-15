@@ -75,7 +75,7 @@ export const fixtureRepository = {
         INNER JOIN teams ht ON f.home_team_id = ht.id
         INNER JOIN teams at ON f.away_team_id = at.id
         WHERE f.division_id = ?
-        ORDER BY f.fixture_date, f.fixture_time
+        ORDER BY f.fixture_date, f.fixture_time IS NULL, f.fixture_time
       `
       )
       .all(divisionId) as FixtureWithTeamsRow[];
@@ -94,7 +94,7 @@ export const fixtureRepository = {
         INNER JOIN teams ht ON f.home_team_id = ht.id
         INNER JOIN teams at ON f.away_team_id = at.id
         WHERE f.home_team_id = ? OR f.away_team_id = ?
-        ORDER BY f.fixture_date DESC, f.fixture_time DESC
+        ORDER BY f.fixture_date DESC, f.fixture_time IS NULL, f.fixture_time DESC
       `
       )
       .all(teamId, teamId) as FixtureWithTeamsRow[];
@@ -122,7 +122,7 @@ export const fixtureRepository = {
       params.push(teamId, teamId);
     }
 
-    query += ' ORDER BY f.fixture_date, f.fixture_time LIMIT ?';
+    query += ' ORDER BY f.fixture_date, f.fixture_time IS NULL, f.fixture_time LIMIT ?';
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
@@ -151,8 +151,8 @@ export const fixtureRepository = {
       params.push(teamId, teamId);
     }
 
-    // Order by date descending, with completed fixtures first
-    query += ' ORDER BY f.fixture_date DESC, (f.status = \'completed\') DESC, f.fixture_time DESC LIMIT ?';
+    // Order by date descending, then by time descending (most recent first)
+    query += ' ORDER BY f.fixture_date DESC, f.fixture_time IS NULL, f.fixture_time DESC LIMIT ?';
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
@@ -175,11 +175,11 @@ export const fixtureRepository = {
       INNER JOIN teams at ON f.away_team_id = at.id
       WHERE f.fixture_date >= ? AND f.status = 'scheduled'
       AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
-      ORDER BY f.fixture_date, f.fixture_time LIMIT ?
+      ORDER BY f.fixture_date, f.fixture_time IS NULL, f.fixture_time LIMIT ?
     `;
 
     const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];
-    
+
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
     return rows.map(rowToFixtureWithTeams);
   },
@@ -201,7 +201,7 @@ export const fixtureRepository = {
       INNER JOIN teams at ON f.away_team_id = at.id
       WHERE f.fixture_date <= ?
       AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
-      ORDER BY f.fixture_date DESC, (f.status = 'completed') DESC, f.fixture_time DESC LIMIT ?
+      ORDER BY f.fixture_date DESC, f.fixture_time IS NULL, f.fixture_time DESC LIMIT ?
     `;
 
     const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];

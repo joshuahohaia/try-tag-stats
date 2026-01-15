@@ -24,6 +24,7 @@ interface StandingRow {
 interface StandingWithTeamRow extends StandingRow {
   team_name: string;
   external_team_id: number;
+  form?: string;
 }
 
 interface StandingWithDivisionRow extends StandingRow {
@@ -69,6 +70,7 @@ function rowToStandingWithTeam(row: StandingWithTeamRow): StandingWithTeam {
   return {
     ...rowToStanding(row),
     team,
+    form: row.form,
   };
 }
 
@@ -88,7 +90,33 @@ export const standingRepository = {
     const rows = db
       .prepare(
         `
-        SELECT s.*, t.name as team_name, t.external_team_id
+        SELECT s.*, t.name as team_name, t.external_team_id,
+          (
+            SELECT GROUP_CONCAT(result, '')
+            FROM (
+              SELECT result, fixture_date, fixture_time
+              FROM (
+                SELECT
+                  CASE
+                    WHEN (f.home_team_id = s.team_id AND f.home_score > f.away_score) OR
+                         (f.away_team_id = s.team_id AND f.away_score > f.home_score) THEN 'W'
+                    WHEN (f.home_team_id = s.team_id AND f.home_score < f.away_score) OR
+                         (f.away_team_id = s.team_id AND f.away_score < f.home_score) THEN 'L'
+                    ELSE 'D'
+                  END as result,
+                  f.fixture_date,
+                  f.fixture_time
+                FROM fixtures f
+                WHERE f.division_id = s.division_id
+                  AND (f.home_team_id = s.team_id OR f.away_team_id = s.team_id)
+                  AND f.status = 'completed'
+                  AND f.home_score IS NOT NULL
+                ORDER BY f.fixture_date DESC, f.fixture_time IS NULL, f.fixture_time DESC
+                LIMIT 5
+              )
+              ORDER BY fixture_date, fixture_time IS NULL, fixture_time
+            )
+          ) as form
         FROM standings s
         INNER JOIN teams t ON s.team_id = t.id
         WHERE s.division_id = ?

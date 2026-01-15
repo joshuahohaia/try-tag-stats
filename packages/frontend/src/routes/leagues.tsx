@@ -87,11 +87,10 @@ function LeaguesPage() {
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
       <Container size="xl" w="100%" p="md" flex={0}>
-        <Stack >
+        <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Leagues</Title>
             <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>
-
           </div>
 
           <Group>

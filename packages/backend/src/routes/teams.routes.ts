@@ -72,10 +72,16 @@ router.get('/:id', async (req, res) => {
         // Transform scraped fixtures to match FixtureWithTeams format
         // The scraped fixtures have homeTeamId as the team we're viewing
         // We need to use the INTERNAL team.id so frontend comparisons work
-        // Sort by date descending (most recent first)
-        const sortedFixtures = [...profileData.fixtureHistory].sort((a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
+        // Sort by date descending, then time descending (most recent first)
+        const sortedFixtures = [...profileData.fixtureHistory].sort((a, b) => {
+          const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateCompare !== 0) return dateCompare;
+          // Same date - sort by time descending (later times first)
+          if (!a.time && !b.time) return 0;
+          if (!a.time) return 1; // NULL times go last
+          if (!b.time) return -1;
+          return b.time.localeCompare(a.time);
+        });
         recentFixtures = sortedFixtures.map((f, idx) => {
           // Try to find the opponent team in DB by external ID
           const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);

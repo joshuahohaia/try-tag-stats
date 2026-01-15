@@ -58,7 +58,7 @@ function FavoritesPage() {
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
       <Container size="xl" w="100%" p="md" flex={0}>
-        <Stack gap="lg">
+        <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Favourites</Title>
             <Text c="dimmed">Manage your favorite teams</Text>
@@ -67,7 +67,7 @@ function FavoritesPage() {
       </Container>
 
       <ScrollArea flex={1} type="auto">
-        <Container size="xl" p="md" >
+        <Container size="xl" p="md">
           {favorites.length > 0 ? (
             <Stack gap="sm">
               {favorites.map((team) => (

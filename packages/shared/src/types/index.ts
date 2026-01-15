@@ -111,6 +111,7 @@ export interface StandingWithDivision extends Standing {
 
 export interface StandingWithTeam extends Standing {
   team: Team;
+  form?: string; // Last 5 results as "WWLDW" (oldest to newest)
 }
 
 // ============================================

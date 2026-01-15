@@ -16,12 +16,13 @@ import {
   ScrollArea,
   Container,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconMinus } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import { formatTime } from '../utils/format';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
 import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
 import type { Team, StandingWithDivision } from '@trytag/shared';
@@ -36,6 +37,27 @@ interface ActiveDivision {
   leagueName: string;
   seasonName: string;
   leagueId: number;
+}
+
+function FormDisplay({ form }: { form?: string }) {
+  if (!form) return <IconMinus size={10} style={{ color: 'var(--mantine-color-gray-5)' }} />;
+
+  return (
+    <Group gap={2}>
+      {form.split('').map((result, idx) => (
+        <Badge
+          key={idx}
+          circle
+          size="xs"
+          color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
+          variant="filled"
+          style={{ minWidth: 14, height: 14, padding: 0, fontSize: rem(8) }}
+        >
+          {result}
+        </Badge>
+      ))}
+    </Group>
+  );
 }
 
 function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivision[]; favoriteIds: number[] }) {
@@ -88,6 +110,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                 <Table.Tr>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Team</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Form</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pld</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>W</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>L</Table.Th>
@@ -114,6 +137,9 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                             {row.team.name}
                           </Text>
                         </Link>
+                      </Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
+                        <FormDisplay form={row.form} />
                       </Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.played}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.wins}</Table.Td>
@@ -259,7 +285,7 @@ function HomePage() {
   return (
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md">
-        <Stack gap="lg">
+        <Stack gap="md">
           {!hasFavorites && (
             <Card withBorder bg="green.0">
               <Stack align="center">
@@ -321,7 +347,7 @@ function HomePage() {
                             </Link>
                           </Group>
                           <Text size="xs" c="dimmed">
-                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${fixture.fixtureTime}`}
+                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${formatTime(fixture.fixtureTime)}`}
                           </Text>
                         </div>
                         <Badge variant="light">{fixture.status}</Badge>
@@ -365,7 +391,15 @@ function HomePage() {
                   >
                     View All Fixtures
                   </Button>
-          <Button component={Link} to="/favorites">Manage Favourites</Button>
+                  <Button
+                    variant="light"
+                    fullWidth
+                    leftSection={<IconStar size={18} />}
+                    component={Link}
+                    to="/favorites"
+                  >
+                    Manage Favourites
+                  </Button>
                 </Stack>
               </Card>
             )}

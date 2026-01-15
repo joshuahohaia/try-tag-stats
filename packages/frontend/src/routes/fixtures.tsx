@@ -17,6 +17,7 @@ import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import { formatTime } from '../utils/format';
 
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
@@ -43,7 +44,7 @@ function FixturesPage() {
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
       <Container size="xl" w="100%" p="md" flex={0}>
-        <Stack gap="lg">
+        <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Fixtures</Title>
             <Text c="dimmed">View upcoming matches and recent results for your favorite teams</Text>
@@ -61,7 +62,7 @@ function FixturesPage() {
       </Container>
 
       <ScrollArea flex={1} type="auto">
-        <Container size="xl" p="md" >
+        <Container size="xl" p="md">
           {!hasFavorites ? (
             <Card withBorder>
               <Stack align="center" py="xl">
@@ -75,51 +76,71 @@ function FixturesPage() {
             </Center>
           ) : fixtures && fixtures.length > 0 ? (
             <Stack gap="sm">
-              {fixtures.map((fixture) => (
-                <Card key={fixture.id} withBorder padding="md">
-                  <Group justify="space-between" align="flex-start">
-                    <Stack gap={4}>
-                      <Link
-                        to="/teams/$teamId"
-                        params={{ teamId: String(fixture.homeTeam.id) }}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        <Text fw={600} size="lg" c="blue">
-                          {fixture.homeTeam.name}
+              {fixtures.map((fixture) => {
+                // Determine result color based on favorite team's perspective
+                let resultColor = 'gray';
+                if (fixture.status === 'completed' && fixture.homeScore !== null && fixture.awayScore !== null) {
+                  const homeFavorite = favoriteIds.includes(fixture.homeTeam.id);
+                  const awayFavorite = favoriteIds.includes(fixture.awayTeam.id);
+
+                  if (homeFavorite && !awayFavorite) {
+                    // Home team is favorite
+                    resultColor = fixture.homeScore > fixture.awayScore ? 'green' : fixture.homeScore < fixture.awayScore ? 'red' : 'gray';
+                  } else if (awayFavorite && !homeFavorite) {
+                    // Away team is favorite
+                    resultColor = fixture.awayScore > fixture.homeScore ? 'green' : fixture.awayScore < fixture.homeScore ? 'red' : 'gray';
+                  } else {
+                    // Both are favorites or neither - show neutral
+                    resultColor = 'blue';
+                  }
+                }
+
+                return (
+                  <Card key={fixture.id} withBorder padding="md">
+                    <Group justify="space-between" align="flex-start">
+                      <Stack gap={4}>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.homeTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Text fw={600} size="lg" c="blue">
+                            {fixture.homeTeam.name}
+                          </Text>
+                        </Link>
+                        <Text c="dimmed" size="sm">vs</Text>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(fixture.awayTeam.id) }}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Text fw={600} size="lg" c="blue">
+                            {fixture.awayTeam.name}
+                          </Text>
+                        </Link>
+                      </Stack>
+                      <Stack align="flex-end" gap={4}>
+                        {fixture.status === 'completed' && fixture.homeScore !== null ? (
+                          <Badge size="xl" variant="filled" color={resultColor}>
+                            {fixture.homeScore} - {fixture.awayScore}
+                          </Badge>
+                        ) : (
+                          <Badge size="lg" variant="light">{fixture.status}</Badge>
+                        )}
+                        <Text size="sm" c="dimmed">
+                          {fixture.fixtureDate}
                         </Text>
-                      </Link>
-                      <Text c="dimmed" size="sm">vs</Text>
-                      <Link
-                        to="/teams/$teamId"
-                        params={{ teamId: String(fixture.awayTeam.id) }}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        <Text fw={600} size="lg" c="blue">
-                          {fixture.awayTeam.name}
-                        </Text>
-                      </Link>
-                    </Stack>
-                    <Stack align="flex-end" gap={4}>
-                      {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                        <Badge size="xl" variant="filled" color="var(--mantine-color-success-6)">
-                          {fixture.homeScore} - {fixture.awayScore}
-                        </Badge>
-                      ) : (
-                        <Badge size="lg" variant="light">{fixture.status}</Badge>
-                      )}
-                      <Text size="sm" c="dimmed">
-                        {fixture.fixtureDate}
-                      </Text>
-                      {fixture.fixtureTime && (
-                        <Text size="sm" c="dimmed">{fixture.fixtureTime}</Text>
-                      )}
-                      {fixture.pitch && (
-                        <Text size="xs" c="dimmed">{fixture.pitch}</Text>
-                      )}
-                    </Stack>
-                  </Group>
-                </Card>
-              ))}
+                        {fixture.fixtureTime && (
+                          <Text size="sm" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
+                        )}
+                        {fixture.pitch && (
+                          <Text size="xs" c="dimmed">{fixture.pitch}</Text>
+                        )}
+                      </Stack>
+                    </Group>
+                  </Card>
+                );
+              })}
             </Stack>
           ) : (
             <Card withBorder>
