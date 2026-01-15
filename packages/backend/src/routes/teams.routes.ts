@@ -32,103 +32,116 @@ router.get('/batch', (req, res) => {
 
 // GET /api/v1/teams/:id - Get team profile
 router.get('/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  try {
+    const id = parseInt(req.params.id, 10);
 
-  // Try to find by internal ID first, then fall back to external ID
-  let team = teamRepository.findById(id);
-  if (!team) {
-    team = teamRepository.findByExternalId(id);
-  }
+    // Try to find by internal ID first, then fall back to external ID
+    let team = teamRepository.findById(id);
+    if (!team) {
+      team = teamRepository.findByExternalId(id);
+    }
 
-  if (!team) {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'Team not found' },
-    });
-    return;
-  }
+    if (!team) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Team not found' },
+      });
+      return;
+    }
 
-  const teamId = team.id; // Use internal ID for all lookups
-  const standings = standingRepository.findByTeam(teamId);
-  const upcomingFixtures = fixtureRepository.findUpcoming(teamId, 5);
-  let recentFixtures = fixtureRepository.findRecent(teamId, 10);
-  const playerAwards = playerAwardRepository.findByTeam(teamId);
+    const teamId = team.id; // Use internal ID for all lookups
+    const standings = standingRepository.findByTeam(teamId);
+    const upcomingFixtures = fixtureRepository.findUpcoming(teamId, 5);
+    let recentFixtures = fixtureRepository.findRecent(teamId, 10);
+    const playerAwards = playerAwardRepository.findByTeam(teamId);
 
-  // Fetch live profile data from website (position history, stats, previous seasons, fixture history)
-  let positionHistory: any[] = [];
-  let seasonStats: any[] = [];
-  let previousSeasons: any[] = [];
+    // Fetch live profile data from website (position history, stats, previous seasons, fixture history)
+    let positionHistory: any[] = [];
+    let seasonStats: any[] = [];
+    let previousSeasons: any[] = [];
 
-  // Only fetch if we have an external team ID
-  if (team.externalTeamId) {
-    const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId);
-    if (profileData) {
-      positionHistory = profileData.positionHistory;
-      seasonStats = profileData.seasonStats;
-      previousSeasons = profileData.previousSeasons;
+    // Only fetch if we have an external team ID
+    if (team.externalTeamId) {
+      try {
+        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId);
+        if (profileData) {
+          positionHistory = profileData.positionHistory;
+          seasonStats = profileData.seasonStats;
+          previousSeasons = profileData.previousSeasons;
 
-      // If no recent fixtures from DB, use fixture history from scraped profile
-      if (recentFixtures.length === 0 && profileData.fixtureHistory.length > 0) {
-        // Transform scraped fixtures to match FixtureWithTeams format
-        // The scraped fixtures have homeTeamId as the team we're viewing
-        // We need to use the INTERNAL team.id so frontend comparisons work
-        // Sort by date descending, then time descending (most recent first)
-        const sortedFixtures = [...profileData.fixtureHistory].sort((a, b) => {
-          const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-          if (dateCompare !== 0) return dateCompare;
-          // Same date - sort by time descending (later times first)
-          if (!a.time && !b.time) return 0;
-          if (!a.time) return 1; // NULL times go last
-          if (!b.time) return -1;
-          return b.time.localeCompare(a.time);
-        });
-        recentFixtures = sortedFixtures.map((f, idx) => {
-          // Try to find the opponent team in DB by external ID
-          const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
+          // If no recent fixtures from DB, use fixture history from scraped profile
+          if (recentFixtures.length === 0 && profileData.fixtureHistory.length > 0) {
+            // Transform scraped fixtures to match FixtureWithTeams format
+            // The scraped fixtures have homeTeamId as the team we're viewing
+            // We need to use the INTERNAL team.id so frontend comparisons work
+            // Sort by date descending, then time descending (most recent first)
+            const sortedFixtures = [...profileData.fixtureHistory].sort((a, b) => {
+              const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+              if (dateCompare !== 0) return dateCompare;
+              // Same date - sort by time descending (later times first)
+              if (!a.time && !b.time) return 0;
+              if (!a.time) return 1; // NULL times go last
+              if (!b.time) return -1;
+              return b.time.localeCompare(a.time);
+            });
+            recentFixtures = sortedFixtures.map((f, idx) => {
+              // Try to find the opponent team in DB by external ID
+              const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
 
-          return {
-            id: -idx - 1, // Negative IDs to indicate these are from scraper
-            externalFixtureId: null,
-            divisionId: 0,
-            homeTeamId: team.id, // Use internal ID
-            awayTeamId: opponentTeam?.id || f.awayTeamId,
-            fixtureDate: f.date,
-            fixtureTime: f.time,
-            pitch: f.pitch,
-            roundNumber: null,
-            homeScore: f.homeScore,
-            awayScore: f.awayScore,
-            status: f.status,
-            isForfeit: false,
-            homeTeam: {
-              id: team.id, // Use internal ID so frontend comparison works
-              externalTeamId: team.externalTeamId,
-              name: team.name, // Use actual team name from DB
-            },
-            awayTeam: {
-              id: opponentTeam?.id || f.awayTeamId,
-              externalTeamId: f.awayTeamId,
-              name: opponentTeam?.name || f.awayTeamName, // Use DB name if available
-            },
-          };
-        });
+              return {
+                id: -idx - 1, // Negative IDs to indicate these are from scraper
+                externalFixtureId: null,
+                divisionId: 0,
+                homeTeamId: team.id, // Use internal ID
+                awayTeamId: opponentTeam?.id || f.awayTeamId,
+                fixtureDate: f.date,
+                fixtureTime: f.time,
+                pitch: f.pitch,
+                roundNumber: null,
+                homeScore: f.homeScore,
+                awayScore: f.awayScore,
+                status: f.status,
+                isForfeit: false,
+                homeTeam: {
+                  id: team.id, // Use internal ID so frontend comparison works
+                  externalTeamId: team.externalTeamId,
+                  name: team.name, // Use actual team name from DB
+                },
+                awayTeam: {
+                  id: opponentTeam?.id || f.awayTeamId,
+                  externalTeamId: f.awayTeamId,
+                  name: opponentTeam?.name || f.awayTeamName, // Use DB name if available
+                },
+              };
+            });
+          }
+        }
+      } catch (scraperError) {
+        // Log but don't fail the request if scraper fails
+        console.error('Failed to fetch team profile from scraper:', scraperError);
       }
     }
-  }
 
-  res.json({
-    success: true,
-    data: {
-      ...team,
-      standings,
-      upcomingFixtures,
-      recentFixtures,
-      playerAwards,
-      positionHistory,
-      seasonStats,
-      previousSeasons,
-    },
-  });
+    res.json({
+      success: true,
+      data: {
+        ...team,
+        standings,
+        upcomingFixtures,
+        recentFixtures,
+        playerAwards,
+        positionHistory,
+        seasonStats,
+        previousSeasons,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching team profile:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch team profile' },
+    });
+  }
 });
 
 // GET /api/v1/teams/:id/standings - Get team standings across divisions

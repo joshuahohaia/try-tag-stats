@@ -111,10 +111,10 @@ export const standingRepository = {
                   AND (f.home_team_id = s.team_id OR f.away_team_id = s.team_id)
                   AND f.status = 'completed'
                   AND f.home_score IS NOT NULL
-                ORDER BY f.fixture_date DESC, f.fixture_time IS NULL, f.fixture_time DESC
+                ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC
                 LIMIT 5
               )
-              ORDER BY fixture_date, fixture_time IS NULL, fixture_time
+              ORDER BY fixture_date, CASE WHEN fixture_time IS NULL THEN 1 ELSE 0 END, fixture_time
             )
           ) as form
         FROM standings s
