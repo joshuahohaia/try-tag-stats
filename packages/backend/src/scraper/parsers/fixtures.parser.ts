@@ -8,7 +8,7 @@ interface ParsedFixtures {
 }
 
 // Common regex patterns
-const DATE_PATTERN = /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}/i;
+const DATE_PATTERN = /(?:(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+)?\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}/i;
 const TIME_PATTERN = /\b(\d{1,2}:\d{2})(?!\d)/;
 const PITCH_PATTERN = /Pitch\s+[A-Z0-9]/i;
 const SCORE_PATTERN = /\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/;
@@ -206,23 +206,20 @@ export function parseFixtures(html: string): ParsedFixtures {
       if (processedPairs.has(pairKey)) return;
       processedPairs.add(pairKey);
 
-      // Walk up the DOM to find date context
-      let $container = $homeLink.closest('div').parent();
-      for (let i = 0; i < 5; i++) {
-        const containerText = $container.text();
-        const dateMatch = containerText.match(DATE_PATTERN);
-        if (dateMatch) {
-          const parsed = parseDate(dateMatch[0]);
-          if (parsed) currentDate = parsed;
-          break;
-        }
-        $container = $container.parent();
-        if (!$container.length) break;
+      // Find the fixture div itself
+      const $fixtureDiv = $homeLink.closest('.fixture');
+      currentDate = ''; // Reset for this fixture
+
+      // Try to find the date within the fixture div
+      const dateSpanText = $fixtureDiv.find('span').first().text();
+      const dateMatch = dateSpanText.match(DATE_PATTERN);
+      if (dateMatch) {
+        const parsed = parseDate(dateMatch[0]);
+        if (parsed) currentDate = parsed;
       }
 
       // Find time and pitch in row context
-      const $row = $homeLink.closest('div');
-      const rowText = $row.parent().text();
+      const rowText = $fixtureDiv.text();
 
       const timeMatch = rowText.match(TIME_PATTERN);
       const time = timeMatch ? parseTime(timeMatch[1]) : null;
@@ -234,18 +231,6 @@ export function parseFixtures(html: string): ParsedFixtures {
       let homeScore: number | null = null;
       let awayScore: number | null = null;
 
-      const homeScoreAttr = $row.find('[data-home-score-for-fixture]').attr('data-home-score-for-fixture');
-      const awayScoreAttr = $row.find('[data-away-score-for-fixture]').attr('data-away-score-for-fixture');
-
-      if (homeScoreAttr && awayScoreAttr) {
-        const hs = parseInt(homeScoreAttr, 10);
-        const as = parseInt(awayScoreAttr, 10);
-        if (!isNaN(hs) && !isNaN(as)) {
-          homeScore = hs;
-          awayScore = as;
-        }
-      }
-
       if (homeScore === null) {
         const scoreMatch = rowText.match(SCORE_PATTERN);
         if (scoreMatch) {
@@ -254,14 +239,13 @@ export function parseFixtures(html: string): ParsedFixtures {
         }
       }
 
-      const date = currentDate || new Date().toISOString().split('T')[0];
-
       const fixture = createFixture(
-        date, time, pitch,
+        currentDate, time, pitch,
         homeTeamId, homeTeamName,
         awayTeamId, awayTeamName,
         homeScore, awayScore
       );
+
 
       if (fixture) fixtures.push(fixture);
     });
