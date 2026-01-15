@@ -61,7 +61,7 @@ function FavoritesPage() {
         <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Favourites</Title>
-            <Text c="dimmed">Manage your favorite teams</Text>
+            <Text c="dimmed">Manage Your favourite Teams</Text>
           </div>
         </Stack>
       </Container>
@@ -95,7 +95,7 @@ function FavoritesPage() {
 
       <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
-          Showing {favorites.length} favorite teams
+          Showing {favorites.length}favouriteteams
         </Text>
       </Container>
     </Stack>

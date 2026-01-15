@@ -1,3 +1,5 @@
+import { format, parseISO } from 'date-fns';
+
 /**
  * Format a 24-hour time string to UK 12-hour format
  * e.g., "20:00" -> "8:00pm", "09:30" -> "9:30am"
@@ -20,4 +22,36 @@ export function formatTime(time: string | null | undefined): string | null {
   } else {
     return `${hours - 12}:${minutes}pm`;
   }
+}
+
+/**
+ * Format an ISO date string to UK format
+ * e.g., "2026-01-12" -> "12/01/2026"
+ */
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+
+  try {
+    const date = parseISO(dateStr);
+    return format(date, 'dd/MM/yyyy');
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Format date and time together
+ * e.g., "2026-01-12", "20:00" -> "12/01/2026 at 8:00pm"
+ */
+export function formatDateTime(
+  dateStr: string | null | undefined,
+  timeStr: string | null | undefined
+): string {
+  const date = formatDate(dateStr);
+  const time = formatTime(timeStr);
+
+  if (date && time) {
+    return `${date} at ${time}`;
+  }
+  return date || '';
 }

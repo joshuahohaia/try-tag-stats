@@ -16,13 +16,13 @@ import {
   ScrollArea,
   Container,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconMinus } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatTime } from '../utils/format';
+import { formatDate, formatTime } from '../utils/format';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
 import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
 import type { Team, StandingWithDivision } from '@trytag/shared';
@@ -39,26 +39,7 @@ interface ActiveDivision {
   leagueId: number;
 }
 
-function FormDisplay({ form }: { form?: string }) {
-  if (!form) return <IconMinus size={10} style={{ color: 'var(--mantine-color-gray-5)' }} />;
 
-  return (
-    <Group gap={2}>
-      {form.split('').map((result, idx) => (
-        <Badge
-          key={idx}
-          circle
-          size="xs"
-          color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
-          variant="filled"
-          style={{ minWidth: 14, height: 14, padding: 0, fontSize: rem(8) }}
-        >
-          {result}
-        </Badge>
-      ))}
-    </Group>
-  );
-}
 
 function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivision[]; favoriteIds: number[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -110,7 +91,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                 <Table.Tr>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Team</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Form</Table.Th>
+
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pld</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>W</Table.Th>
                   <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>L</Table.Th>
@@ -138,9 +119,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                           </Text>
                         </Link>
                       </Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
-                        <FormDisplay form={row.form} />
-                      </Table.Td>
+
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.played}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.wins}</Table.Td>
                       <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.losses}</Table.Td>
@@ -292,7 +271,7 @@ function HomePage() {
                 <IconStar size={48} color="var(--mantine-color-success-6)" />
                 <Title order={3}>Get Started</Title>
                 <Text c="dimmed" ta="center">
-                  Browse leagues and add your favorite teams to track their fixtures and standings.
+                  Browse leagues and add Your favourite Teams to track their fixtures and standings.
                 </Text>
                 <Button component={Link} to="/leagues">
                   Browse Leagues
@@ -346,9 +325,14 @@ function HomePage() {
                               <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
                             </Link>
                           </Group>
-                          <Text size="xs" c="dimmed">
-                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${formatTime(fixture.fixtureTime)}`}
-                          </Text>
+                          <Stack gap={0}>
+                            <Text size="xs" c="dimmed">
+                              {formatDate(fixture.fixtureDate)}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {formatTime(fixture.fixtureTime)}
+                            </Text>
+                          </Stack>
                         </div>
                         <Badge variant="light">{fixture.status}</Badge>
                       </Group>
@@ -358,7 +342,7 @@ function HomePage() {
               ) : (
                 <Text c="dimmed">
                   {hasFavorites
-                    ? "No upcoming fixtures for your favorite teams."
+                    ? "No upcoming fixtures for your favourite teams."
                     : "No upcoming fixtures found."}
                 </Text>
               )}
@@ -410,7 +394,7 @@ function HomePage() {
               <Group justify="space-between" mb="md">
                 <Title order={3}>
                   <IconStar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Your Favorite Teams
+                  Your favourite Teams
                 </Title>
                 <Button variant="subtle" component={Link} to="/favorites" size="sm">
                   Manage

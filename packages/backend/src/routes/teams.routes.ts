@@ -1,5 +1,10 @@
 import { Router } from 'express';
 import {
+  TeamPositionHistory,
+  TeamSeasonStats,
+  TeamPreviousSeason,
+} from '@trytag/shared';
+import {
   teamRepository,
   standingRepository,
   fixtureRepository,
@@ -56,9 +61,9 @@ router.get('/:id', async (req, res) => {
     const playerAwards = playerAwardRepository.findByTeam(teamId);
 
     // Fetch live profile data from website (position history, stats, previous seasons, fixture history)
-    let positionHistory: any[] = [];
-    let seasonStats: any[] = [];
-    let previousSeasons: any[] = [];
+    let positionHistory: TeamPositionHistory[] = [];
+    let seasonStats: TeamSeasonStats[] = [];
+    let previousSeasons: TeamPreviousSeason[] = [];
 
     // Only fetch if we have an external team ID
     if (team.externalTeamId) {

@@ -16,34 +16,15 @@ import {
   Box,
   Container,
 } from '@mantine/core';
-import { IconStar, IconStarFilled, IconAward, IconMinus } from '@tabler/icons-react';
+import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatTime } from '../utils/format';
+import { formatDate, formatTime } from '../utils/format';
 
-function FormDisplay({ form }: { form?: string }) {
-  if (!form) return <IconMinus size={14} style={{ color: 'var(--mantine-color-gray-5)' }} />;
 
-  return (
-    <Group gap={4}>
-      {form.split('').map((result, idx) => (
-        <Badge
-          key={idx}
-          circle
-          size="xs"
-          color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
-          variant="filled"
-          style={{ minWidth: 18, height: 18, padding: 0 }}
-        >
-          {result}
-        </Badge>
-      ))}
-    </Group>
-  );
-}
 
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
@@ -200,7 +181,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                               <Table.Th>Pos</Table.Th>
                               <Table.Th></Table.Th>
                               <Table.Th>Team</Table.Th>
-                              <Table.Th>Form</Table.Th>
+                              
                               <Table.Th>Pld</Table.Th>
                               <Table.Th>W</Table.Th>
                               <Table.Th>L</Table.Th>
@@ -238,9 +219,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     <Text span fw={500} c="blue">{standing.team.name}</Text>
                                   </Link>
                                 </Table.Td>
-                                <Table.Td>
-                                  <FormDisplay form={standing.form} />
-                                </Table.Td>
+                                
                                 <Table.Td>{standing.played}</Table.Td>
                                 <Table.Td>{standing.wins}</Table.Td>
                                 <Table.Td>{standing.losses}</Table.Td>
@@ -288,10 +267,15 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                   <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
                                 </Link>
                               </Group>
-                              <Text size="sm" c="dimmed">
-                                {fixture.fixtureDate} {fixture.fixtureTime && `at ${formatTime(fixture.fixtureTime)}`}
-                                {fixture.pitch && ` - ${fixture.pitch}`}
-                              </Text>
+                              <Stack gap={0}>
+                                <Text size="sm" c="dimmed">
+                                  {formatDate(fixture.fixtureDate)}
+                                </Text>
+                                <Text size="sm" c="dimmed">
+                                  {formatTime(fixture.fixtureTime)}
+                                  {fixture.pitch && ` - ${fixture.pitch}`}
+                                </Text>
+                              </Stack>
                             </Stack>
                             <div>
                               {fixture.status === 'completed' && fixture.homeScore !== null ? (

@@ -20,7 +20,7 @@ import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-r
 import { Link } from '@tanstack/react-router';
 import { useTeam } from '../hooks/useTeams';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatTime } from '../utils/format';
+import { formatDate, formatTime } from '../utils/format';
 import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
 
 // Form component showing last 5 results as W/L/D badges
@@ -411,10 +411,8 @@ function TeamDetailPage() {
                         return (
                           <Table.Tr key={fixture.id || idx}>
                             <Table.Td>
-                              <Text size="sm">{fixture.fixtureDate}</Text>
-                              {fixture.fixtureTime && (
-                                <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
-                              )}
+                              <Text size="sm">{formatDate(fixture.fixtureDate)}</Text>
+                              <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
                             </Table.Td>
                             <Table.Td>
                               {opponent?.id && opponent.id > 0 ? (
@@ -431,6 +429,7 @@ function TeamDetailPage() {
                             </Table.Td>
                             <Table.Td>
                               <Badge
+                                fullWidth
                                 color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
                                 variant="filled"
                               >
@@ -459,9 +458,14 @@ function TeamDetailPage() {
                           <Text fw={500}>
                             {fixture.homeTeam?.name || 'TBD'} vs {fixture.awayTeam?.name || 'TBD'}
                           </Text>
-                          <Text size="sm" c="dimmed">
-                            {fixture.fixtureDate} {fixture.fixtureTime && `at ${formatTime(fixture.fixtureTime)}`}
-                          </Text>
+                          <Stack gap={0}>
+                            <Text size="sm" c="dimmed">
+                              {formatDate(fixture.fixtureDate)}
+                            </Text>
+                            <Text size="sm" c="dimmed">
+                              {formatTime(fixture.fixtureTime)}
+                            </Text>
+                          </Stack>
                         </div>
                         <Badge variant="light">{fixture.status}</Badge>
                       </Group>

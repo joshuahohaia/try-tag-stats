@@ -17,7 +17,7 @@ import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatTime } from '../utils/format';
+import { formatDate, formatTime } from '../utils/format';
 
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
@@ -47,7 +47,7 @@ function FixturesPage() {
         <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Fixtures</Title>
-            <Text c="dimmed">View upcoming matches and recent results for your favorite teams</Text>
+            <Text c="dimmed">View upcoming matches and recent results for Your favourite Teams</Text>
           </div>
 
           <SegmentedControl
@@ -66,7 +66,7 @@ function FixturesPage() {
           {!hasFavorites ? (
             <Card withBorder>
               <Stack align="center" py="xl">
-                <Text c="dimmed">You haven't added any favorite teams yet.</Text>
+                <Text c="dimmed">You haven't added anyfavouriteteams yet.</Text>
                 <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
               </Stack>
             </Card>
@@ -77,7 +77,7 @@ function FixturesPage() {
           ) : fixtures && fixtures.length > 0 ? (
             <Stack gap="sm">
               {fixtures.map((fixture) => {
-                // Determine result color based on favorite team's perspective
+                // Determine result color based onfavouriteteam's perspective
                 let resultColor = 'gray';
                 if (fixture.status === 'completed' && fixture.homeScore !== null && fixture.awayScore !== null) {
                   const homeFavorite = favoriteIds.includes(fixture.homeTeam.id);
@@ -121,18 +121,16 @@ function FixturesPage() {
                       </Stack>
                       <Stack align="flex-end" gap={4}>
                         {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                          <Badge size="xl" variant="filled" color={resultColor}>
+                          <Badge fullWidth size="xl" variant="filled" color={resultColor}>
                             {fixture.homeScore} - {fixture.awayScore}
                           </Badge>
                         ) : (
                           <Badge size="lg" variant="light">{fixture.status}</Badge>
                         )}
                         <Text size="sm" c="dimmed">
-                          {fixture.fixtureDate}
+                          {formatDate(fixture.fixtureDate)}
+                          {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
                         </Text>
-                        {fixture.fixtureTime && (
-                          <Text size="sm" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
-                        )}
                         {fixture.pitch && (
                           <Text size="xs" c="dimmed">{fixture.pitch}</Text>
                         )}
@@ -145,7 +143,7 @@ function FixturesPage() {
           ) : (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
-                No {view} fixtures found for your favorite teams
+                No {view} fixtures found for Your favourite Teams
               </Text>
             </Card>
           )}

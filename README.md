@@ -16,7 +16,7 @@ This is a monorepo managed with npm workspaces:
 - **Standings**: Real-time division standings including points, wins, losses, and point difference.
 - **Fixtures & Results**: Track upcoming matches and recent results.
 - **Team Profiles**: Detailed team statistics, position history charts, and player awards.
-- **Favorites**: Star your favorite teams for quick access to their fixtures and standings on the home page.
+- **Favorites**: Star Your favourite Teams for quick access to their fixtures and standings on the home page.
 - **Mobile Friendly**: Fully responsive design with a dedicated mobile navigation bar.
 
 ## Getting Started

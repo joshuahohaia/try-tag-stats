@@ -41,7 +41,7 @@ function TeamsPage() {
         <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
           {favorites.length > 0 ? (
             <Stack gap="sm">
-              <Title order={3}>Your Favorite Teams</Title>
+              <Title order={3}>Your favourite Teams</Title>
               {filteredFavorites.length > 0 ? (
                 filteredFavorites.map((team) => (
                   <Link
@@ -64,7 +64,7 @@ function TeamsPage() {
               <Center py="xl">
                 <Stack align="center">
                   <Text c="dimmed" ta="center">
-                    You haven't added any favorite teams yet.
+                    You haven't added anyfavouriteteams yet.
                   </Text>
                   <Text c="dimmed" ta="center" size="sm">
                     Browse leagues and click the star icon next to a team to add it to your favorites.
@@ -78,7 +78,7 @@ function TeamsPage() {
 
       <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
-          Showing {filteredFavorites.length} of {favorites.length} favorite teams
+          Showing {filteredFavorites.length} of {favorites.length}favouriteteams
         </Text>
       </Container>
     </Stack>

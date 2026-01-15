@@ -2,6 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import type { FixtureWithTeams } from '@trytag/shared';
 
+interface FixtureParams {
+  limit: number;
+  type: 'upcoming' | 'recent';
+  teamIds?: string;
+}
+
 export function useUpcomingFixtures(teamIds?: number | number[], limit = 20) {
   return useQuery({
     queryKey: ['fixtures', 'upcoming', teamIds, limit],
@@ -11,7 +17,7 @@ export function useUpcomingFixtures(teamIds?: number | number[], limit = 20) {
       // unless we want to preserve the specific /teams/id endpoints.
       // The previous code used /teams/:id/fixtures/upcoming for single team.
       
-      const params: Record<string, any> = { limit, type: 'upcoming' };
+      const params: FixtureParams = { limit, type: 'upcoming' };
       
       if (typeof teamIds === 'number') {
         params.teamIds = String(teamIds);
@@ -32,7 +38,7 @@ export function useRecentFixtures(teamIds?: number | number[], limit = 20) {
   return useQuery({
     queryKey: ['fixtures', 'recent', teamIds, limit],
     queryFn: async () => {
-      const params: Record<string, any> = { limit, type: 'recent' };
+      const params: FixtureParams = { limit, type: 'recent' };
       
       if (typeof teamIds === 'number') {
         params.teamIds = String(teamIds);

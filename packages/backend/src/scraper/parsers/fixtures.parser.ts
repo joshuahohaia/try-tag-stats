@@ -7,6 +7,17 @@ interface ParsedFixtures {
   fixtures: ScrapedFixture[];
 }
 
+// Common regex patterns
+const DATE_PATTERN = /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}/i;
+const TIME_PATTERN = /\b(\d{1,2}:\d{2})(?!\d)/;
+const PITCH_PATTERN = /Pitch\s+[A-Z0-9]/i;
+const SCORE_PATTERN = /\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/;
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
 // Extract team ID from href
 function extractTeamId(href: string): number | null {
   const match = href.match(/TeamId=(\d+)/);
@@ -15,43 +26,30 @@ function extractTeamId(href: string): number | null {
 
 // Parse date string to YYYY-MM-DD format
 function parseDate(dateStr: string): string | null {
-  // Try various date formats
   const formats = [
-    // "Monday 19 Jan 2026"
-    /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i,
-    // "19/01/2026" or "19-01-2026"
+    /(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+(\d{4})/i,
     /(\d{1,2})[/-](\d{1,2})[/-](\d{4})/,
-    // "2026-01-19"
     /(\d{4})-(\d{2})-(\d{2})/,
   ];
-
-  const monthMap: Record<string, string> = {
-    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
-  };
 
   for (const regex of formats) {
     const match = dateStr.match(regex);
     if (match) {
       if (regex === formats[0]) {
-        // "19 Jan 2026" format
         const day = match[1].padStart(2, '0');
-        const month = monthMap[match[2].toLowerCase()];
+        const month = MONTH_MAP[match[2].toLowerCase().slice(0, 3)];
         const year = match[3];
         return `${year}-${month}-${day}`;
       } else if (regex === formats[1]) {
-        // "19/01/2026" format
         const day = match[1].padStart(2, '0');
         const month = match[2].padStart(2, '0');
         const year = match[3];
         return `${year}-${month}-${day}`;
       } else {
-        // Already ISO format
         return match[0];
       }
     }
   }
-
   return null;
 }
 
@@ -64,36 +62,53 @@ function parseTime(timeStr: string): string | null {
   return null;
 }
 
-// Determine fixture status from scores and date
-function determineStatus(homeScore: number | null, awayScore: number | null, dateStr: string): FixtureStatus {
-  if (homeScore !== null && awayScore !== null) {
-    return 'completed';
+// Determine fixture status from scores
+function determineStatus(homeScore: number | null, awayScore: number | null): FixtureStatus {
+  return homeScore !== null && awayScore !== null ? 'completed' : 'scheduled';
+}
+
+// Create and validate a fixture
+function createFixture(
+  date: string,
+  time: string | null,
+  pitch: string | null,
+  homeTeamId: number,
+  homeTeamName: string,
+  awayTeamId: number,
+  awayTeamName: string,
+  homeScore: number | null,
+  awayScore: number | null
+): ScrapedFixture | null {
+  const fixture: ScrapedFixture = {
+    date,
+    time,
+    pitch,
+    homeTeamId,
+    homeTeamName,
+    awayTeamId,
+    awayTeamName,
+    homeScore,
+    awayScore,
+    status: determineStatus(homeScore, awayScore),
+  };
+
+  const result = ScrapedFixtureSchema.safeParse(fixture);
+  if (result.success) {
+    return result.data;
   }
 
-  const fixtureDate = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (fixtureDate < today) {
-    // Past date but no score - might be postponed or just missing data
-    return 'scheduled';
-  }
-
-  return 'scheduled';
+  logger.warn({ fixture, errors: result.error.errors }, 'Invalid fixture');
+  return null;
 }
 
 export function parseFixtures(html: string): ParsedFixtures {
   const $ = cheerio.load(html);
   const fixtures: ScrapedFixture[] = [];
 
-  // Look for fixture entries - typically in tables or divs
-  // The structure varies, so we try multiple approaches
-
   // Approach 1: Table-based fixtures
   $('table').each((_, table) => {
     const $table = $(table);
     const $rows = $table.find('tr');
-
     let currentDate = '';
 
     $rows.each((_, row) => {
@@ -101,12 +116,10 @@ export function parseFixtures(html: string): ParsedFixtures {
       const rowText = $row.text();
 
       // Check if this is a date header row
-      const dateMatch = rowText.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}\s+\w+\s+\d{4}/i);
+      const dateMatch = rowText.match(DATE_PATTERN);
       if (dateMatch) {
         const parsed = parseDate(dateMatch[0]);
-        if (parsed) {
-          currentDate = parsed;
-        }
+        if (parsed) currentDate = parsed;
         return;
       }
 
@@ -124,19 +137,17 @@ export function parseFixtures(html: string): ParsedFixtures {
 
       if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) return;
 
-      // Try to find time
-      const timeMatch = rowText.match(/\b(\d{1,2}:\d{2})\b/);
+      // Extract time and pitch
+      const timeMatch = rowText.match(TIME_PATTERN);
       const time = timeMatch ? parseTime(timeMatch[1]) : null;
 
-      // Try to find pitch
-      const pitchMatch = rowText.match(/Pitch\s+[A-Z]/i);
+      const pitchMatch = rowText.match(PITCH_PATTERN);
       const pitch = pitchMatch ? pitchMatch[0] : null;
 
-      // Try to find scores (look for data attributes or text patterns)
+      // Extract scores
       let homeScore: number | null = null;
       let awayScore: number | null = null;
 
-      // Check for data attributes
       const homeScoreAttr = $row.find('[data-home-score-for-fixture]').attr('data-home-score-for-fixture');
       const awayScoreAttr = $row.find('[data-away-score-for-fixture]').attr('data-away-score-for-fixture');
 
@@ -149,9 +160,8 @@ export function parseFixtures(html: string): ParsedFixtures {
         }
       }
 
-      // Also try to find score pattern like "3-2" or "3 - 2"
       if (homeScore === null) {
-        const scoreMatch = rowText.match(/\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/);
+        const scoreMatch = rowText.match(SCORE_PATTERN);
         if (scoreMatch) {
           homeScore = parseInt(scoreMatch[1], 10);
           awayScore = parseInt(scoreMatch[2], 10);
@@ -160,73 +170,100 @@ export function parseFixtures(html: string): ParsedFixtures {
 
       const date = currentDate || new Date().toISOString().split('T')[0];
 
-      const fixture: ScrapedFixture = {
-        date,
-        time,
-        pitch,
-        homeTeamId,
-        homeTeamName,
-        awayTeamId,
-        awayTeamName,
-        homeScore,
-        awayScore,
-        status: determineStatus(homeScore, awayScore, date),
-      };
+      const fixture = createFixture(
+        date, time, pitch,
+        homeTeamId, homeTeamName,
+        awayTeamId, awayTeamName,
+        homeScore, awayScore
+      );
 
-      // Validate with Zod
-      const result = ScrapedFixtureSchema.safeParse(fixture);
-      if (result.success) {
-        fixtures.push(result.data);
-      } else {
-        logger.warn({ fixture, errors: result.error.errors }, 'Invalid fixture');
-      }
+      if (fixture) fixtures.push(fixture);
     });
   });
 
-  // Approach 2: Div-based fixtures (if table approach didn't find much)
+  // Approach 2: Div-based fixtures (fallback if table approach found nothing)
   if (fixtures.length === 0) {
-    $('div[class*="fixture"], div[class*="match"], .fixture, .match').each((_, div) => {
-      const $div = $(div);
-      const $teamLinks = $div.find('a[href*="TeamId"]');
+    let currentDate = '';
+    const $teamLinks = $('a[href*="TeamId"]');
+    const processedPairs = new Set<string>();
 
-      if ($teamLinks.length < 2) return;
-
-      const $homeLink = $teamLinks.first();
-      const $awayLink = $teamLinks.last();
-
+    $teamLinks.each((idx, link) => {
+      const $homeLink = $(link);
       const homeTeamId = extractTeamId($homeLink.attr('href') || '');
-      const awayTeamId = extractTeamId($awayLink.attr('href') || '');
       const homeTeamName = $homeLink.text().trim();
-      const awayTeamName = $awayLink.text().trim();
 
-      if (!homeTeamId || !awayTeamId) return;
+      if (!homeTeamId || !homeTeamName) return;
 
-      const divText = $div.text();
-      const dateMatch = divText.match(/\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2}/);
-      const date = dateMatch ? parseDate(dateMatch[0]) : new Date().toISOString().split('T')[0];
+      const $nextLink = $teamLinks.eq(idx + 1);
+      if (!$nextLink.length) return;
 
-      if (!date) return;
+      const awayTeamId = extractTeamId($nextLink.attr('href') || '');
+      const awayTeamName = $nextLink.text().trim();
 
-      const timeMatch = divText.match(/\d{1,2}:\d{2}/);
-      const time = timeMatch ? parseTime(timeMatch[0]) : null;
+      if (!awayTeamId || !awayTeamName || homeTeamId === awayTeamId) return;
 
-      const fixture: ScrapedFixture = {
-        date,
-        time,
-        pitch: null,
-        homeTeamId,
-        homeTeamName,
-        awayTeamId,
-        awayTeamName,
-        homeScore: null,
-        awayScore: null,
-        status: 'scheduled',
-      };
+      const pairKey = `${homeTeamId}-${awayTeamId}`;
+      if (processedPairs.has(pairKey)) return;
+      processedPairs.add(pairKey);
 
-      const result = ScrapedFixtureSchema.safeParse(fixture);
-      if (result.success) {
-        fixtures.push(result.data);
+      // Walk up the DOM to find date context
+      let $container = $homeLink.closest('div').parent();
+      for (let i = 0; i < 5; i++) {
+        const containerText = $container.text();
+        const dateMatch = containerText.match(DATE_PATTERN);
+        if (dateMatch) {
+          const parsed = parseDate(dateMatch[0]);
+          if (parsed) currentDate = parsed;
+          break;
+        }
+        $container = $container.parent();
+        if (!$container.length) break;
       }
+
+      // Find time and pitch in row context
+      const $row = $homeLink.closest('div');
+      const rowText = $row.parent().text();
+
+      const timeMatch = rowText.match(TIME_PATTERN);
+      const time = timeMatch ? parseTime(timeMatch[1]) : null;
+
+      const pitchMatch = rowText.match(PITCH_PATTERN);
+      const pitch = pitchMatch ? pitchMatch[0] : null;
+
+      // Extract scores
+      let homeScore: number | null = null;
+      let awayScore: number | null = null;
+
+      const homeScoreAttr = $row.find('[data-home-score-for-fixture]').attr('data-home-score-for-fixture');
+      const awayScoreAttr = $row.find('[data-away-score-for-fixture]').attr('data-away-score-for-fixture');
+
+      if (homeScoreAttr && awayScoreAttr) {
+        const hs = parseInt(homeScoreAttr, 10);
+        const as = parseInt(awayScoreAttr, 10);
+        if (!isNaN(hs) && !isNaN(as)) {
+          homeScore = hs;
+          awayScore = as;
+        }
+      }
+
+      if (homeScore === null) {
+        const scoreMatch = rowText.match(SCORE_PATTERN);
+        if (scoreMatch) {
+          homeScore = parseInt(scoreMatch[1], 10);
+          awayScore = parseInt(scoreMatch[2], 10);
+        }
+      }
+
+      const date = currentDate || new Date().toISOString().split('T')[0];
+
+      const fixture = createFixture(
+        date, time, pitch,
+        homeTeamId, homeTeamName,
+        awayTeamId, awayTeamName,
+        homeScore, awayScore
+      );
+
+      if (fixture) fixtures.push(fixture);
     });
   }
 

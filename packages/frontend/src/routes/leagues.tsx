@@ -153,7 +153,7 @@ function LeaguesPage() {
                       }}
                     >
                       <Stack gap="sm" justify="space-between" h="100%">
-                        {/* Header with name and favorite star */}
+                        {/* Header with name andfavouritestar */}
                         <div>
                           <Group justify="space-between" align="flex-start" wrap="nowrap" mb="xs">
                             <Text fw={600} size="lg" style={{ flex: 1, lineHeight: 1.3 }}>

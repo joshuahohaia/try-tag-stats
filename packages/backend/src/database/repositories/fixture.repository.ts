@@ -122,7 +122,8 @@ export const fixtureRepository = {
       params.push(teamId, teamId);
     }
 
-    query += ' ORDER BY f.fixture_date, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time LIMIT ?';
+    query +=
+      ' ORDER BY f.fixture_date, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time LIMIT ?';
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
@@ -152,7 +153,8 @@ export const fixtureRepository = {
     }
 
     // Order by date descending, then by time descending (most recent first)
-    query += ' ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?';
+    query +=
+      ' ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?';
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
@@ -161,7 +163,7 @@ export const fixtureRepository = {
 
   findUpcomingByTeams(teamIds: number[], limit = 50): FixtureWithTeams[] {
     if (teamIds.length === 0) return [];
-    
+
     const db = getDatabase();
     const today = new Date().toISOString().split('T')[0];
     const placeholders = teamIds.map(() => '?').join(',');
@@ -191,7 +193,7 @@ export const fixtureRepository = {
     const today = new Date().toISOString().split('T')[0];
     const placeholders = teamIds.map(() => '?').join(',');
 
-    // Show all past fixtures for favorite teams, prioritizing completed ones
+    // Show all past fixtures forfavouriteteams, prioritizing completed ones
     const query = `
       SELECT f.*,
         ht.name as home_team_name, ht.external_team_id as home_team_external_id,
