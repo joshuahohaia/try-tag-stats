@@ -47,7 +47,7 @@ function FixturesPage() {
         <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Fixtures</Title>
-            <Text c="dimmed">View upcoming matches and recent results for Your favourite Teams</Text>
+            <Text c="dimmed">View upcoming matches and recent results for Your Favourite Teams</Text>
           </div>
 
           <SegmentedControl
@@ -77,7 +77,7 @@ function FixturesPage() {
           ) : fixtures && fixtures.length > 0 ? (
             <Stack gap="sm">
               {fixtures.map((fixture) => {
-                // Determine result color based onfavouriteteam's perspective
+                // Determine result color based on favourite team's perspective
                 let resultColor = 'gray';
                 if (fixture.status === 'completed' && fixture.homeScore !== null && fixture.awayScore !== null) {
                   const homeFavorite = favoriteIds.includes(fixture.homeTeam.id);
@@ -169,7 +169,7 @@ function FixturesPage() {
           ) : (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
-                No {view} fixtures found for Your favourite Teams
+                No {view} fixtures found for Your Favourite Teams
               </Text>
             </Card>
           )}

@@ -41,7 +41,7 @@ function TeamsPage() {
         <Container size="xl" p="md" pb={isMobile ? 80 : "md"}>
           {favorites.length > 0 ? (
             <Stack gap="sm">
-              <Title order={3}>Your favourite Teams</Title>
+              <Title order={3}>Your Favourite Teams</Title>
               {filteredFavorites.length > 0 ? (
                 filteredFavorites.map((team) => (
                   <Link

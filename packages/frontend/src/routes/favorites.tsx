@@ -95,7 +95,7 @@ function FavoritesPage() {
 
       <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
-          Showing {favorites.length}favouriteteams
+          Showing {favorites.length} favourite teams
         </Text>
       </Container>
     </Stack>

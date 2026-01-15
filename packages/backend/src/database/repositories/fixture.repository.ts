@@ -193,7 +193,7 @@ export const fixtureRepository = {
     const today = new Date().toISOString().split('T')[0];
     const placeholders = teamIds.map(() => '?').join(',');
 
-    // Show all past fixtures forfavouriteteams, prioritizing completed ones
+    // Show all past fixtures for favourite teams, prioritizing completed ones
     const query = `
       SELECT f.*,
         ht.name as home_team_name, ht.external_team_id as home_team_external_id,
