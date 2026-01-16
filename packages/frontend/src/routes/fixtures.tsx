@@ -13,7 +13,7 @@ import {
   SegmentedControl,
   ScrollArea,
   Button,
-  Tooltip,
+  HoverCard,
 } from '@mantine/core';
 import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useState, useMemo } from 'react';
@@ -103,78 +103,97 @@ function FixturesPage() {
                   const awayFavorite = favoriteIds.includes(fixture.awayTeam.id);
 
                   if (homeFavorite && !awayFavorite) {
-                    // Home team is favorite
                     resultColor = fixture.homeScore > fixture.awayScore ? 'green' : fixture.homeScore < fixture.awayScore ? 'red' : 'gray';
                   } else if (awayFavorite && !homeFavorite) {
-                    // Away team is favorite
                     resultColor = fixture.awayScore > fixture.homeScore ? 'green' : fixture.awayScore < fixture.homeScore ? 'red' : 'gray';
                   } else {
-                    // Both are favorites or neither - show neutral
                     resultColor = 'blue';
                   }
                 }
+
+                const insightIcons = insights.map((insight) => (
+                  <HoverCard key={insight.type} width={200} withArrow shadow="md">
+                    <HoverCard.Target>
+                      {insight.type === 'top-clash' ? (
+                        <IconTrophy size={20} color="orange" />
+                      ) : (
+                        <IconSparkles size={20} color="purple" />
+                      )}
+                    </HoverCard.Target>
+                    <HoverCard.Dropdown>
+                      <Text size="xs">{insight.text}</Text>
+                    </HoverCard.Dropdown>
+                  </HoverCard>
+                ));
+
+                const fixtureBadge = fixture.status === 'completed' && fixture.homeScore !== null ? (
+                  <Badge size="lg" variant="filled" color={resultColor}>
+                    {fixture.homeScore} - {fixture.awayScore}
+                  </Badge>
+                ) : (
+                  <Badge size="lg" variant="light">{fixture.status}</Badge>
+                );
 
                 return (
                   <Card
                     key={fixture.id}
                     withBorder
-                    padding="md"
-                    style={{ position: 'relative' }}
+                    padding="sm"
                   >
-                    <Group justify="space-between" align="flex-start" style={{ position: 'absolute', top: 'var(--mantine-spacing-md)', right: 'var(--mantine-spacing-md)' }}>
-                      {insights.map((insight) => (
-                        <Tooltip key={insight.type} label={insight.text} withArrow>
-                          {insight.type === 'top-clash' ? (
-                            <IconTrophy size={20} color="orange" />
-                          ) : (
-                            <IconSparkles size={20} color="purple" />
-                          )}
-                        </Tooltip>
-                      ))}
-                      {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                        <Badge size="lg" variant="filled" color={resultColor}>
-                          {fixture.homeScore} - {fixture.awayScore}
-                        </Badge>
-                      ) : (
-                        <Badge size="lg" variant="light">{fixture.status}</Badge>
-                      )}
-                    </Group>
-
                     <Group justify="space-between" align="flex-start">
-                      <Stack gap={4} style={{ flex: 1, paddingRight: '120px' }}>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.homeTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-                        >
+                      <Stack gap={4} style={{ flex: 1 }}>
+                        {fixture.homeTeam ? (
+                          <Link
+                            to="/teams/$teamId"
+                            params={{ teamId: String(fixture.homeTeam.id) }}
+                            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                          >
+                            <Text
+                              fw={500}
+                              size="lg"
+                              lineClamp={1}
+                              style={{ wordBreak: 'break-word' }}
+                            >
+                              {fixture.homeTeam.name}
+                            </Text>
+                          </Link>
+                        ) : (
                           <Text
-                            fw={600}
+                            fw={500}
                             size="lg"
-                            c="blue"
                             lineClamp={1}
                             style={{ wordBreak: 'break-word' }}
                           >
-                            {fixture.homeTeam.name}
+                            TBD
                           </Text>
-                        </Link>
+                        )}
 
                         <Text c="dimmed" size="sm">vs</Text>
 
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(fixture.awayTeam.id) }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          <Text fw={600}
+                        {fixture.awayTeam ? (
+                          <Link
+                            to="/teams/$teamId"
+                            params={{ teamId: String(fixture.awayTeam.id) }}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                          >
+                            <Text fw={500}
+                              size="lg"
+                              lineClamp={1}
+                              style={{ wordBreak: 'break-word' }}>
+                              {fixture.awayTeam.name}
+                            </Text>
+                          </Link>
+                        ) : (
+                          <Text
+                            fw={500}
                             size="lg"
-                            c="blue"
                             lineClamp={1}
-                            style={{ wordBreak: 'break-word' }}>
-                            {fixture.awayTeam.name}
+                            style={{ wordBreak: 'break-word' }}
+                          >
+                            TBD
                           </Text>
-                        </Link>
+                        )}
 
-                        {/* Date/Time and Pitch moved here to keep them clear of the badge area */}
                         <Stack gap={0} mt="xs">
                           <Text size="sm" c="dimmed">
                             {formatDate(fixture.fixtureDate)}
@@ -185,6 +204,17 @@ function FixturesPage() {
                           )}
                         </Stack>
                       </Stack>
+                      {isMobile ? (
+                        <Stack align="flex-end" gap="xs">
+                          {fixtureBadge}
+                          <Group gap="xs">{insightIcons}</Group>
+                        </Stack>
+                      ) : (
+                        <Group>
+                          {insightIcons}
+                          {fixtureBadge}
+                        </Group>
+                      )}
                     </Group>
                   </Card>
                 );

@@ -15,8 +15,9 @@ import {
   ScrollArea,
   Box,
   Container,
-  Tooltip,
+  HoverCard,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconAward, IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
@@ -41,6 +42,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
   const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
@@ -251,6 +253,29 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                       {fixtures.map((fixture) => {
                         const insights = getFixtureInsights(fixture, standings, statistics);
 
+                        const insightIcons = insights.map((insight) => (
+                          <HoverCard key={insight.type} width={200} withArrow shadow="md">
+                            <HoverCard.Target>
+                              {insight.type === 'top-clash' ? (
+                                <IconTrophy size={20} color="orange" />
+                              ) : (
+                                <IconSparkles size={20} color="purple" />
+                              )}
+                            </HoverCard.Target>
+                            <HoverCard.Dropdown>
+                              <Text size="xs">{insight.text}</Text>
+                            </HoverCard.Dropdown>
+                          </HoverCard>
+                        ));
+
+                        const fixtureBadge = fixture.status === 'completed' && fixture.homeScore !== null ? (
+                          <Badge size="lg" variant="filled">
+                            {fixture.homeScore} - {fixture.awayScore}
+                          </Badge>
+                        ) : (
+                          <Badge variant="light">{fixture.status}</Badge>
+                        );
+
                         return (
                           <Card key={fixture.id} withBorder padding="sm">
                             <Group justify="space-between">
@@ -282,24 +307,17 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                   </Text>
                                 </Stack>
                               </Stack>
-                              <Group>
-                                {insights.map((insight) => (
-                                  <Tooltip key={insight.type} label={insight.text} withArrow>
-                                    {insight.type === 'top-clash' ? (
-                                      <IconTrophy size={20} color="orange" />
-                                    ) : (
-                                      <IconSparkles size={20} color="purple" />
-                                    )}
-                                  </Tooltip>
-                                ))}
-                                {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                                  <Badge size="lg" variant="filled">
-                                    {fixture.homeScore} - {fixture.awayScore}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="light">{fixture.status}</Badge>
-                                )}
-                              </Group>
+                              {isMobile ? (
+                                <Stack align="flex-end" gap="xs">
+                                  {fixtureBadge}
+                                  <Group gap="xs">{insightIcons}</Group>
+                                </Stack>
+                              ) : (
+                                <Group>
+                                  {insightIcons}
+                                  {fixtureBadge}
+                                </Group>
+                              )}
                             </Group>
                           </Card>
                         );
@@ -362,7 +380,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     </Stack>
   );
 }
-
 export const Route = createFileRoute('/leagues_/$leagueId')({
   component: LeagueDetailPage,
 });

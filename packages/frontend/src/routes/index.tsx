@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   Title,
   Text,
@@ -16,7 +17,7 @@ import {
   ScrollArea,
   Container,
   Flex,
-  Tooltip,
+  HoverCard,
 } from '@mantine/core';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -219,6 +220,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
@@ -325,6 +327,23 @@ function HomePage() {
                     const fixtureStats = statistics?.filter(s => s.divisionId === fixture.divisionId);
                     const insights = getFixtureInsights(fixture, fixtureStandings, fixtureStats);
 
+                    const insightIcons = insights.map((insight) => (
+                      <HoverCard key={insight.type} width={200} withArrow shadow="md">
+                        <HoverCard.Target>
+                          {insight.type === 'top-clash' ? (
+                            <IconTrophy size={16} color="orange" />
+                          ) : (
+                            <IconSparkles size={16} color="purple" />
+                          )}
+                        </HoverCard.Target>
+                        <HoverCard.Dropdown>
+                          <Text size="xs">{insight.text}</Text>
+                        </HoverCard.Dropdown>
+                      </HoverCard>
+                    ));
+
+                    const fixtureBadge = <Badge variant="light" size="xs">{fixture.status}</Badge>;
+
                     return (
                       <Card
                         key={fixture.id}
@@ -332,24 +351,19 @@ function HomePage() {
                         padding="xs"
                         style={{ position: 'relative' }} // Required for absolute child positioning
                       >
-                        <Group justify="space-between" align="flex-start" style={{ position: 'absolute', top: '8px', right: '8px' }}>
-                          {insights.map((insight) => (
-                            <Tooltip key={insight.type} label={insight.text} withArrow>
-                              {insight.type === 'top-clash' ? (
-                                <IconTrophy size={16} color="orange" />
-                              ) : (
-                                <IconSparkles size={16} color="purple" />
-                              )}
-                            </Tooltip>
-                          ))}
-                          <Badge
-                            variant="light"
-                            size="xs"
-                          >
-                            {fixture.status}
-                          </Badge>
-                        </Group>
-
+                        <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                          {isMobile ? (
+                            <Stack align="flex-end" gap="xs">
+                              {fixtureBadge}
+                              <Group gap="xs">{insightIcons}</Group>
+                            </Stack>
+                          ) : (
+                            <Group>
+                              {insightIcons}
+                              {fixtureBadge}
+                            </Group>
+                          )}
+                        </div>
 
                         <div>
                           <Group gap={4} mb={4} pr={60}> {/* Added padding-right to avoid overlapping text with the badge */}
@@ -439,7 +453,6 @@ function HomePage() {
       </Container>
     </ScrollArea >
   );
-}
-export const Route = createFileRoute('/')({
+} export const Route = createFileRoute('/')({
   component: HomePage,
 });
