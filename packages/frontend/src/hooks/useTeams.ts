@@ -20,6 +20,16 @@ export interface TeamProfile extends Team {
   playerAwards?: PlayerAwardWithDetails[];
 }
 
+export function useTeams() {
+  return useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: Team[] }>('/teams');
+      return extractData(response);
+    },
+  });
+}
+
 export function useTeam(id: number) {
   return useQuery({
     queryKey: ['teams', id],

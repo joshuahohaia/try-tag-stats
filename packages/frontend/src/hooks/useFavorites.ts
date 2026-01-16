@@ -16,6 +16,7 @@ interface FavoritesStore {
   isFavorite: (teamId: number) => boolean;
   toggleFavorite: (team: Team, leagueId?: number) => void;
   hasTeamInLeague: (leagueId: number) => boolean;
+  cleanupFavorites: (validTeamIds: number[]) => void;
 }
 
 const useFavoritesStore = create<FavoritesStore>()(
@@ -66,6 +67,12 @@ const useFavoritesStore = create<FavoritesStore>()(
       hasTeamInLeague: (leagueId) => {
         return get().favorites.some((t) => t.leagueId === leagueId);
       },
+
+      cleanupFavorites: (validTeamIds) => {
+        set((state) => ({
+          favorites: state.favorites.filter((fav) => validTeamIds.includes(fav.id)),
+        }));
+      },
     }),
     {
       name: 'trytag-favorites',
@@ -80,6 +87,7 @@ export function useFavoriteTeams() {
   const isFavorite = useFavoritesStore((state) => state.isFavorite);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const hasTeamInLeague = useFavoritesStore((state) => state.hasTeamInLeague);
+  const cleanupFavorites = useFavoritesStore((state) => state.cleanupFavorites);
 
   return {
     favorites,
@@ -88,5 +96,6 @@ export function useFavoriteTeams() {
     isFavorite,
     toggleFavorite,
     hasTeamInLeague,
+    cleanupFavorites,
   };
 }

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   Title,
   Text,
@@ -50,6 +51,7 @@ function getRegionColor(regionName: string): string {
 function LeaguesPage() {
   const [search, setSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const { data: leagues, isLoading: leaguesLoading } = useLeagues();
   const { data: regions, isLoading: regionsLoading } = useRegions();
@@ -90,7 +92,7 @@ function LeaguesPage() {
         <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Leagues</Title>
-            <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>
+            {!isMobile && <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>}
           </div>
 
           <Group>

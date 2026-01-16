@@ -118,7 +118,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
         <Container size="xl" p="md">
           <Group justify="space-between" align="flex-start" mb="md">
             <div>
-              <Title order={1} mb="xs">{league.name}</Title>
+              <Title lineClamp={2} order={1} mb="xs">{league.name}</Title>
               <Group gap="xs">
                 {league.dayOfWeek && <Badge variant="light">{league.dayOfWeek}</Badge>}
                 {league.format && <Badge variant="outline">{league.format}</Badge>}
@@ -138,7 +138,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                 onChange={setSelectedDivisionId}
                 placeholder="Select Division"
                 disabled={!divisions || divisions.length === 0}
-                w={200}
+                w={180}
               />
             </Group>
           </Group>
@@ -181,7 +181,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                               <Table.Th>Pos</Table.Th>
                               <Table.Th></Table.Th>
                               <Table.Th>Team</Table.Th>
-                              
+
                               <Table.Th>Pld</Table.Th>
                               <Table.Th>W</Table.Th>
                               <Table.Th>L</Table.Th>
@@ -219,7 +219,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     <Text span fw={500} c="blue">{standing.team.name}</Text>
                                   </Link>
                                 </Table.Td>
-                                
+
                                 <Table.Td>{standing.played}</Table.Td>
                                 <Table.Td>{standing.wins}</Table.Td>
                                 <Table.Td>{standing.losses}</Table.Td>

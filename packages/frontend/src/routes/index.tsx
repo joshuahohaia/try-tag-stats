@@ -15,6 +15,7 @@ import {
   rem,
   ScrollArea,
   Container,
+  Flex,
 } from '@mantine/core';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -273,9 +274,14 @@ function HomePage() {
                 <Text c="dimmed" ta="center">
                   Browse leagues and add Your favourite Teams to track their fixtures and standings.
                 </Text>
-                <Button component={Link} to="/leagues">
-                  Browse Leagues
-                </Button>
+                <Flex gap="sm">
+                  <Button component={Link} to="/leagues">
+                    Browse Leagues
+                  </Button>
+                  <Button component={Link} to="/teams" variant="light">
+                    Browse Teams
+                  </Button>
+                </Flex>
               </Stack>
             </Card>
           )}
@@ -396,54 +402,20 @@ function HomePage() {
                   <Button
                     variant="light"
                     fullWidth
-                    leftSection={<IconStar size={18} />}
+                    leftSection={<IconCalendar size={18} />}
                     component={Link}
-                    to="/favorites"
+                    to="/teams"
                   >
-                    Manage Favourites
+                    View All Teams
                   </Button>
                 </Stack>
               </Card>
             )}
           </SimpleGrid>
 
-          {hasFavorites && (
-            <Card withBorder>
-              <Group justify="space-between" mb="md">
-                <Title order={3}>
-                  <IconStar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Your favourite Teams
-                </Title>
-                <Button variant="subtle" component={Link} to="/favorites" size="sm">
-                  Manage
-                </Button>
-              </Group>
-              <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                {favorites.map((team) => (
-                  <Card key={team.id} withBorder padding="sm">
-                    <Text fw={500}>{team.name}</Text>
-                    <Link
-                      to="/teams/$teamId"
-                      params={{ teamId: String(team.id) }}
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <Button
-                        variant="light"
-                        size="xs"
-                        mt="xs"
-                        component="div"
-                      >
-                        View Team
-                      </Button>
-                    </Link>
-                  </Card>
-                ))}
-              </SimpleGrid>
-            </Card>
-          )}
         </Stack>
       </Container>
-    </ScrollArea>
+    </ScrollArea >
   );
 }
 

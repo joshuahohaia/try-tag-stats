@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   Title,
   Text,
@@ -22,6 +23,7 @@ import { formatDate, formatTime } from '../utils/format';
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
   const { favorites } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
@@ -47,7 +49,9 @@ function FixturesPage() {
         <Stack gap="md">
           <div>
             <Title order={1} mb="xs">Fixtures</Title>
-            <Text c="dimmed">View upcoming matches and recent results for Your Favourite Teams</Text>
+            {!isMobile && (
+              <Text c="dimmed">View upcoming matches and recent results for Your Favourite Teams</Text>
+            )}
           </div>
 
           <SegmentedControl

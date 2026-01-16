@@ -16,7 +16,6 @@ import {
   IconTrophy,
   IconUsers,
   IconCalendar,
-  IconStar,
 } from '@tabler/icons-react';
 import { Link, useRouterState } from '@tanstack/react-router';
 
@@ -62,9 +61,8 @@ function RootLayout() {
   const navItems = [
     { to: '/', label: 'Home', icon: IconHome },
     { to: '/leagues', label: 'Leagues', icon: IconTrophy },
-    { to: '/teams', label: 'Teams', icon: IconUsers },
     { to: '/fixtures', label: 'Fixtures', icon: IconCalendar },
-    { to: '/favorites', label: 'Favourites', icon: IconStar },
+    { to: '/teams', label: 'Teams', icon: IconUsers },
   ];
 
   return (
@@ -83,12 +81,12 @@ function RootLayout() {
       <AppShell.Navbar p="md">
         <Center>
           <Link to="/" style={{ textDecoration: 'none' }}>
-            <Image 
-               src="/logo.png" 
-               alt="Try Tag Stats" 
-               w={40} 
-               radius="md" 
-               mb="xl"
+            <Image
+              src="/logo.png"
+              alt="Try Tag Stats"
+              w={40}
+              radius="md"
+              mb="xl"
             />
           </Link>
         </Center>
@@ -105,9 +103,9 @@ function RootLayout() {
 
       <AppShell.Main h="100vh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Box
-           flex={1}
-           h="100%"
-           style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          flex={1}
+          h="100%"
+          style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         >
           <Outlet />
         </Box>
@@ -116,30 +114,28 @@ function RootLayout() {
       {/* Mobile Bottom Navigation */}
       <AppShell.Footer p={0} hiddenFrom="sm" style={{ display: 'flex', alignItems: 'center' }}>
         <Group justify="space-around" w="100%" px="xs" gap={0}>
-           {navItems.map((item) => (
-             <UnstyledButton
-               key={item.to}
-               component={Link}
-               to={item.to}
-               style={{
-                 flex: 1,
-                 display: 'flex',
-                 flexDirection: 'column',
-                 alignItems: 'center',
-                 padding: '8px 0',
-                 color: currentPath === item.to ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
-               }}
-             >
-               <item.icon size={24} stroke={1.5} />
-             </UnstyledButton>
-           ))}
+          {navItems.map((item) => (
+            <UnstyledButton
+              key={item.to}
+              component={Link}
+              to={item.to}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '8px 0',
+                color: currentPath === item.to ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
+              }}
+            >
+              <item.icon size={24} stroke={1.5} />
+            </UnstyledButton>
+          ))}
         </Group>
       </AppShell.Footer>
     </AppShell>
   );
 }
-
-// Helper component for centering the logo removed as we import Center from mantine
 
 export const Route = createRootRoute({
   component: RootLayout,

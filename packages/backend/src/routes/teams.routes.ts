@@ -14,6 +14,16 @@ import { scraperOrchestrator } from '../scraper/index.js';
 
 const router = Router();
 
+// GET /api/v1/teams - Get all teams
+router.get('/', (_req, res) => {
+  const teams = teamRepository.findAll();
+  res.json({
+    success: true,
+    data: teams,
+    meta: { total: teams.length },
+  });
+});
+
 // GET /api/v1/teams/batch - Get multiple teams by IDs
 router.get('/batch', (req, res) => {
   const idsParam = req.query.ids as string;
