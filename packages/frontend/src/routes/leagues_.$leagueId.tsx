@@ -15,14 +15,16 @@ import {
   ScrollArea,
   Box,
   Container,
+  Tooltip,
 } from '@mantine/core';
-import { IconStar, IconStarFilled, IconAward } from '@tabler/icons-react';
+import { IconStar, IconStarFilled, IconAward, IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
-import { useFavoriteTeams } from '../hooks/useFavorites';
+import { getFixtureInsights } from '../utils/fixtures';
 import { formatDate, formatTime } from '../utils/format';
+import { useFavoriteTeams } from '../hooks/useFavorites';
 
 
 
@@ -246,49 +248,62 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                     <Center h={200}><Loader /></Center>
                   ) : fixtures && fixtures.length > 0 ? (
                     <Stack gap="sm">
-                      {fixtures.map((fixture) => (
-                        <Card key={fixture.id} withBorder padding="sm">
-                          <Group justify="space-between">
-                            <Stack gap={2}>
-                              <Group gap="xs">
-                                <Link
-                                  to="/teams/$teamId"
-                                  params={{ teamId: String(fixture.homeTeam.id) }}
-                                  style={{ textDecoration: 'none', color: 'inherit' }}
-                                >
-                                  <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                                </Link>
-                                <Text fw={500}>vs</Text>
-                                <Link
-                                  to="/teams/$teamId"
-                                  params={{ teamId: String(fixture.awayTeam.id) }}
-                                  style={{ textDecoration: 'none', color: 'inherit' }}
-                                >
-                                  <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                                </Link>
-                              </Group>
-                              <Stack gap={0}>
-                                <Text size="sm" c="dimmed">
-                                  {formatDate(fixture.fixtureDate)}
-                                </Text>
-                                <Text size="sm" c="dimmed">
-                                  {formatTime(fixture.fixtureTime)}
-                                  {fixture.pitch && ` - ${fixture.pitch}`}
-                                </Text>
+                      {fixtures.map((fixture) => {
+                        const insights = getFixtureInsights(fixture, standings, statistics);
+
+                        return (
+                          <Card key={fixture.id} withBorder padding="sm">
+                            <Group justify="space-between">
+                              <Stack gap={2}>
+                                <Group gap="xs">
+                                  <Link
+                                    to="/teams/$teamId"
+                                    params={{ teamId: String(fixture.homeTeam.id) }}
+                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                  >
+                                    <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                                  </Link>
+                                  <Text fw={500}>vs</Text>
+                                  <Link
+                                    to="/teams/$teamId"
+                                    params={{ teamId: String(fixture.awayTeam.id) }}
+                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                  >
+                                    <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                                  </Link>
+                                </Group>
+                                <Stack gap={0}>
+                                  <Text size="sm" c="dimmed">
+                                    {formatDate(fixture.fixtureDate)}
+                                  </Text>
+                                  <Text size="sm" c="dimmed">
+                                    {formatTime(fixture.fixtureTime)}
+                                    {fixture.pitch && ` - ${fixture.pitch}`}
+                                  </Text>
+                                </Stack>
                               </Stack>
-                            </Stack>
-                            <div>
-                              {fixture.status === 'completed' && fixture.homeScore !== null ? (
-                                <Badge size="lg" variant="filled">
-                                  {fixture.homeScore} - {fixture.awayScore}
-                                </Badge>
-                              ) : (
-                                <Badge variant="light">{fixture.status}</Badge>
-                              )}
-                            </div>
-                          </Group>
-                        </Card>
-                      ))}
+                              <Group>
+                                {insights.map((insight) => (
+                                  <Tooltip key={insight.type} label={insight.text} withArrow>
+                                    {insight.type === 'top-clash' ? (
+                                      <IconTrophy size={20} color="orange" />
+                                    ) : (
+                                      <IconSparkles size={20} color="purple" />
+                                    )}
+                                  </Tooltip>
+                                ))}
+                                {fixture.status === 'completed' && fixture.homeScore !== null ? (
+                                  <Badge size="lg" variant="filled">
+                                    {fixture.homeScore} - {fixture.awayScore}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="light">{fixture.status}</Badge>
+                                )}
+                              </Group>
+                            </Group>
+                          </Card>
+                        );
+                      })}
                     </Stack>
                   ) : (
                     <Text c="dimmed">No fixtures data available</Text>

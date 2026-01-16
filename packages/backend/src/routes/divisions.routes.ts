@@ -51,6 +51,44 @@ router.get('/:id/statistics', (req, res) => {
   });
 });
 
+// GET /api/v1/divisions/standings/batch - Get standings for multiple divisions
+router.get('/standings/batch', (req, res) => {
+  const idsParam = req.query.ids as string;
+  if (!idsParam) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'BAD_REQUEST', message: 'ids query parameter required' },
+    });
+    return;
+  }
+  const ids = idsParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+  const standings = standingRepository.findByDivisionIds(ids);
+  res.json({
+    success: true,
+    data: standings,
+    meta: { total: standings.length },
+  });
+});
+
+// GET /api/v1/divisions/statistics/batch - Get statistics for multiple divisions
+router.get('/statistics/batch', (req, res) => {
+  const idsParam = req.query.ids as string;
+  if (!idsParam) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'BAD_REQUEST', message: 'ids query parameter required' },
+    });
+    return;
+  }
+  const ids = idsParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+  const stats = playerAwardRepository.findByDivisionIds(ids);
+  res.json({
+    success: true,
+    data: stats,
+    meta: { total: stats.length },
+  });
+});
+
 // GET /api/v1/divisions/:id/fixtures - Get all fixtures
 router.get('/:id/fixtures', (req, res) => {
   const id = parseInt(req.params.id, 10);

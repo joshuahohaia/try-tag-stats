@@ -40,3 +40,29 @@ export function useDivisionStatistics(divisionId: number) {
     enabled: !!divisionId,
   });
 }
+
+export function useDivisionsStandings(divisionIds: number[]) {
+  return useQuery({
+    queryKey: ['divisions', 'standings', 'batch', divisionIds],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: StandingWithTeam[] }>(
+        `/divisions/standings/batch?ids=${divisionIds.join(',')}`
+      );
+      return extractData(response);
+    },
+    enabled: divisionIds.length > 0,
+  });
+}
+
+export function useDivisionsStatistics(divisionIds: number[]) {
+  return useQuery({
+    queryKey: ['divisions', 'statistics', 'batch', divisionIds],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: PlayerAwardWithDetails[] }>(
+        `/divisions/statistics/batch?ids=${divisionIds.join(',')}`
+      );
+      return extractData(response);
+    },
+    enabled: divisionIds.length > 0,
+  });
+}

@@ -127,6 +127,50 @@ export const standingRepository = {
     return rows.map(rowToStandingWithTeam);
   },
 
+  findByDivisionIds(divisionIds: number[]): StandingWithTeam[] {
+    if (divisionIds.length === 0) return [];
+    const db = getDatabase();
+    const placeholders = divisionIds.map(() => '?').join(',');
+    const rows = db
+      .prepare(
+        `
+        SELECT s.*, t.name as team_name, t.external_team_id,
+          (
+            SELECT GROUP_CONCAT(result, '')
+            FROM (
+              SELECT result, fixture_date, fixture_time
+              FROM (
+                SELECT
+                  CASE
+                    WHEN (f.home_team_id = s.team_id AND f.home_score > f.away_score) OR
+                         (f.away_team_id = s.team_id AND f.away_score > f.home_score) THEN 'W'
+                    WHEN (f.home_team_id = s.team_id AND f.home_score < f.away_score) OR
+                         (f.away_team_id = s.team_id AND f.away_score < f.home_score) THEN 'L'
+                    ELSE 'D'
+                  END as result,
+                  f.fixture_date,
+                  f.fixture_time
+                FROM fixtures f
+                WHERE f.division_id = s.division_id
+                  AND (f.home_team_id = s.team_id OR f.away_team_id = s.team_id)
+                  AND f.status = 'completed'
+                  AND f.home_score IS NOT NULL
+                ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC
+                LIMIT 5
+              )
+              ORDER BY fixture_date, CASE WHEN fixture_time IS NULL THEN 1 ELSE 0 END, fixture_time
+            )
+          ) as form
+        FROM standings s
+        INNER JOIN teams t ON s.team_id = t.id
+        WHERE s.division_id IN (${placeholders})
+        ORDER BY s.division_id, s.position
+      `
+      )
+      .all(...divisionIds) as StandingWithTeamRow[];
+    return rows.map(rowToStandingWithTeam);
+  },
+
   findByTeam(teamId: number): StandingWithDivision[] {
     const db = getDatabase();
     const rows = db

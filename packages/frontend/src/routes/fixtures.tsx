@@ -13,12 +13,16 @@ import {
   SegmentedControl,
   ScrollArea,
   Button,
+  Tooltip,
 } from '@mantine/core';
+import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { formatDate, formatTime } from '../utils/format';
+import { useDivisionsStandings, useDivisionsStatistics } from '../hooks/useDivisions';
+import { getFixtureInsights } from '../utils/fixtures';
 
 function FixturesPage() {
   const [view, setView] = useState('upcoming');
@@ -39,9 +43,16 @@ function FixturesPage() {
     50
   );
 
-  // If no favorites, we don't even use the data
   const fixtures = view === 'upcoming' ? upcomingFixtures : recentFixtures;
   const isLoading = view === 'upcoming' ? upcomingLoading : recentLoading;
+
+  const divisionIds = useMemo(() => {
+    if (!fixtures) return [];
+    return [...new Set(fixtures.map(f => f.divisionId))];
+  }, [fixtures]);
+
+  const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(divisionIds);
+  const { data: statistics, isLoading: statsLoading } = useDivisionsStatistics(divisionIds);
 
   return (
     <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
@@ -74,13 +85,17 @@ function FixturesPage() {
                 <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
               </Stack>
             </Card>
-          ) : isLoading ? (
+          ) : isLoading || standingsLoading || statsLoading ? (
             <Center h={200}>
               <Loader size="lg" />
             </Center>
           ) : fixtures && fixtures.length > 0 ? (
             <Stack gap="sm">
               {fixtures.map((fixture) => {
+                const fixtureStandings = standings?.filter(s => s.divisionId === fixture.divisionId);
+                const fixtureStats = statistics?.filter(s => s.divisionId === fixture.divisionId);
+                const insights = getFixtureInsights(fixture, fixtureStandings, fixtureStats);
+
                 // Determine result color based on favourite team's perspective
                 let resultColor = 'gray';
                 if (fixture.status === 'completed' && fixture.homeScore !== null && fixture.awayScore !== null) {
@@ -106,11 +121,16 @@ function FixturesPage() {
                     padding="md"
                     style={{ position: 'relative' }}
                   >
-                    <div style={{
-                      position: 'absolute',
-                      top: 'var(--mantine-spacing-md)',
-                      right: 'var(--mantine-spacing-md)'
-                    }}>
+                    <Group justify="space-between" align="flex-start" style={{ position: 'absolute', top: 'var(--mantine-spacing-md)', right: 'var(--mantine-spacing-md)' }}>
+                      {insights.map((insight) => (
+                        <Tooltip key={insight.type} label={insight.text} withArrow>
+                          {insight.type === 'top-clash' ? (
+                            <IconTrophy size={20} color="orange" />
+                          ) : (
+                            <IconSparkles size={20} color="purple" />
+                          )}
+                        </Tooltip>
+                      ))}
                       {fixture.status === 'completed' && fixture.homeScore !== null ? (
                         <Badge size="lg" variant="filled" color={resultColor}>
                           {fixture.homeScore} - {fixture.awayScore}
@@ -118,7 +138,7 @@ function FixturesPage() {
                       ) : (
                         <Badge size="lg" variant="light">{fixture.status}</Badge>
                       )}
-                    </div>
+                    </Group>
 
                     <Group justify="space-between" align="flex-start">
                       <Stack gap={4} style={{ flex: 1, paddingRight: '120px' }}>

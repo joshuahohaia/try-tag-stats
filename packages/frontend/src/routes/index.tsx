@@ -16,8 +16,9 @@ import {
   ScrollArea,
   Container,
   Flex,
+  Tooltip,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
@@ -25,7 +26,8 @@ import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { formatDate, formatTime } from '../utils/format';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
-import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
+import { useDivisionStandings, useDivisionStatistics, useDivisionsStandings, useDivisionsStatistics } from '../hooks/useDivisions';
+import { getFixtureInsights } from '../utils/fixtures';
 import type { Team, StandingWithDivision } from '@trytag/shared';
 
 interface TeamProfile extends Team {
@@ -262,6 +264,14 @@ function HomePage() {
     5
   );
 
+  const divisionIds = useMemo(() => {
+    if (!upcomingFixtures) return [];
+    return [...new Set(upcomingFixtures.map(f => f.divisionId))];
+  }, [upcomingFixtures]);
+
+  const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(divisionIds);
+  const { data: statistics, isLoading: statsLoading } = useDivisionsStatistics(divisionIds);
+
   return (
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md">
@@ -306,62 +316,74 @@ function HomePage() {
                   View All
                 </Button>
               </Group>
-              {fixturesLoading ? (
+              {fixturesLoading || standingsLoading || statsLoading ? (
                 <Text c="dimmed">Loading fixtures...</Text>
               ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
                 <Stack gap="xs">
-                  {upcomingFixtures.map((fixture) => (
-                    <Card
-                      key={fixture.id}
-                      withBorder
-                      padding="xs"
-                      style={{ position: 'relative' }} // Required for absolute child positioning
-                    >
-                      {/* Absolute Anchored Badge */}
-                      <Badge
-                        variant="light"
-                        size="xs"
-                        style={{
-                          position: 'absolute',
-                          top: '8px',
-                          right: '8px'
-                        }}
+                  {upcomingFixtures.map((fixture) => {
+                    const fixtureStandings = standings?.filter(s => s.divisionId === fixture.divisionId);
+                    const fixtureStats = statistics?.filter(s => s.divisionId === fixture.divisionId);
+                    const insights = getFixtureInsights(fixture, fixtureStandings, fixtureStats);
+
+                    return (
+                      <Card
+                        key={fixture.id}
+                        withBorder
+                        padding="xs"
+                        style={{ position: 'relative' }} // Required for absolute child positioning
                       >
-                        {fixture.status}
-                      </Badge>
-
-                      <div>
-                        <Group gap={4} mb={4} pr={60}> {/* Added padding-right to avoid overlapping text with the badge */}
-                          <Link
-                            to="/teams/$teamId"
-                            params={{ teamId: String(fixture.homeTeam.id) }}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                        <Group justify="space-between" align="flex-start" style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                          {insights.map((insight) => (
+                            <Tooltip key={insight.type} label={insight.text} withArrow>
+                              {insight.type === 'top-clash' ? (
+                                <IconTrophy size={16} color="orange" />
+                              ) : (
+                                <IconSparkles size={16} color="purple" />
+                              )}
+                            </Tooltip>
+                          ))}
+                          <Badge
+                            variant="light"
+                            size="xs"
                           >
-                            <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                          </Link>
-
-                          <Text size="sm" fw={500}>vs</Text>
-
-                          <Link
-                            to="/teams/$teamId"
-                            params={{ teamId: String(fixture.awayTeam.id) }}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
-                          >
-                            <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                          </Link>
+                            {fixture.status}
+                          </Badge>
                         </Group>
 
-                        <Stack gap={0}>
-                          <Text size="xs" c="dimmed">
-                            {formatDate(fixture.fixtureDate)}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            {formatTime(fixture.fixtureTime)}
-                          </Text>
-                        </Stack>
-                      </div>
-                    </Card>
-                  ))}
+
+                        <div>
+                          <Group gap={4} mb={4} pr={60}> {/* Added padding-right to avoid overlapping text with the badge */}
+                            <Link
+                              to="/teams/$teamId"
+                              params={{ teamId: String(fixture.homeTeam.id) }}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                            </Link>
+
+                            <Text size="sm" fw={500}>vs</Text>
+
+                            <Link
+                              to="/teams/$teamId"
+                              params={{ teamId: String(fixture.awayTeam.id) }}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                            </Link>
+                          </Group>
+
+                          <Stack gap={0}>
+                            <Text size="xs" c="dimmed">
+                              {formatDate(fixture.fixtureDate)}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {formatTime(fixture.fixtureTime)}
+                            </Text>
+                          </Stack>
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Text c="dimmed">
@@ -418,7 +440,6 @@ function HomePage() {
     </ScrollArea >
   );
 }
-
 export const Route = createFileRoute('/')({
   component: HomePage,
 });

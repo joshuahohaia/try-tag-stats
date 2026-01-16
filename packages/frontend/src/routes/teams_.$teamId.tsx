@@ -16,9 +16,11 @@ import {
   Container,
   Tooltip,
 } from '@mantine/core';
-import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-react';
+import { IconStar, IconStarFilled, IconTrophy, IconAward, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useTeam } from '../hooks/useTeams';
+import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
+import { getFixtureInsights } from '../utils/fixtures';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { formatDate, formatTime } from '../utils/format';
 import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
@@ -261,6 +263,11 @@ function TeamDetailPage() {
   const { data: teamProfile, isLoading } = useTeam(parseInt(teamId, 10));
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
 
+  const currentDivisionId = teamProfile?.standings?.[0]?.divisionId;
+  const { data: standings, isLoading: standingsLoading } = useDivisionStandings(currentDivisionId ?? 0);
+  const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(currentDivisionId ?? 0);
+
+
   if (isLoading) {
     return (
       <Center h={400}>
@@ -386,7 +393,8 @@ function TeamDetailPage() {
             {/* Recent Results - shown first */}
             <Card withBorder>
               <Title order={3} mb="md">Recent Results</Title>
-              {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
+              {standingsLoading || statsLoading ? <Center><Loader /></Center> :
+                teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
                 <Table>
                   <Table.Thead>
                     <Table.Tr>
@@ -408,6 +416,8 @@ function TeamDetailPage() {
                           ? teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D'
                           : '-';
 
+                        const insights = getFixtureInsights(fixture, standings, statistics);
+
                         return (
                           <Table.Tr key={fixture.id || idx}>
                             <Table.Td>
@@ -428,13 +438,24 @@ function TeamDetailPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
-                              <Badge
-                                fullWidth
-                                color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
-                                variant="filled"
-                              >
-                                {result} {teamScore !== null && `${teamScore}-${oppScore}`}
-                              </Badge>
+                              <Group>
+                                <Badge
+                                  fullWidth
+                                  color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
+                                  variant="filled"
+                                >
+                                  {result} {teamScore !== null && `${teamScore}-${oppScore}`}
+                                </Badge>
+                                {insights.map((insight) => (
+                                  <Tooltip key={insight.type} label={insight.text} withArrow>
+                                    {insight.type === 'top-clash' ? (
+                                      <IconTrophy size={16} color="orange" />
+                                    ) : (
+                                      <IconSparkles size={16} color="purple" />
+                                    )}
+                                  </Tooltip>
+                                ))}
+                              </Group>
                             </Table.Td>
                           </Table.Tr>
                         );
@@ -449,28 +470,43 @@ function TeamDetailPage() {
             {/* Upcoming Fixtures */}
             <Card withBorder>
               <Title order={3} mb="md">Upcoming Fixtures</Title>
-              {teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
+              {standingsLoading || statsLoading ? <Center><Loader /></Center> :
+                teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
                 <Stack gap="sm">
-                  {teamProfile.upcomingFixtures.map((fixture, idx) => (
-                    <Card key={fixture.id || idx} withBorder padding="sm">
-                      <Group justify="space-between">
-                        <div>
-                          <Text fw={500}>
-                            {fixture.homeTeam?.name || 'TBD'} vs {fixture.awayTeam?.name || 'TBD'}
-                          </Text>
-                          <Stack gap={0}>
-                            <Text size="sm" c="dimmed">
-                              {formatDate(fixture.fixtureDate)}
+                  {teamProfile.upcomingFixtures.map((fixture, idx) => {
+                    const insights = getFixtureInsights(fixture, standings, statistics);
+                    return (
+                      <Card key={fixture.id || idx} withBorder padding="sm">
+                        <Group justify="space-between">
+                          <div>
+                            <Text fw={500}>
+                              {fixture.homeTeam?.name || 'TBD'} vs {fixture.awayTeam?.name || 'TBD'}
                             </Text>
-                            <Text size="sm" c="dimmed">
-                              {formatTime(fixture.fixtureTime)}
-                            </Text>
-                          </Stack>
-                        </div>
-                        <Badge variant="light">{fixture.status}</Badge>
-                      </Group>
-                    </Card>
-                  ))}
+                            <Stack gap={0}>
+                              <Text size="sm" c="dimmed">
+                                {formatDate(fixture.fixtureDate)}
+                              </Text>
+                              <Text size="sm" c="dimmed">
+                                {formatTime(fixture.fixtureTime)}
+                              </Text>
+                            </Stack>
+                          </div>
+                          <Group>
+                            {insights.map((insight) => (
+                              <Tooltip key={insight.type} label={insight.text} withArrow>
+                                {insight.type === 'top-clash' ? (
+                                  <IconTrophy size={16} color="orange" />
+                                ) : (
+                                  <IconSparkles size={16} color="purple" />
+                                )}
+                              </Tooltip>
+                            ))}
+                            <Badge variant="light">{fixture.status}</Badge>
+                          </Group>
+                        </Group>
+                      </Card>
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Text c="dimmed" ta="center" py="md">No upcoming fixtures</Text>
@@ -527,7 +563,6 @@ function TeamDetailPage() {
     </ScrollArea>
   );
 }
-
 export const Route = createFileRoute('/teams_/$teamId')({
   component: TeamDetailPage,
 });

@@ -64,6 +64,24 @@ export const playerAwardRepository = {
     return rows.map(rowToPlayerAwardWithDetails);
   },
 
+  findByDivisionIds(divisionIds: number[]): PlayerAwardWithDetails[] {
+    if (divisionIds.length === 0) return [];
+    const db = getDatabase();
+    const placeholders = divisionIds.map(() => '?').join(',');
+    const rows = db.prepare(`
+        SELECT pa.*,
+               p.name as player_name, p.external_player_id,
+               t.name as team_name, t.external_team_id
+        FROM player_awards pa
+        INNER JOIN players p ON pa.player_id = p.id
+        INNER JOIN teams t ON pa.team_id = t.id
+        WHERE pa.division_id IN (${placeholders})
+        ORDER BY pa.division_id, pa.award_count DESC, p.name ASC
+    `).all(...divisionIds) as PlayerAwardWithDetailsRow[];
+
+    return rows.map(rowToPlayerAwardWithDetails);
+  },
+
   findByTeam(teamId: number): PlayerAwardWithDetails[] {
     const db = getDatabase();
     const rows = db.prepare(`
