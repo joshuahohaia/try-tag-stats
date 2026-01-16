@@ -66,7 +66,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
   return (
     <Card withBorder>
       <Group justify="space-between" mb="md">
-        <Title order={3}>Active League Standings</Title>
+        <Title fz={15} order={3}>Active League Standings</Title>
         {divisions.length > 1 && (
           <Group gap="xs">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
@@ -82,9 +82,9 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
         <Stack gap="xs">
           <div>
             <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <Text size="lg" fw={700} c="blue">{currentDivision.leagueName}</Text>
+              <Text size="sm" fw={700} c="blue">{currentDivision.leagueName}</Text>
             </Link>
-            <Text c="dimmed" size="sm">{currentDivision.name} • {currentDivision.seasonName}</Text>
+            <Text c="dimmed" size="xs">{currentDivision.name} • {currentDivision.seasonName}</Text>
           </div>
 
           {standingsLoading ? (
@@ -165,7 +165,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
   return (
     <Card withBorder>
       <Group justify="space-between" mb="md">
-        <Title order={3}>Player of Match Leaders</Title>
+        <Title fz={15} order={3}>Player of Match Leaders</Title>
         {divisions.length > 1 && (
           <Group gap="xs">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
@@ -180,7 +180,9 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
       {currentDivision && (
         <Stack gap="xs">
           <div>
-            <Text fw={600}>{currentDivision.leagueName}</Text>
+            <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Text size="sm" fw={700} c="blue">{currentDivision.leagueName}</Text>
+            </Link>
             <Text c="dimmed" size="xs">{currentDivision.name}</Text>
           </div>
 
@@ -210,7 +212,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
               ))}
             </SimpleGrid>
           ) : (
-            <Text c="dimmed" size="sm">No stats available</Text>
+            <Text c="dimmed" size="xs">No stats available</Text>
           )}
         </Stack>
       )}
@@ -310,11 +312,11 @@ function HomePage() {
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             <Card withBorder>
               <Group justify="space-between" mb="md">
-                <Title order={3}>
+                <Title fz={15} order={3} >
                   <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
                   Upcoming Fixtures
                 </Title>
-                <Button variant="subtle" component={Link} to="/fixtures" size="sm">
+                <Button variant="subtle" component={Link} to="/fixtures" size="xs">
                   View All
                 </Button>
               </Group>
@@ -412,7 +414,7 @@ function HomePage() {
               <PlayerStatsWidget divisions={activeDivisions} />
             ) : (
               <Card withBorder>
-                <Title order={3} mb="md">
+                <Title fz={15} order={3} mb="md">
                   <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
                   Quick Links
                 </Title>

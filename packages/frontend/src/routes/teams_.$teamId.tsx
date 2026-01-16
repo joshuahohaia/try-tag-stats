@@ -35,7 +35,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
     .slice(0, 5)
     .reverse(); // Reverse so oldest is on left, newest on right
 
-  if (completedFixtures.length === 0) return null;
+  if (completedFixtures.length === 0) return <Text c="dimmed" size="xs">No form data</Text>;
 
   return (
     <Group gap={8}>
@@ -357,13 +357,15 @@ function TeamDetailPage() {
             </Card>
           )}
 
-          {teamProfile.positionHistory && teamProfile.positionHistory.length > 0 && (
-            <PositionChart positionHistory={teamProfile.positionHistory} />
-          )}
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            {teamProfile.seasonStats && teamProfile.seasonStats.length > 0 && (
+              <StatsTable seasonStats={teamProfile.seasonStats} />
+            )}
 
-          {teamProfile.seasonStats && teamProfile.seasonStats.length > 0 && (
-            <StatsTable seasonStats={teamProfile.seasonStats} />
-          )}
+            {teamProfile.positionHistory && teamProfile.positionHistory.length > 0 && (
+              <PositionChart positionHistory={teamProfile.positionHistory} />
+            )}
+          </SimpleGrid>
 
           {teamProfile.playerAwards && teamProfile.playerAwards.length > 0 && (
             <Card withBorder>
@@ -486,12 +488,12 @@ function TeamDetailPage() {
 
                       return (
                         <Card key={fixture.id || idx} withBorder padding="sm">
-                          <Group justify="space-between">
-                            <div>
-                              <Group>
+                          <Group justify="space-between" align="flex-start" wrap="nowrap">
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <Stack gap={0}>
                                 {fixture.homeTeam ? (
                                   <Link to="/teams/$teamId" params={{ teamId: String(fixture.homeTeam.id) }} style={{ textDecoration: 'none' }}>
-                                    <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                                    <Text fw={500} c="blue" truncate="end">{fixture.homeTeam.name}</Text>
                                   </Link>
                                 ) : (
                                   <Text fw={500}>TBD</Text>
@@ -499,12 +501,12 @@ function TeamDetailPage() {
                                 <Text fw={500}>vs</Text>
                                 {fixture.awayTeam ? (
                                   <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
-                                    <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                                    <Text fw={500} c="blue" truncate="end">{fixture.awayTeam.name}</Text>
                                   </Link>
                                 ) : (
                                   <Text fw={500}>TBD</Text>
                                 )}
-                              </Group>
+                              </Stack>
                               <Stack gap={0}>
                                 <Text size="sm" c="dimmed">
                                   {formatDate(fixture.fixtureDate)}

@@ -134,7 +134,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                 value={selectedSeasonId}
                 onChange={setSelectedSeasonId}
                 placeholder="Select Season"
-                w={160}
+                w={150}
               />
               <Select
                 data={divisionOptions}
@@ -142,7 +142,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                 onChange={setSelectedDivisionId}
                 placeholder="Select Division"
                 disabled={!divisions || divisions.length === 0}
-                w={180}
+                w={150}
               />
             </Group>
           </Group>
@@ -152,7 +152,6 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
               <Tabs.List>
                 <Tabs.Tab value="standings">Standings</Tabs.Tab>
                 <Tabs.Tab value="fixtures">Fixtures</Tabs.Tab>
-                <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
               </Tabs.List>
             </Tabs>
           )}
@@ -173,7 +172,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
           <Container size="xl" p="md">
             <Box>
               {activeTab === 'standings' && (
-                <>
+                <Stack gap="md">
                   {standingsLoading ? (
                     <Center h={200}><Loader /></Center>
                   ) : standings && standings.length > 0 ? (
@@ -241,7 +240,56 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   ) : (
                     <Text c="dimmed">No standings data available</Text>
                   )}
-                </>
+
+                  {statsLoading ? (
+                    <Center h={200}><Loader /></Center>
+                  ) : statistics && statistics.length > 0 ? (
+                    <Card withBorder>
+                      <Title order={3} mb="md">Player of the Match Awards</Title>
+                      <Table highlightOnHover>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Pos</Table.Th>
+                            <Table.Th>Player</Table.Th>
+                            <Table.Th>Team</Table.Th>
+                            <Table.Th>Awards</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {statistics.map((stat) => {
+                            const uniqueCounts = [...new Set(statistics.map(s => s.awardCount))]
+                              .sort((a, b) => b - a);
+
+                            const awardCountPosition = uniqueCounts.indexOf(stat.awardCount) + 1;
+                            return (
+                              <Table.Tr key={stat.id}>
+                                <Table.Td>{awardCountPosition}</Table.Td>
+                                <Table.Td fw={500}>{stat.player.name}</Table.Td>
+                                <Table.Td>
+                                  <Link
+                                    to="/teams/$teamId"
+                                    params={{ teamId: String(stat.team.id) }}
+                                    style={{ color: 'inherit', textDecoration: 'none' }}
+                                  >
+                                    <Text span c="blue">{stat.team.name}</Text>
+                                  </Link>
+                                </Table.Td>
+                                <Table.Td>
+                                  <Group gap={4}>
+                                    <IconAward size={18} style={{ color: 'gold' }} />
+                                    <Text fw={700}>{stat.awardCount}</Text>
+                                  </Group>
+                                </Table.Td>
+                              </Table.Tr>
+                            );
+                          })}
+                        </Table.Tbody>
+                      </Table>
+                    </Card>
+                  ) : (
+                    <Text c="dimmed">No statistics available for this division.</Text>
+                  )}
+                </Stack>
               )}
 
               {activeTab === 'fixtures' && (
@@ -331,7 +379,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
               {activeTab === 'statistics' && (
                 <>
-                  {statsLoading ? (
+                  {/* {statsLoading ? (
                     <Center h={200}><Loader /></Center>
                   ) : statistics && statistics.length > 0 ? (
                     <Card withBorder>
@@ -339,38 +387,43 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                       <Table highlightOnHover>
                         <Table.Thead>
                           <Table.Tr>
+                            <Table.Th>Pos</Table.Th>
                             <Table.Th>Player</Table.Th>
                             <Table.Th>Team</Table.Th>
                             <Table.Th>Awards</Table.Th>
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {statistics.map((stat) => (
-                            <Table.Tr key={stat.id}>
-                              <Table.Td fw={500}>{stat.player.name}</Table.Td>
-                              <Table.Td>
-                                <Link
-                                  to="/teams/$teamId"
-                                  params={{ teamId: String(stat.team.id) }}
-                                  style={{ color: 'inherit', textDecoration: 'none' }}
-                                >
-                                  <Text span c="blue">{stat.team.name}</Text>
-                                </Link>
-                              </Table.Td>
-                              <Table.Td>
-                                <Group gap={4}>
-                                  <IconAward size={18} style={{ color: 'gold' }} />
-                                  <Text fw={700}>{stat.awardCount}</Text>
-                                </Group>
-                              </Table.Td>
-                            </Table.Tr>
-                          ))}
+                          {statistics.map((stat) => {
+                            const standing = standings?.find(s => s.teamId === stat.team.id);
+                            return (
+                              <Table.Tr key={stat.id}>
+                                <Table.Td>{standing?.position ?? '-'}</Table.Td>
+                                <Table.Td fw={500}>{stat.player.name}</Table.Td>
+                                <Table.Td>
+                                  <Link
+                                    to="/teams/$teamId"
+                                    params={{ teamId: String(stat.team.id) }}
+                                    style={{ color: 'inherit', textDecoration: 'none' }}
+                                  >
+                                    <Text span c="blue">{stat.team.name}</Text>
+                                  </Link>
+                                </Table.Td>
+                                <Table.Td>
+                                  <Group gap={4}>
+                                    <IconAward size={18} style={{ color: 'gold' }} />
+                                    <Text fw={700}>{stat.awardCount}</Text>
+                                  </Group>
+                                </Table.Td>
+                              </Table.Tr>
+                            );
+                          })}
                         </Table.Tbody>
                       </Table>
                     </Card>
                   ) : (
                     <Text c="dimmed">No statistics available for this division.</Text>
-                  )}
+                  )} */}
                 </>
               )}
             </Box>

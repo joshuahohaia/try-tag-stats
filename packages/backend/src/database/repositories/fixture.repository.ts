@@ -152,9 +152,9 @@ export const fixtureRepository = {
       params.push(teamId, teamId);
     }
 
-    // Order by date descending, then by time descending (most recent first)
+    // Order by completed status first, then by date descending, then by time descending
     query +=
-      ' ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?';
+      " ORDER BY CASE f.status WHEN 'completed' THEN 0 ELSE 1 END, f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?";
     params.push(limit);
 
     const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
