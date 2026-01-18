@@ -212,6 +212,7 @@ export interface ScrapedLeagueListItem {
   seasonName: string;
   divisionName: string;
   region: string;
+  externalId?: string;
 }
 
 export interface ScrapedStandingRow {

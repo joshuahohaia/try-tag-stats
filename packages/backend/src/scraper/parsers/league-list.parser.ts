@@ -165,7 +165,6 @@ export function parseLeagueList(html: string): ParsedLeagueList {
 
     const item: ScrapedLeagueListItem = {
       leagueId,
-      externalId: `league_${leagueId}_season_${seasonId}_division_${divisionId}`,
       seasonId,
       divisionId,
       leagueName,
