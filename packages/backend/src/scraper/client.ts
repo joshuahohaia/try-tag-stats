@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import Bottleneck from 'bottleneck';
-import { config } from '../config/env.js';
+import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 interface FetchOptions {
@@ -10,7 +10,7 @@ interface FetchOptions {
 
 const DEFAULT_OPTIONS: Required<FetchOptions> = {
   maxRetries: 3,
-  timeout: config.scraper.timeout,
+  timeout: env.scraper.timeout,
 };
 
 class ScraperClient {
@@ -19,8 +19,8 @@ class ScraperClient {
 
   constructor() {
     this.axios = axios.create({
-      baseURL: config.scraper.baseUrl,
-      timeout: config.scraper.timeout,
+      baseURL: env.scraper.baseUrl,
+      timeout: env.scraper.timeout,
       headers: {
         'User-Agent': 'TryTagStats/1.0 (Statistics aggregator)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -31,10 +31,10 @@ class ScraperClient {
     // Rate limiter: max N requests per second
     this.limiter = new Bottleneck({
       maxConcurrent: 2,
-      minTime: Math.ceil(1000 / config.scraper.rateLimit),
+      minTime: Math.ceil(1000 / env.scraper.rateLimit),
     });
 
-    logger.info(`Scraper client initialized with rate limit: ${config.scraper.rateLimit} req/s`);
+    logger.info(`Scraper client initialized with rate limit: ${env.scraper.rateLimit} req/s`);
   }
 
   async fetch(url: string, options: FetchOptions = {}): Promise<string> {

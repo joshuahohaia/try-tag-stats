@@ -1,193 +1,373 @@
-import { getDatabase } from './connection.js';
-import { logger } from '../utils/logger.js';
+import { relations } from 'drizzle-orm';
+import {
+  boolean,
+  integer,
+  pgTable,
+  primaryKey,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
-export function initializeSchema(): void {
-  const db = getDatabase();
+// ===========
+// Core Tables
+// ===========
 
-  logger.info('Initializing database schema...');
+export const regions = pgTable(
+  'regions',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex('regions_name_idx').on(table.name),
+  })
+);
 
-  db.exec(`
-    -- ============================================
-    -- REFERENCE DATA TABLES
-    -- ============================================
+export const leagues = pgTable(
+  'leagues',
+  {
+    id: serial('id').primaryKey(),
+    externalLeagueId: integer('external_league_id').notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    regionId: integer('region_id').references(() => regions.id),
+    venueName: varchar('venue_name', { length: 255 }),
+    dayOfWeek: varchar('day_of_week', { length: 50 }),
+    format: varchar('format', { length: 50 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    externalIdIdx: uniqueIndex('leagues_external_id_idx').on(table.externalLeagueId),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS regions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      slug TEXT NOT NULL UNIQUE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const seasons = pgTable(
+  'seasons',
+  {
+    id: serial('id').primaryKey(),
+    externalSeasonId: integer('external_season_id').notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    startDate: timestamp('start_date'),
+    endDate: timestamp('end_date'),
+    isCurrent: boolean('is_current').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    externalIdIdx: uniqueIndex('seasons_external_id_idx').on(table.externalSeasonId),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS leagues (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_league_id INTEGER NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      region_id INTEGER REFERENCES regions(id),
-      venue_name TEXT,
-      day_of_week TEXT,
-      format TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const divisions = pgTable(
+  'divisions',
+  {
+    id: serial('id').primaryKey(),
+    externalDivisionId: integer('external_division_id').notNull(),
+    leagueId: integer('league_id')
+      .references(() => leagues.id)
+      .notNull(),
+    seasonId: integer('season_id')
+      .references(() => seasons.id)
+      .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    tier: integer('tier'),
+    lastScrapedAt: timestamp('last_scraped_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueIdx: uniqueIndex('divisions_unique_idx').on(
+      table.externalDivisionId,
+      table.leagueId,
+      table.seasonId
+    ),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS seasons (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_season_id INTEGER NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      start_date DATE,
-      end_date DATE,
-      is_current INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const teams = pgTable(
+  'teams',
+  {
+    id: serial('id').primaryKey(),
+    externalTeamId: integer('external_team_id').notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    externalIdIdx: uniqueIndex('teams_external_id_idx').on(table.externalTeamId),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS divisions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_division_id INTEGER NOT NULL,
-      league_id INTEGER NOT NULL REFERENCES leagues(id),
-      season_id INTEGER NOT NULL REFERENCES seasons(id),
-      name TEXT NOT NULL,
-      tier INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_scraped_at DATETIME,
-      UNIQUE(external_division_id, league_id, season_id)
-    );
+export const players = pgTable(
+  'players',
+  {
+    id: serial('id').primaryKey(),
+    externalPlayerId: integer('external_player_id'),
+    name: varchar('name', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex('players_name_idx').on(table.name),
+    externalIdIdx: uniqueIndex('players_external_id_idx').on(table.externalPlayerId),
+  })
+);
 
-    -- ============================================
-    -- TEAM DATA
-    -- ============================================
+export const fixtures = pgTable(
+  'fixtures',
+  {
+    id: serial('id').primaryKey(),
+    externalFixtureId: integer('external_fixture_id'),
+    divisionId: integer('division_id')
+      .references(() => divisions.id)
+      .notNull(),
+    homeTeamId: integer('home_team_id')
+      .references(() => teams.id)
+      .notNull(),
+    awayTeamId: integer('away_team_id')
+      .references(() => teams.id)
+      .notNull(),
+    fixtureDate: timestamp('fixture_date').notNull(),
+    fixtureTime: varchar('fixture_time', { length: 50 }),
+    pitch: varchar('pitch', { length: 255 }),
+    roundNumber: integer('round_number'),
+    homeScore: integer('home_score'),
+    awayScore: integer('away_score'),
+    status: text('status', { enum: ['scheduled', 'completed', 'postponed'] }).notNull(),
+    isForfeit: boolean('is_forfeit').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueIdx: uniqueIndex('fixtures_unique_idx').on(
+      table.divisionId,
+      table.homeTeamId,
+      table.awayTeamId,
+      table.fixtureDate
+    ),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS teams (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_team_id INTEGER NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const standings = pgTable(
+  'standings',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .references(() => teams.id)
+      .notNull(),
+    divisionId: integer('division_id')
+      .references(() => divisions.id)
+      .notNull(),
+    position: integer('position').notNull(),
+    played: integer('played').notNull(),
+    wins: integer('wins').notNull(),
+    losses: integer('losses').notNull(),
+    draws: integer('draws').notNull(),
+    forfeitsFor: integer('forfeits_for').notNull(),
+    forfeitsAgainst: integer('forfeits_against').notNull(),
+    pointsFor: integer('points_for').notNull(),
+    pointsAgainst: integer('points_against').notNull(),
+    pointDifference: integer('point_difference').notNull(),
+    bonusPoints: integer('bonus_points').notNull(),
+    totalPoints: integer('total_points').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueIdx: uniqueIndex('standings_unique_idx').on(table.teamId, table.divisionId),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS team_divisions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      team_id INTEGER NOT NULL REFERENCES teams(id),
-      division_id INTEGER NOT NULL REFERENCES divisions(id),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(team_id, division_id)
-    );
+export const playerAwards = pgTable(
+  'player_awards',
+  {
+    id: serial('id').primaryKey(),
+    playerId: integer('player_id')
+      .references(() => players.id)
+      .notNull(),
+    teamId: integer('team_id')
+      .references(() => teams.id)
+      .notNull(),
+    divisionId: integer('division_id')
+      .references(() => divisions.id)
+      .notNull(),
+    fixtureId: integer('fixture_id').references(() => fixtures.id),
+    awardType: varchar('award_type', { length: 50 }).notNull(),
+    awardCount: integer('award_count').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueIdx: uniqueIndex('player_awards_unique_idx').on(
+      table.playerId,
+      table.divisionId,
+      table.awardType
+    ),
+  })
+);
 
-    -- ============================================
-    -- STANDINGS DATA
-    -- ============================================
+// ===================
+// Junction/Pivot Tables
+// ===================
 
-    CREATE TABLE IF NOT EXISTS standings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      team_id INTEGER NOT NULL REFERENCES teams(id),
-      division_id INTEGER NOT NULL REFERENCES divisions(id),
-      position INTEGER NOT NULL,
-      played INTEGER DEFAULT 0,
-      wins INTEGER DEFAULT 0,
-      losses INTEGER DEFAULT 0,
-      draws INTEGER DEFAULT 0,
-      forfeits_for INTEGER DEFAULT 0,
-      forfeits_against INTEGER DEFAULT 0,
-      points_for INTEGER DEFAULT 0,
-      points_against INTEGER DEFAULT 0,
-      point_difference INTEGER DEFAULT 0,
-      bonus_points INTEGER DEFAULT 0,
-      total_points INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(team_id, division_id)
-    );
+export const teamDivisions = pgTable(
+  'team_divisions',
+  {
+    teamId: integer('team_id')
+      .references(() => teams.id)
+      .notNull(),
+    divisionId: integer('division_id')
+      .references(() => divisions.id)
+      .notNull(),
+  },
+  (table) => ({
+    pk: primaryKey(table.teamId, table.divisionId),
+  })
+);
 
-    -- ============================================
-    -- FIXTURES DATA
-    -- ============================================
+export const playerTeams = pgTable(
+  'player_teams',
+  {
+    playerId: integer('player_id')
+      .references(() => players.id)
+      .notNull(),
+    teamId: integer('team_id')
+      .references(() => teams.id)
+      .notNull(),
+    divisionId: integer('division_id')
+      .references(() => divisions.id)
+      .notNull(),
+  },
+  (table) => ({
+    pk: primaryKey(table.playerId, table.teamId, table.divisionId),
+  })
+);
 
-    CREATE TABLE IF NOT EXISTS fixtures (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_fixture_id INTEGER,
-      division_id INTEGER NOT NULL REFERENCES divisions(id),
-      home_team_id INTEGER NOT NULL REFERENCES teams(id),
-      away_team_id INTEGER NOT NULL REFERENCES teams(id),
-      fixture_date DATE NOT NULL,
-      fixture_time TIME,
-      pitch TEXT,
-      round_number INTEGER,
-      home_score INTEGER,
-      away_score INTEGER,
-      status TEXT DEFAULT 'scheduled',
-      is_forfeit INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(division_id, home_team_id, away_team_id, fixture_date)
-    );
+// =======================
+// Relations
+// =======================
 
-    -- ============================================
-    -- STATISTICS/AWARDS DATA
-    -- ============================================
+export const regionRelations = relations(regions, ({ one, many }) => ({
+  leagues: many(leagues),
+}));
 
-    CREATE TABLE IF NOT EXISTS players (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_player_id INTEGER,
-      name TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const leagueRelations = relations(leagues, ({ one, many }) => ({
+  region: one(regions, {
+    fields: [leagues.regionId],
+    references: [regions.id],
+  }),
+  divisions: many(divisions),
+}));
 
-    CREATE TABLE IF NOT EXISTS player_teams (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      player_id INTEGER NOT NULL REFERENCES players(id),
-      team_id INTEGER NOT NULL REFERENCES teams(id),
-      division_id INTEGER NOT NULL REFERENCES divisions(id),
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(player_id, team_id, division_id)
-    );
+export const seasonRelations = relations(seasons, ({ many }) => ({
+  divisions: many(divisions),
+}));
 
-    CREATE TABLE IF NOT EXISTS player_awards (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      player_id INTEGER NOT NULL REFERENCES players(id),
-      team_id INTEGER NOT NULL REFERENCES teams(id),
-      division_id INTEGER NOT NULL REFERENCES divisions(id),
-      fixture_id INTEGER REFERENCES fixtures(id),
-      award_type TEXT NOT NULL,
-      award_count INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(player_id, division_id, award_type)
-    );
+export const divisionRelations = relations(divisions, ({ one, many }) => ({
+  league: one(leagues, {
+    fields: [divisions.leagueId],
+    references: [leagues.id],
+  }),
+  season: one(seasons, {
+    fields: [divisions.seasonId],
+    references: [seasons.id],
+  }),
+  standings: many(standings),
+  fixtures: many(fixtures),
+  playerAwards: many(playerAwards),
+  teamDivisions: many(teamDivisions),
+  playerTeams: many(playerTeams),
+}));
 
-    -- ============================================
-    -- SCRAPING METADATA
-    -- ============================================
+export const teamRelations = relations(teams, ({ many }) => ({
+  standings: many(standings),
+  homeFixtures: many(fixtures, { relationName: 'home_team' }),
+  awayFixtures: many(fixtures, { relationName: 'away_team' }),
+  playerAwards: many(playerAwards),
+  teamDivisions: many(teamDivisions),
+  playerTeams: many(playerTeams),
+}));
 
-    CREATE TABLE IF NOT EXISTS scrape_jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      job_type TEXT NOT NULL,
-      target_id INTEGER,
-      status TEXT DEFAULT 'pending',
-      started_at DATETIME,
-      completed_at DATETIME,
-      error_message TEXT,
-      items_processed INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+export const playerRelations = relations(players, ({ many }) => ({
+  playerAwards: many(playerAwards),
+  playerTeams: many(playerTeams),
+}));
 
-    -- ============================================
-    -- INDEXES
-    -- ============================================
+export const fixtureRelations = relations(fixtures, ({ one, many }) => ({
+  division: one(divisions, {
+    fields: [fixtures.divisionId],
+    references: [divisions.id],
+  }),
+  homeTeam: one(teams, {
+    fields: [fixtures.homeTeamId],
+    references: [teams.id],
+    relationName: 'home_team',
+  }),
+  awayTeam: one(teams, {
+    fields: [fixtures.awayTeamId],
+    references: [teams.id],
+    relationName: 'away_team',
+  }),
+  playerAwards: many(playerAwards),
+}));
 
-    CREATE INDEX IF NOT EXISTS idx_leagues_region ON leagues(region_id);
-    CREATE INDEX IF NOT EXISTS idx_divisions_league ON divisions(league_id);
-    CREATE INDEX IF NOT EXISTS idx_divisions_season ON divisions(season_id);
-    CREATE INDEX IF NOT EXISTS idx_standings_division ON standings(division_id);
-    CREATE INDEX IF NOT EXISTS idx_standings_team ON standings(team_id);
-    CREATE INDEX IF NOT EXISTS idx_fixtures_division ON fixtures(division_id);
-    CREATE INDEX IF NOT EXISTS idx_fixtures_date ON fixtures(fixture_date);
-    CREATE INDEX IF NOT EXISTS idx_fixtures_home_team ON fixtures(home_team_id);
-    CREATE INDEX IF NOT EXISTS idx_fixtures_away_team ON fixtures(away_team_id);
-    CREATE INDEX IF NOT EXISTS idx_player_awards_player ON player_awards(player_id);
-    CREATE INDEX IF NOT EXISTS idx_player_awards_division ON player_awards(division_id);
-  `);
+export const standingRelations = relations(standings, ({ one }) => ({
+  team: one(teams, {
+    fields: [standings.teamId],
+    references: [teams.id],
+  }),
+  division: one(divisions, {
+    fields: [standings.divisionId],
+    references: [divisions.id],
+  }),
+}));
 
-  logger.info('Database schema initialized');
-}
+export const playerAwardRelations = relations(playerAwards, ({ one }) => ({
+  player: one(players, {
+    fields: [playerAwards.playerId],
+    references: [players.id],
+  }),
+  team: one(teams, {
+    fields: [playerAwards.teamId],
+    references: [teams.id],
+  }),
+  division: one(divisions, {
+    fields: [playerAwards.divisionId],
+    references: [divisions.id],
+  }),
+  fixture: one(fixtures, {
+    fields: [playerAwards.fixtureId],
+    references: [fixtures.id],
+  }),
+}));
+
+export const teamDivisionRelations = relations(teamDivisions, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamDivisions.teamId],
+    references: [teams.id],
+  }),
+  division: one(divisions, {
+    fields: [teamDivisions.divisionId],
+    references: [divisions.id],
+  }),
+}));
+
+export const playerTeamRelations = relations(playerTeams, ({ one }) => ({
+  player: one(players, {
+    fields: [playerTeams.playerId],
+    references: [players.id],
+  }),
+  team: one(teams, {
+    fields: [playerTeams.teamId],
+    references: [teams.id],
+  }),
+  division: one(divisions, {
+    fields: [playerTeams.divisionId],
+    references: [divisions.id],
+  }),
+}));

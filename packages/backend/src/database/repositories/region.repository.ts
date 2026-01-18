@@ -1,52 +1,42 @@
-import { getDatabase } from '../connection.js';
+import { eq } from 'drizzle-orm';
+import { db } from '../index.js';
+import { regions } from '../schema.js';
 import type { Region } from '@trytag/shared';
 
-interface RegionRow {
-  id: number;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToRegion(row: RegionRow): Region {
-  return {
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-  };
-}
-
 export const regionRepository = {
-  findAll(): Region[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM regions ORDER BY name').all() as RegionRow[];
-    return rows.map(rowToRegion);
+  async findAll(): Promise<Region[]> {
+    return db.query.regions.findMany({
+      orderBy: (regions, { asc }) => [asc(regions.name)],
+    });
   },
 
-  findById(id: number): Region | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM regions WHERE id = ?').get(id) as RegionRow | undefined;
-    return row ? rowToRegion(row) : null;
+  async findById(id: number): Promise<Region | null> {
+    const result = await db.query.regions.findFirst({
+      where: eq(regions.id, id),
+    });
+    return result ?? null;
   },
 
-  findBySlug(slug: string): Region | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM regions WHERE slug = ?').get(slug) as RegionRow | undefined;
-    return row ? rowToRegion(row) : null;
+  async findBySlug(slug: string): Promise<Region | null> {
+    const result = await db.query.regions.findFirst({
+      where: eq(regions.slug, slug),
+    });
+    return result ?? null;
   },
 
-  upsert(name: string, slug: string): Region {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO regions (name, slug, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(name) DO UPDATE SET
-        slug = excluded.slug,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(name, slug) as RegionRow;
-    return rowToRegion(row);
+  async upsert(name: string, slug: string): Promise<Region> {
+    const [result] = await db
+      .insert(regions)
+      .values({ name, slug, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: regions.name,
+        set: {
+          slug,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return result;
   },
 };

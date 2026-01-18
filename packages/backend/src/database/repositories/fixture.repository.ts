@@ -1,252 +1,147 @@
-import { getDatabase } from '../connection.js';
-import type { Fixture, FixtureWithTeams, Team, FixtureStatus } from '@trytag/shared';
-
-interface FixtureRow {
-  id: number;
-  external_fixture_id: number | null;
-  division_id: number;
-  home_team_id: number;
-  away_team_id: number;
-  fixture_date: string;
-  fixture_time: string | null;
-  pitch: string | null;
-  round_number: number | null;
-  home_score: number | null;
-  away_score: number | null;
-  status: string;
-  is_forfeit: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface FixtureWithTeamsRow extends FixtureRow {
-  home_team_name: string;
-  home_team_external_id: number;
-  away_team_name: string;
-  away_team_external_id: number;
-}
-
-function rowToFixture(row: FixtureRow): Fixture {
-  return {
-    id: row.id,
-    externalFixtureId: row.external_fixture_id,
-    divisionId: row.division_id,
-    homeTeamId: row.home_team_id,
-    awayTeamId: row.away_team_id,
-    fixtureDate: row.fixture_date,
-    fixtureTime: row.fixture_time,
-    pitch: row.pitch,
-    roundNumber: row.round_number,
-    homeScore: row.home_score,
-    awayScore: row.away_score,
-    status: row.status as FixtureStatus,
-    isForfeit: row.is_forfeit === 1,
-  };
-}
-
-function rowToFixtureWithTeams(row: FixtureWithTeamsRow): FixtureWithTeams {
-  const homeTeam: Team = {
-    id: row.home_team_id,
-    externalTeamId: row.home_team_external_id,
-    name: row.home_team_name,
-  };
-  const awayTeam: Team = {
-    id: row.away_team_id,
-    externalTeamId: row.away_team_external_id,
-    name: row.away_team_name,
-  };
-  return {
-    ...rowToFixture(row),
-    homeTeam,
-    awayTeam,
-  };
-}
+import { and, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { db } from '../index.js';
+import { fixtures } from '../schema.js';
+import type { Fixture, FixtureWithTeams } from '@trytag/shared';
 
 export const fixtureRepository = {
-  findByDivision(divisionId: number): FixtureWithTeams[] {
-    const db = getDatabase();
-    const rows = db
-      .prepare(
-        `
-        SELECT f.*,
-          ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-          at.name as away_team_name, at.external_team_id as away_team_external_id
-        FROM fixtures f
-        INNER JOIN teams ht ON f.home_team_id = ht.id
-        INNER JOIN teams at ON f.away_team_id = at.id
-        WHERE f.division_id = ?
-        ORDER BY f.fixture_date, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time
-      `
-      )
-      .all(divisionId) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+  async findByDivision(divisionId: number): Promise<FixtureWithTeams[]> {
+    return db.query.fixtures.findMany({
+      where: eq(fixtures.divisionId, divisionId),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { asc }) => [
+        asc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} asc nulls last`,
+      ],
+    });
   },
 
-  findByTeam(teamId: number): FixtureWithTeams[] {
-    const db = getDatabase();
-    const rows = db
-      .prepare(
-        `
-        SELECT f.*,
-          ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-          at.name as away_team_name, at.external_team_id as away_team_external_id
-        FROM fixtures f
-        INNER JOIN teams ht ON f.home_team_id = ht.id
-        INNER JOIN teams at ON f.away_team_id = at.id
-        WHERE f.home_team_id = ? OR f.away_team_id = ?
-        ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC
-      `
-      )
-      .all(teamId, teamId) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+  async findByTeam(teamId: number): Promise<FixtureWithTeams[]> {
+    return db.query.fixtures.findMany({
+      where: or(eq(fixtures.homeTeamId, teamId), eq(fixtures.awayTeamId, teamId)),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { desc }) => [
+        desc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} desc nulls last`,
+      ],
+    });
   },
 
-  findUpcoming(teamId?: number, limit = 10): FixtureWithTeams[] {
-    const db = getDatabase();
-    const today = new Date().toISOString().split('T')[0];
-
-    let query = `
-      SELECT f.*,
-        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-        at.name as away_team_name, at.external_team_id as away_team_external_id
-      FROM fixtures f
-      INNER JOIN teams ht ON f.home_team_id = ht.id
-      INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date >= ? AND f.status = 'scheduled'
-    `;
-
-    const params: (string | number)[] = [today];
+  async findUpcoming(teamId?: number, limit = 10): Promise<FixtureWithTeams[]> {
+    const today = new Date();
+    const conditions = [gte(fixtures.fixtureDate, today), eq(fixtures.status, 'scheduled')];
 
     if (teamId) {
-      query += ' AND (f.home_team_id = ? OR f.away_team_id = ?)';
-      params.push(teamId, teamId);
+      conditions.push(or(eq(fixtures.homeTeamId, teamId), eq(fixtures.awayTeamId, teamId)));
     }
 
-    query +=
-      ' ORDER BY f.fixture_date, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time LIMIT ?';
-    params.push(limit);
-
-    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+    return db.query.fixtures.findMany({
+      where: and(...conditions),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { asc }) => [
+        asc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} asc nulls last`,
+      ],
+      limit,
+    });
   },
 
-  findRecent(teamId?: number, limit = 10): FixtureWithTeams[] {
-    const db = getDatabase();
-    const today = new Date().toISOString().split('T')[0];
-
-    // Show all past fixtures, prioritizing completed ones with scores
-    let query = `
-      SELECT f.*,
-        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-        at.name as away_team_name, at.external_team_id as away_team_external_id
-      FROM fixtures f
-      INNER JOIN teams ht ON f.home_team_id = ht.id
-      INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date <= ?
-    `;
-
-    const params: (string | number)[] = [today];
+  async findRecent(teamId?: number, limit = 10): Promise<FixtureWithTeams[]> {
+    const today = new Date();
+    const conditions = [lte(fixtures.fixtureDate, today)];
 
     if (teamId) {
-      query += ' AND (f.home_team_id = ? OR f.away_team_id = ?)';
-      params.push(teamId, teamId);
+      conditions.push(or(eq(fixtures.homeTeamId, teamId), eq(fixtures.awayTeamId, teamId)));
     }
 
-    // Order by completed status first, then by date descending, then by time descending
-    query +=
-      " ORDER BY CASE f.status WHEN 'completed' THEN 0 ELSE 1 END, f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?";
-    params.push(limit);
-
-    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+    return db.query.fixtures.findMany({
+      where: and(...conditions),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { desc, asc }) => [
+        asc(fixtures.status), // 'completed' comes before 'scheduled'/'postponed'
+        desc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} desc nulls last`,
+      ],
+      limit,
+    });
   },
 
-  findUpcomingByTeams(teamIds: number[], limit = 50): FixtureWithTeams[] {
+  async findUpcomingByTeams(teamIds: number[], limit = 50): Promise<FixtureWithTeams[]> {
     if (teamIds.length === 0) return [];
+    const today = new Date();
 
-    const db = getDatabase();
-    const today = new Date().toISOString().split('T')[0];
-    const placeholders = teamIds.map(() => '?').join(',');
-
-    const query = `
-      SELECT f.*,
-        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-        at.name as away_team_name, at.external_team_id as away_team_external_id
-      FROM fixtures f
-      INNER JOIN teams ht ON f.home_team_id = ht.id
-      INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date >= ? AND f.status = 'scheduled'
-      AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
-      ORDER BY f.fixture_date, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time LIMIT ?
-    `;
-
-    const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];
-
-    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+    return db.query.fixtures.findMany({
+      where: and(
+        gte(fixtures.fixtureDate, today),
+        eq(fixtures.status, 'scheduled'),
+        or(inArray(fixtures.homeTeamId, teamIds), inArray(fixtures.awayTeamId, teamIds))
+      ),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { asc }) => [
+        asc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} asc nulls last`,
+      ],
+      limit,
+    });
   },
 
-  findRecentByTeams(teamIds: number[], limit = 50): FixtureWithTeams[] {
+  async findRecentByTeams(teamIds: number[], limit = 50): Promise<FixtureWithTeams[]> {
     if (teamIds.length === 0) return [];
+    const today = new Date();
 
-    const db = getDatabase();
-    const today = new Date().toISOString().split('T')[0];
-    const placeholders = teamIds.map(() => '?').join(',');
-
-    // Show all past fixtures for favourite teams, prioritizing completed ones
-    const query = `
-      SELECT f.*,
-        ht.name as home_team_name, ht.external_team_id as home_team_external_id,
-        at.name as away_team_name, at.external_team_id as away_team_external_id
-      FROM fixtures f
-      INNER JOIN teams ht ON f.home_team_id = ht.id
-      INNER JOIN teams at ON f.away_team_id = at.id
-      WHERE f.fixture_date <= ?
-      AND (f.home_team_id IN (${placeholders}) OR f.away_team_id IN (${placeholders}))
-      ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?
-    `;
-
-    const params: (string | number)[] = [today, ...teamIds, ...teamIds, limit];
-
-    const rows = db.prepare(query).all(...params) as FixtureWithTeamsRow[];
-    return rows.map(rowToFixtureWithTeams);
+    return db.query.fixtures.findMany({
+      where: and(
+        lte(fixtures.fixtureDate, today),
+        or(inArray(fixtures.homeTeamId, teamIds), inArray(fixtures.awayTeamId, teamIds))
+      ),
+      with: {
+        homeTeam: true,
+        awayTeam: true,
+      },
+      orderBy: (fixtures, { desc }) => [
+        desc(fixtures.fixtureDate),
+        sql`${fixtures.fixtureTime} desc nulls last`,
+      ],
+      limit,
+    });
   },
 
-  upsert(data: Omit<Fixture, 'id'>): Fixture {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO fixtures (
-        external_fixture_id, division_id, home_team_id, away_team_id,
-        fixture_date, fixture_time, pitch, round_number,
-        home_score, away_score, status, is_forfeit, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(division_id, home_team_id, away_team_id, fixture_date) DO UPDATE SET
-        external_fixture_id = excluded.external_fixture_id,
-        fixture_time = excluded.fixture_time,
-        pitch = excluded.pitch,
-        round_number = excluded.round_number,
-        home_score = excluded.home_score,
-        away_score = excluded.away_score,
-        status = excluded.status,
-        is_forfeit = excluded.is_forfeit,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(
-      data.externalFixtureId,
-      data.divisionId,
-      data.homeTeamId,
-      data.awayTeamId,
-      data.fixtureDate,
-      data.fixtureTime,
-      data.pitch,
-      data.roundNumber,
-      data.homeScore,
-      data.awayScore,
-      data.status,
-      data.isForfeit ? 1 : 0
-    ) as FixtureRow;
-    return rowToFixture(row);
+  async upsert(data: Omit<Fixture, 'id'>): Promise<Fixture> {
+    const toInsert = { ...data, fixtureDate: new Date(data.fixtureDate) };
+
+    const [result] = await db
+      .insert(fixtures)
+      .values({ ...toInsert, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [fixtures.divisionId, fixtures.homeTeamId, fixtures.awayTeamId, fixtures.fixtureDate],
+        set: {
+          externalFixtureId: toInsert.externalFixtureId,
+          fixtureTime: toInsert.fixtureTime,
+          pitch: toInsert.pitch,
+          roundNumber: toInsert.roundNumber,
+          homeScore: toInsert.homeScore,
+          awayScore: toInsert.awayScore,
+          status: toInsert.status,
+          isForfeit: toInsert.isForfeit,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return { ...result, fixtureDate: result.fixtureDate.toISOString().split('T')[0] };
   },
 };

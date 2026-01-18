@@ -17,14 +17,14 @@ router.get('/', async (req, res) => {
     const teamIds = teamIdsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
 
     if (type === 'recent') {
-      fixtures = fixtureRepository.findRecentByTeams(teamIds, limit);
+      fixtures = await fixtureRepository.findRecentByTeams(teamIds, limit);
 
       // Fallback to scraper if DB returns empty
       if (fixtures.length === 0 && teamIds.length > 0) {
         const allScrapedFixtures: FixtureWithTeams[] = [];
 
         for (const teamId of teamIds) {
-          const team = teamRepository.findById(teamId);
+          const team = await teamRepository.findById(teamId);
           if (!team?.externalTeamId) continue;
 
           const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId);
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 
           // Transform to FixtureWithTeams format
           for (const f of sortedFixtures) {
-            const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
+            const opponentTeam = await teamRepository.findByExternalId(f.awayTeamId);
             allScrapedFixtures.push({
               id: -(allScrapedFixtures.length + 1),
               externalFixtureId: null,
@@ -72,14 +72,14 @@ router.get('/', async (req, res) => {
           .slice(0, limit);
       }
     } else {
-      fixtures = fixtureRepository.findUpcomingByTeams(teamIds, limit);
+      fixtures = await fixtureRepository.findUpcomingByTeams(teamIds, limit);
     }
   } else {
     // Global list
     if (type === 'recent') {
-      fixtures = fixtureRepository.findRecent(undefined, limit);
+      fixtures = await fixtureRepository.findRecent(undefined, limit);
     } else {
-      fixtures = fixtureRepository.findUpcoming(undefined, limit);
+      fixtures = await fixtureRepository.findUpcoming(undefined, limit);
     }
   }
 
@@ -91,8 +91,8 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/v1/fixtures/today - Get today's fixtures
-router.get('/today', (_req, res) => {
-  const fixtures = fixtureRepository.findUpcoming(undefined, 50);
+router.get('/today', async (_req, res) => {
+  const fixtures = await fixtureRepository.findUpcoming(undefined, 50);
   const today = new Date().toISOString().split('T')[0];
   const todayFixtures = fixtures.filter((f) => f.fixtureDate === today);
 
@@ -104,8 +104,8 @@ router.get('/today', (_req, res) => {
 });
 
 // GET /api/v1/fixtures/week - Get this week's fixtures
-router.get('/week', (_req, res) => {
-  const fixtures = fixtureRepository.findUpcoming(undefined, 100);
+router.get('/week', async (_req, res) => {
+  const fixtures = await fixtureRepository.findUpcoming(undefined, 100);
   const today = new Date();
   const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 

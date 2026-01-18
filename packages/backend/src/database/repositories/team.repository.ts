@@ -1,93 +1,74 @@
-import { getDatabase } from '../connection.js';
+import { eq, inArray } from 'drizzle-orm';
+import { db } from '../index.js';
+import { teams, teamDivisions } from '../schema.js';
 import type { Team } from '@trytag/shared';
 
-interface TeamRow {
-  id: number;
-  external_team_id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToTeam(row: TeamRow): Team {
-  return {
-    id: row.id,
-    externalTeamId: row.external_team_id,
-    name: row.name,
-  };
-}
-
 export const teamRepository = {
-  findAll(): Team[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM teams ORDER BY name').all() as TeamRow[];
-    return rows.map(rowToTeam);
+  async findAll(): Promise<Team[]> {
+    return db.query.teams.findMany({
+      orderBy: (teams, { asc }) => [asc(teams.name)],
+    });
   },
 
-  findById(id: number): Team | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM teams WHERE id = ?').get(id) as TeamRow | undefined;
-    return row ? rowToTeam(row) : null;
+  async findById(id: number): Promise<Team | null> {
+    const result = await db.query.teams.findFirst({
+      where: eq(teams.id, id),
+    });
+    return result ?? null;
   },
 
-  findByExternalId(externalTeamId: number): Team | null {
-    const db = getDatabase();
-    const row = db
-      .prepare('SELECT * FROM teams WHERE external_team_id = ?')
-      .get(externalTeamId) as TeamRow | undefined;
-    return row ? rowToTeam(row) : null;
+  async findByExternalId(externalTeamId: number): Promise<Team | null> {
+    const result = await db.query.teams.findFirst({
+      where: eq(teams.externalTeamId, externalTeamId),
+    });
+    return result ?? null;
   },
 
-  findByName(name: string): Team | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM teams WHERE name = ?').get(name) as TeamRow | undefined;
-    return row ? rowToTeam(row) : null;
+  async findByName(name: string): Promise<Team | null> {
+    const result = await db.query.teams.findFirst({
+      where: eq(teams.name, name),
+    });
+    return result ?? null;
   },
 
-  findByIds(ids: number[]): Team[] {
+  async findByIds(ids: number[]): Promise<Team[]> {
     if (ids.length === 0) return [];
-    const db = getDatabase();
-    const placeholders = ids.map(() => '?').join(',');
-    const rows = db
-      .prepare(`SELECT * FROM teams WHERE id IN (${placeholders}) ORDER BY name`)
-      .all(...ids) as TeamRow[];
-    return rows.map(rowToTeam);
+    return db.query.teams.findMany({
+      where: inArray(teams.id, ids),
+      orderBy: (teams, { asc }) => [asc(teams.name)],
+    });
   },
 
-  findByDivision(divisionId: number): Team[] {
-    const db = getDatabase();
-    const rows = db
-      .prepare(
-        `
-        SELECT t.* FROM teams t
-        INNER JOIN team_divisions td ON t.id = td.team_id
-        WHERE td.division_id = ?
-        ORDER BY t.name
-      `
-      )
-      .all(divisionId) as TeamRow[];
-    return rows.map(rowToTeam);
+  async findByDivision(divisionId: number): Promise<Team[]> {
+    const results = await db
+      .select({ team: teams })
+      .from(teamDivisions)
+      .leftJoin(teams, eq(teamDivisions.teamId, teams.id))
+      .where(eq(teamDivisions.divisionId, divisionId));
+
+    return results.map((r) => r.team).filter((t): t is Team => t !== null);
   },
 
-  upsert(externalTeamId: number, name: string): Team {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO teams (external_team_id, name, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(external_team_id) DO UPDATE SET
-        name = excluded.name,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(externalTeamId, name) as TeamRow;
-    return rowToTeam(row);
+  async upsert(externalTeamId: number, name: string): Promise<Team> {
+    const [result] = await db
+      .insert(teams)
+      .values({ externalTeamId, name, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: teams.externalTeamId,
+        set: {
+          name,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    return result;
   },
 
-  linkToDivision(teamId: number, divisionId: number): void {
-    const db = getDatabase();
-    db.prepare(`
-      INSERT OR IGNORE INTO team_divisions (team_id, division_id)
-      VALUES (?, ?)
-    `).run(teamId, divisionId);
+  async linkToDivision(teamId: number, divisionId: number): Promise<void> {
+    await db
+      .insert(teamDivisions)
+      .values({ teamId, divisionId })
+      .onConflictDoNothing();
   },
 };

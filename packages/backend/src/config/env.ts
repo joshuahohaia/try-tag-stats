@@ -6,7 +6,12 @@ dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
+<<<<<<< Updated upstream
   databasePath: process.env.DATABASE_PATH || './data/trytag.db',
+=======
+  databaseUrl: process.env.DATABASE_URL || '',
+  cronSecret: process.env.CRON_SECRET || '',
+>>>>>>> Stashed changes
   scraper: {
     baseUrl: process.env.SCRAPER_BASE_URL || 'https://trytagrugby.spawtz.com',
     rateLimit: parseInt(process.env.SCRAPER_RATE_LIMIT || '5', 10),

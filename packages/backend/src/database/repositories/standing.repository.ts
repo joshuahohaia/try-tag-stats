@@ -1,38 +1,10 @@
-import { getDatabase } from '../connection.js';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { db } from '../index.js';
+import { divisions, fixtures, leagues, seasons, standings, teams } from '../schema.js';
 import type { Standing, StandingWithTeam, Team } from '@trytag/shared';
 
-interface StandingRow {
-  id: number;
-  team_id: number;
-  division_id: number;
-  position: number;
-  played: number;
-  wins: number;
-  losses: number;
-  draws: number;
-  forfeits_for: number;
-  forfeits_against: number;
-  points_for: number;
-  points_against: number;
-  point_difference: number;
-  bonus_points: number;
-  total_points: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface StandingWithTeamRow extends StandingRow {
-  team_name: string;
-  external_team_id: number;
-  form?: string;
-}
-
-interface StandingWithDivisionRow extends StandingRow {
-  division_name: string;
-  league_id: number;
-  league_name: string;
-  season_name: string;
-}
+// Custom type for the result of the query with the raw SQL 'form' string
+type StandingWithTeamAndForm = Standing & { team: Team; form: string | null };
 
 export interface StandingWithDivision extends Standing {
   divisionName: string;
@@ -41,210 +13,127 @@ export interface StandingWithDivision extends Standing {
   seasonName: string;
 }
 
-function rowToStanding(row: StandingRow): Standing {
-  return {
-    id: row.id,
-    teamId: row.team_id,
-    divisionId: row.division_id,
-    position: row.position,
-    played: row.played,
-    wins: row.wins,
-    losses: row.losses,
-    draws: row.draws,
-    forfeitsFor: row.forfeits_for,
-    forfeitsAgainst: row.forfeits_against,
-    pointsFor: row.points_for,
-    pointsAgainst: row.points_against,
-    pointDifference: row.point_difference,
-    bonusPoints: row.bonus_points,
-    totalPoints: row.total_points,
-  };
-}
-
-function rowToStandingWithTeam(row: StandingWithTeamRow): StandingWithTeam {
-  const team: Team = {
-    id: row.team_id,
-    externalTeamId: row.external_team_id,
-    name: row.team_name,
-  };
-  return {
-    ...rowToStanding(row),
-    team,
-    form: row.form,
-  };
-}
-
-function rowToStandingWithDivision(row: StandingWithDivisionRow): StandingWithDivision {
-  return {
-    ...rowToStanding(row),
-    divisionName: row.division_name,
-    leagueId: row.league_id,
-    leagueName: row.league_name,
-    seasonName: row.season_name,
-  };
-}
+const formSubQuery = sql`(
+  select string_agg(result, '' order by fixture_date, fixture_time)
+  from (
+    select
+      case
+        when (f.home_team_id = ${standings.teamId} and f.home_score > f.away_score) or (f.away_team_id = ${standings.teamId} and f.away_score > f.home_score) then 'W'
+        when (f.home_team_id = ${standings.teamId} and f.home_score < f.away_score) or (f.away_team_id = ${standings.teamId} and f.away_score < f.home_score) then 'L'
+        else 'D'
+      end as result,
+      f.fixture_date,
+      f.fixture_time
+    from ${fixtures} f
+    where f.division_id = ${standings.divisionId}
+      and (f.home_team_id = ${standings.teamId} or f.away_team_id = ${standings.teamId})
+      and f.status = 'completed'
+      and f.home_score is not null
+    order by f.fixture_date desc, f.fixture_time desc NULLS LAST
+    limit 5
+  ) as form_subquery
+)`.as('form');
 
 export const standingRepository = {
-  findByDivision(divisionId: number): StandingWithTeam[] {
-    const db = getDatabase();
-    const rows = db
-      .prepare(
-        `
-        SELECT s.*, t.name as team_name, t.external_team_id,
-          (
-            SELECT GROUP_CONCAT(result, '')
-            FROM (
-              SELECT result, fixture_date, fixture_time
-              FROM (
-                SELECT
-                  CASE
-                    WHEN (f.home_team_id = s.team_id AND f.home_score > f.away_score) OR
-                         (f.away_team_id = s.team_id AND f.away_score > f.home_score) THEN 'W'
-                    WHEN (f.home_team_id = s.team_id AND f.home_score < f.away_score) OR
-                         (f.away_team_id = s.team_id AND f.away_score < f.home_score) THEN 'L'
-                    ELSE 'D'
-                  END as result,
-                  f.fixture_date,
-                  f.fixture_time
-                FROM fixtures f
-                WHERE f.division_id = s.division_id
-                  AND (f.home_team_id = s.team_id OR f.away_team_id = s.team_id)
-                  AND f.status = 'completed'
-                  AND f.home_score IS NOT NULL
-                ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC
-                LIMIT 5
-              )
-              ORDER BY fixture_date, CASE WHEN fixture_time IS NULL THEN 1 ELSE 0 END, fixture_time
-            )
-          ) as form
-        FROM standings s
-        INNER JOIN teams t ON s.team_id = t.id
-        WHERE s.division_id = ?
-        ORDER BY s.position
-      `
-      )
-      .all(divisionId) as StandingWithTeamRow[];
-    return rows.map(rowToStandingWithTeam);
+  async findByDivision(divisionId: number): Promise<StandingWithTeam[]> {
+    const results = await db
+      .select({
+        standing: standings,
+        team: teams,
+        form: formSubQuery,
+      })
+      .from(standings)
+      .leftJoin(teams, eq(standings.teamId, teams.id))
+      .where(eq(standings.divisionId, divisionId))
+      .orderBy(standings.position);
+
+    return results
+      .filter((r) => r.team)
+      .map((r) => ({
+        ...(r.standing as Standing),
+        team: r.team as Team,
+        form: r.form,
+      }));
   },
 
-  findByDivisionIds(divisionIds: number[]): StandingWithTeam[] {
+  async findByDivisionIds(divisionIds: number[]): Promise<StandingWithTeam[]> {
     if (divisionIds.length === 0) return [];
-    const db = getDatabase();
-    const placeholders = divisionIds.map(() => '?').join(',');
-    const rows = db
-      .prepare(
-        `
-        SELECT s.*, t.name as team_name, t.external_team_id,
-          (
-            SELECT GROUP_CONCAT(result, '')
-            FROM (
-              SELECT result, fixture_date, fixture_time
-              FROM (
-                SELECT
-                  CASE
-                    WHEN (f.home_team_id = s.team_id AND f.home_score > f.away_score) OR
-                         (f.away_team_id = s.team_id AND f.away_score > f.home_score) THEN 'W'
-                    WHEN (f.home_team_id = s.team_id AND f.home_score < f.away_score) OR
-                         (f.away_team_id = s.team_id AND f.away_score < f.home_score) THEN 'L'
-                    ELSE 'D'
-                  END as result,
-                  f.fixture_date,
-                  f.fixture_time
-                FROM fixtures f
-                WHERE f.division_id = s.division_id
-                  AND (f.home_team_id = s.team_id OR f.away_team_id = s.team_id)
-                  AND f.status = 'completed'
-                  AND f.home_score IS NOT NULL
-                ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC
-                LIMIT 5
-              )
-              ORDER BY fixture_date, CASE WHEN fixture_time IS NULL THEN 1 ELSE 0 END, fixture_time
-            )
-          ) as form
-        FROM standings s
-        INNER JOIN teams t ON s.team_id = t.id
-        WHERE s.division_id IN (${placeholders})
-        ORDER BY s.division_id, s.position
-      `
-      )
-      .all(...divisionIds) as StandingWithTeamRow[];
-    return rows.map(rowToStandingWithTeam);
+
+    const results = await db
+      .select({
+        standing: standings,
+        team: teams,
+        form: formSubQuery,
+      })
+      .from(standings)
+      .leftJoin(teams, eq(standings.teamId, teams.id))
+      .where(inArray(standings.divisionId, divisionIds))
+      .orderBy(standings.divisionId, standings.position);
+
+      return results
+      .filter((r) => r.team)
+      .map((r) => ({
+        ...(r.standing as Standing),
+        team: r.team as Team,
+        form: r.form,
+      }));
   },
 
-  findByTeam(teamId: number): StandingWithDivision[] {
-    const db = getDatabase();
-    const rows = db
-      .prepare(`
-        SELECT s.*, 
-               d.name as division_name, 
-               l.id as league_id, 
-               l.name as league_name,
-               se.name as season_name
-        FROM standings s
-        INNER JOIN divisions d ON s.division_id = d.id
-        INNER JOIN leagues l ON d.league_id = l.id
-        INNER JOIN seasons se ON d.season_id = se.id
-        WHERE s.team_id = ? 
-        ORDER BY se.id DESC
-      `)
-      .all(teamId) as StandingWithDivisionRow[];
-    return rows.map(rowToStandingWithDivision);
+  async findByTeam(teamId: number): Promise<StandingWithDivision[]> {
+    return db.query.standings.findMany({
+      where: eq(standings.teamId, teamId),
+      orderBy: (standings, { desc }) => [desc(standings.id)], // Assuming order by latest season
+      with: {
+        division: {
+          with: {
+            league: true,
+            season: true,
+          },
+        },
+      },
+    }).then(results => results.map(s => ({
+      ...s,
+      divisionName: s.division.name,
+      leagueId: s.division.league.id,
+      leagueName: s.division.league.name,
+      seasonName: s.division.season.name,
+    })));
   },
 
-  findByTeamAndDivision(teamId: number, divisionId: number): Standing | null {
-    const db = getDatabase();
-    const row = db
-      .prepare('SELECT * FROM standings WHERE team_id = ? AND division_id = ?')
-      .get(teamId, divisionId) as StandingRow | undefined;
-    return row ? rowToStanding(row) : null;
+  async findByTeamAndDivision(teamId: number, divisionId: number): Promise<Standing | null> {
+    const result = await db.query.standings.findFirst({
+      where: and(eq(standings.teamId, teamId), eq(standings.divisionId, divisionId)),
+    });
+    return result ?? null;
   },
 
-  upsert(data: Omit<Standing, 'id'>): Standing {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO standings (
-        team_id, division_id, position, played, wins, losses, draws,
-        forfeits_for, forfeits_against, points_for, points_against,
-        point_difference, bonus_points, total_points, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(team_id, division_id) DO UPDATE SET
-        position = excluded.position,
-        played = excluded.played,
-        wins = excluded.wins,
-        losses = excluded.losses,
-        draws = excluded.draws,
-        forfeits_for = excluded.forfeits_for,
-        forfeits_against = excluded.forfeits_against,
-        points_for = excluded.points_for,
-        points_against = excluded.points_against,
-        point_difference = excluded.point_difference,
-        bonus_points = excluded.bonus_points,
-        total_points = excluded.total_points,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(
-      data.teamId,
-      data.divisionId,
-      data.position,
-      data.played,
-      data.wins,
-      data.losses,
-      data.draws,
-      data.forfeitsFor,
-      data.forfeitsAgainst,
-      data.pointsFor,
-      data.pointsAgainst,
-      data.pointDifference,
-      data.bonusPoints,
-      data.totalPoints
-    ) as StandingRow;
-    return rowToStanding(row);
+  async upsert(data: Omit<Standing, 'id'>): Promise<Standing> {
+    const [result] = await db
+      .insert(standings)
+      .values({ ...data, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [standings.teamId, standings.divisionId],
+        set: {
+          position: data.position,
+          played: data.played,
+          wins: data.wins,
+          losses: data.losses,
+          draws: data.draws,
+          forfeitsFor: data.forfeitsFor,
+          forfeitsAgainst: data.forfeitsAgainst,
+          pointsFor: data.pointsFor,
+          pointsAgainst: data.pointsAgainst,
+          pointDifference: data.pointDifference,
+          bonusPoints: data.bonusPoints,
+          totalPoints: data.totalPoints,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
   },
 
-  deleteByDivision(divisionId: number): void {
-    const db = getDatabase();
-    db.prepare('DELETE FROM standings WHERE division_id = ?').run(divisionId);
+  async deleteByDivision(divisionId: number): Promise<void> {
+    await db.delete(standings).where(eq(standings.divisionId, divisionId));
   },
 };

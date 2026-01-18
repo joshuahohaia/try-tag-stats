@@ -1,72 +1,84 @@
-import { getDatabase } from '../connection.js';
+import { eq, or } from 'drizzle-orm';
+import { db } from '../index.js';
+import { players, playerTeams } from '../schema.js';
 import type { Player } from '@trytag/shared';
 
-interface PlayerRow {
-  id: number;
-  external_player_id: number | null;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToPlayer(row: PlayerRow): Player {
-  return {
-    id: row.id,
-    externalPlayerId: row.external_player_id,
-    name: row.name,
-  };
-}
-
 export const playerRepository = {
-  findAll(): Player[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM players ORDER BY name').all() as PlayerRow[];
-    return rows.map(rowToPlayer);
+  async findAll(): Promise<Player[]> {
+    return db.query.players.findMany({
+      orderBy: (players, { asc }) => [asc(players.name)],
+    });
   },
 
-  findById(id: number): Player | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM players WHERE id = ?').get(id) as PlayerRow | undefined;
-    return row ? rowToPlayer(row) : null;
+  async findById(id: number): Promise<Player | null> {
+    const result = await db.query.players.findFirst({
+      where: eq(players.id, id),
+    });
+    return result ?? null;
   },
 
-  findByName(name: string): Player | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM players WHERE name = ?').get(name) as PlayerRow | undefined;
-    return row ? rowToPlayer(row) : null;
+  async findByName(name: string): Promise<Player | null> {
+    const result = await db.query.players.findFirst({
+      where: eq(players.name, name),
+    });
+    return result ?? null;
   },
 
-  upsert(name: string, externalPlayerId?: number): Player {
-    const db = getDatabase();
-    
-    // Check if player exists by external ID (if provided)
-    if (externalPlayerId) {
-        const existingByExtId = db.prepare('SELECT * FROM players WHERE external_player_id = ?').get(externalPlayerId) as PlayerRow | undefined;
+  async upsert(name: string, externalPlayerId?: number): Promise<Player> {
+    return db.transaction(async (tx) => {
+      // Check if player exists by external ID (if provided)
+      if (externalPlayerId) {
+        const existingByExtId = await tx.query.players.findFirst({
+          where: eq(players.externalPlayerId, externalPlayerId),
+        });
+
         if (existingByExtId) {
-            // Update name if changed? Maybe.
-            if (existingByExtId.name !== name) {
-                db.prepare('UPDATE players SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, existingByExtId.id);
-                return { ...rowToPlayer(existingByExtId), name };
-            }
-            return rowToPlayer(existingByExtId);
+          if (existingByExtId.name !== name) {
+            const [updated] = await tx
+              .update(players)
+              .set({ name, updatedAt: new Date() })
+              .where(eq(players.id, existingByExtId.id))
+              .returning();
+            return updated;
+          }
+          return existingByExtId;
         }
-    }
+      }
 
-    // Check if player exists by name (deduplication strategy)
-    const existingByName = db.prepare('SELECT * FROM players WHERE name = ?').get(name) as PlayerRow | undefined;
-    if (existingByName) {
-        // If we have an external ID now but didn't before, update it
-        if (externalPlayerId && existingByName.external_player_id !== externalPlayerId) {
-             db.prepare('UPDATE players SET external_player_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-               .run(externalPlayerId, existingByName.id);
-             return { ...rowToPlayer(existingByName), externalPlayerId };
+      // Check if player exists by name
+      const existingByName = await tx.query.players.findFirst({
+        where: eq(players.name, name),
+      });
+
+      if (existingByName) {
+        if (externalPlayerId && existingByName.externalPlayerId !== externalPlayerId) {
+          const [updated] = await tx
+            .update(players)
+            .set({ externalPlayerId, updatedAt: new Date() })
+            .where(eq(players.id, existingByName.id))
+            .returning();
+          return updated;
         }
-        return rowToPlayer(existingByName);
-    }
+        return existingByName;
+      }
 
-    // Create new player
-    const stmt = db.prepare('INSERT INTO players (name, external_player_id) VALUES (?, ?) RETURNING *');
-    const row = stmt.get(name, externalPlayerId || null) as PlayerRow;
-    return rowToPlayer(row);
+      // Create new player
+      const [result] = await tx
+        .insert(players)
+        .values({ name, externalPlayerId, updatedAt: new Date() })
+        .returning();
+      return result;
+    });
+  },
+
+  async linkToTeamInDivision(
+    playerId: number,
+    teamId: number,
+    divisionId: number
+  ): Promise<void> {
+    await db
+      .insert(playerTeams)
+      .values({ playerId, teamId, divisionId })
+      .onConflictDoNothing();
   },
 };

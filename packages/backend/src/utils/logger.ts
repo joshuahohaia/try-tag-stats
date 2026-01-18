@@ -1,10 +1,10 @@
 import { pino } from 'pino';
-import { config } from '../config/env.js';
+import { env } from '../config/env.js';
 
 export const logger = pino({
-  level: config.nodeEnv === 'production' ? 'info' : 'debug',
+  level: env.nodeEnv === 'production' ? 'info' : 'debug',
   transport:
-    config.nodeEnv === 'development'
+    env.nodeEnv === 'development'
       ? {
           target: 'pino-pretty',
           options: {

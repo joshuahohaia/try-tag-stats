@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { config } from './config/env.js';
+import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { apiRouter } from './routes/index.js';
@@ -53,7 +53,7 @@ export function createApp(options: AppOptions = {}) {
   app.use('/api/v1', apiRouter);
 
   // Serve frontend static files in production
-  if (config.nodeEnv === 'production' && options.staticPath) {
+  if (env.nodeEnv === 'production' && options.staticPath) {
     app.use(express.static(options.staticPath));
 
     // Handle SPA routing - serve index.html for all non-API routes

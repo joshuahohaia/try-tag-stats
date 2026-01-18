@@ -8,12 +8,12 @@ import {
 const router = Router();
 
 // GET /api/v1/leagues - List all leagues
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const regionId = req.query.region ? parseInt(req.query.region as string, 10) : undefined;
 
   const leagues = regionId
-    ? leagueRepository.findByRegion(regionId)
-    : leagueRepository.findAll();
+    ? await leagueRepository.findByRegion(regionId)
+    : await leagueRepository.findAll();
 
   res.json({
     success: true,
@@ -23,9 +23,9 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/v1/leagues/:id - Get league details
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const league = leagueRepository.findById(id);
+  const league = await leagueRepository.findById(id);
 
   if (!league) {
     res.status(404).json({
@@ -42,8 +42,8 @@ router.get('/:id', (req, res) => {
 });
 
 // GET /api/v1/leagues/:id/seasons - Get seasons for a league
-router.get('/:id/seasons', (_req, res) => {
-  const seasons = seasonRepository.findAll();
+router.get('/:id/seasons', async (_req, res) => {
+  const seasons = await seasonRepository.findAll();
 
   res.json({
     success: true,
@@ -53,11 +53,11 @@ router.get('/:id/seasons', (_req, res) => {
 });
 
 // GET /api/v1/leagues/:leagueId/seasons/:seasonId/divisions - Get divisions
-router.get('/:leagueId/seasons/:seasonId/divisions', (req, res) => {
+router.get('/:leagueId/seasons/:seasonId/divisions', async (req, res) => {
   const leagueId = parseInt(req.params.leagueId, 10);
   const seasonId = parseInt(req.params.seasonId, 10);
 
-  const divisions = divisionRepository.findByLeagueAndSeason(leagueId, seasonId);
+  const divisions = await divisionRepository.findByLeagueAndSeason(leagueId, seasonId);
 
   res.json({
     success: true,
