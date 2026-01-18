@@ -7,11 +7,10 @@ export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   databasePath: process.env.DATABASE_PATH || './data/trytag.db',
+  cronSecret: process.env.CRON_SECRET || '',
   scraper: {
     baseUrl: process.env.SCRAPER_BASE_URL || 'https://trytagrugby.spawtz.com',
     rateLimit: parseInt(process.env.SCRAPER_RATE_LIMIT || '5', 10),
     timeout: parseInt(process.env.SCRAPER_TIMEOUT || '30000', 10),
   },
 } as const;
-
-export type Config = typeof config;

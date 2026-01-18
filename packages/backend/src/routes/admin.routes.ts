@@ -1,8 +1,12 @@
 import { Router } from 'express';
+import { verifyCronRequest } from '../middleware/auth.js';
 import { scraperOrchestrator } from '../scraper/index.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
+
+// Protect all admin routes
+router.use(verifyCronRequest);
 
 // Track sync status
 let syncInProgress = false;
