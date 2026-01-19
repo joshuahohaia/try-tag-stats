@@ -30,10 +30,9 @@ router.get('/', async (req, res) => {
           const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId);
           if (!profileData?.fixtureHistory?.length) continue;
 
-          // Sort by date descending and filter completed fixtures
+          // Sort by date descending
           const sortedFixtures = [...profileData.fixtureHistory]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .filter(f => f.status === 'completed');
 
           // Transform to FixtureWithTeams format
           for (const f of sortedFixtures) {
@@ -73,6 +72,60 @@ router.get('/', async (req, res) => {
       }
     } else {
       fixtures = fixtureRepository.findUpcomingByTeams(teamIds, limit);
+
+      // Fallback to scraper if DB returns empty
+      if (fixtures.length === 0 && teamIds.length > 0) {
+        const allScrapedFixtures: FixtureWithTeams[] = [];
+
+        for (const teamId of teamIds) {
+          const team = teamRepository.findById(teamId);
+          if (!team?.externalTeamId) continue;
+
+          const profileData = await scraperOrchestrator.fetchTeamProfile(
+            team.externalTeamId,
+          ) as any;
+          if (!profileData?.upcomingFixtures?.length) continue;
+
+          // Transform to FixtureWithTeams format
+          for (const f of profileData.upcomingFixtures) {
+            const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
+            allScrapedFixtures.push({
+              id: -(allScrapedFixtures.length + 1),
+              externalFixtureId: null,
+              divisionId: 0,
+              homeTeamId: team.id,
+              awayTeamId: opponentTeam?.id || f.awayTeamId,
+              fixtureDate: f.date,
+              fixtureTime: f.time,
+              pitch: f.pitch,
+              roundNumber: null,
+              homeScore: f.homeScore,
+              awayScore: f.awayScore,
+              status: f.status,
+              isForfeit: false,
+              homeTeam: {
+                id: team.id,
+                externalTeamId: team.externalTeamId,
+                name: team.name,
+              },
+              awayTeam: {
+                id: opponentTeam?.id || f.awayTeamId,
+                externalTeamId: f.awayTeamId,
+                name: opponentTeam?.name || f.awayTeamName,
+              },
+            });
+          }
+        }
+
+        // Sort all scraped fixtures by date and limit
+        fixtures = allScrapedFixtures
+          .sort(
+            (a, b) =>
+              new Date(a.fixtureDate).getTime() -
+              new Date(b.fixtureDate).getTime(),
+          )
+          .slice(0, limit);
+      }
     }
   } else {
     // Global list

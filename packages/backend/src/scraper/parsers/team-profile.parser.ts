@@ -18,6 +18,7 @@ interface ParsedTeamProfile {
   losses?: number;
   draws?: number;
   fixtureHistory: ScrapedFixture[];
+  upcomingFixtures: ScrapedFixture[];
   playerAwards: ScrapedPlayerAward[];
   historicalSeasons: Array<{
     seasonId: number;
@@ -309,6 +310,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
 
   // Parse fixture history from tables
   const fixtureHistory: ScrapedFixture[] = [];
+  const upcomingFixtures: ScrapedFixture[] = [];
 
   const tables = $('table');
 
@@ -394,9 +396,11 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       if ($oppLink.length) {
         oppTeamId = extractParam($oppLink.attr('href') || '', 'TeamId') || 0;
         oppTeamName = $oppLink.text().trim();
+      } else {
+        oppTeamName = oppCol >= 0 ? $cells.eq(oppCol).text().trim() : '';
       }
 
-      if (!oppTeamId || !oppTeamName) {
+      if (!oppTeamName) {
         return;
       }
 
@@ -414,7 +418,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
         status = 'completed';
       }
 
-      fixtureHistory.push({
+      const fixture = {
         date,
         time,
         pitch,
@@ -425,7 +429,13 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
         homeScore: teamScore,
         awayScore: oppScore,
         status,
-      });
+      };
+
+      if (status === 'completed') {
+        fixtureHistory.push(fixture);
+      } else {
+        upcomingFixtures.push(fixture);
+      }
     });
   });
 
@@ -453,6 +463,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
     {
       teamName,
       fixtureCount: fixtureHistory.length,
+      upcomingCount: upcomingFixtures.length,
       awardCount: playerAwards.length,
       historicalCount: historicalSeasons.length,
       positionHistoryCount: positionHistory.length,
@@ -470,6 +481,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
     losses,
     draws,
     fixtureHistory,
+    upcomingFixtures,
     playerAwards,
     historicalSeasons,
     positionHistory,

@@ -78,10 +78,10 @@ describe('Team Profile Parser', () => {
 
       const result = parseTeamProfile(html, 100);
 
-      expect(result.fixtureHistory).toHaveLength(1);
-      expect(result.fixtureHistory[0].status).toBe('scheduled');
-      expect(result.fixtureHistory[0].homeScore).toBeNull();
-      expect(result.fixtureHistory[0].awayScore).toBeNull();
+      expect(result.upcomingFixtures).toHaveLength(1);
+      expect(result.upcomingFixtures[0].status).toBe('scheduled');
+      expect(result.upcomingFixtures[0].homeScore).toBeNull();
+      expect(result.upcomingFixtures[0].awayScore).toBeNull();
     });
 
     it('should skip tables without date and opposition headers', () => {
