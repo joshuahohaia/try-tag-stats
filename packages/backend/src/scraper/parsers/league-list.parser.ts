@@ -68,15 +68,18 @@ function inferRegion(leagueName: string): string {
     Sheffield: ['Sheffield'],
   };
 
-  const nameLower = leagueName.toLowerCase();
   for (const [region, keywords] of Object.entries(regionMappings)) {
-    if (keywords.some((keyword) => nameLower.includes(keyword.toLowerCase()))) {
-      return region;
+    for (const keyword of keywords) {
+      if (leagueName.toLowerCase().includes(keyword.toLowerCase())) {
+        return region;
+      }
     }
   }
+
   return 'Other';
 }
 
+// Parse URL parameters from href
 function parseUrlParams(href: string): Record<string, number> {
   const params: Record<string, number> = {};
   const match = href.match(/\?(.+)$/);
@@ -84,7 +87,9 @@ function parseUrlParams(href: string): Record<string, number> {
     const searchParams = new URLSearchParams(match[1]);
     for (const [key, value] of searchParams.entries()) {
       const num = parseInt(value, 10);
-      if (!isNaN(num)) params[key] = num;
+      if (!isNaN(num)) {
+        params[key] = num;
+      }
     }
   }
   return params;
@@ -96,6 +101,7 @@ export function parseLeagueList(html: string): ParsedLeagueList {
   const regions = new Set<string>();
   const seasons = new Map<number, string>();
 
+  // Find all league entries - look for links to Fixtures or Standings pages
   $('a[href*="Fixtures"], a[href*="Standings"]').each((_, el) => {
     const $el = $(el);
     const href = $el.attr('href') || '';
@@ -110,55 +116,60 @@ export function parseLeagueList(html: string): ParsedLeagueList {
     }
 
     const params = parseUrlParams(href);
-    const { LeagueId: leagueId, SeasonId: seasonId, DivisionId: divisionId } = params;
-    if (!leagueId || !seasonId || !divisionId) return;
+    const leagueId = params['LeagueId'];
+    const seasonId = params['SeasonId'];
+    const divisionId = params['DivisionId'];
 
+    if (leagueId === undefined || seasonId === undefined || divisionId === undefined) {
+      return;
+    }
+
+    // Try to find the league/division name from parent elements
     const $parent = $el.closest('tr, div, li');
+    let leagueName = '';
+    let divisionName = '';
+    let seasonName = '';
+
+    // Try to extract text from parent context
     const parentText = $parent.text().trim();
 
-    // Enhanced Season Extraction
+    // Look for season text (e.g., "Winter 2025/26", "Spring 2026")
     const seasonMatch = parentText.match(/(Winter|Spring|Summer|Autumn)\s+\d{4}(?:\/\d{2})?/i);
-    const seasonName = seasonMatch ? seasonMatch[0] : `Season ${seasonId}`;
-    seasons.set(seasonId, seasonName);
+    if (seasonMatch) {
+      seasonName = seasonMatch[0];
+      seasons.set(seasonId, seasonName);
+    }
 
-    // 2. Enhanced Division Extraction (added Super League, Social, Grade variants)
+    // Look for division text (e.g., "Division 1", "Open Grade", "Pool A")
     const divisionMatch = parentText.match(
-      /(Division\s+\d+|Open\s+Grade|[A-Z]-Grade|Pool\s+[A-Z]|Plate|Cup|Super\s+League|Social\s+League|Intermediate|Beginner|Group\s+\d+)/i
+      /(Division\s+\d+|Open\s+Grade|[A-Z]-Grade|Pool\s+[A-Z]|Plate|Cup)/i
     );
-    // Fallback: If no division text is found (like West Hampstead), use "Open Grade" or "League"
-    const divisionName = divisionMatch ? divisionMatch[0] : 'Open Grade';
+    if (divisionMatch) {
+      divisionName = divisionMatch[0];
+    } else {
+      divisionName = 'Division 1';
+    }
 
-    //Robust Venue/League Name Extraction
-    // Look for the "Current Leagues" header which is the most reliable anchor
-    let leagueName = $el
-      .closest('div')
-      .find('h2, h3, h4, strong')
-      .first()
-      .text()
-      .replace('Current Leagues', '')
-      .trim();
-
-    if (!leagueName) {
-      leagueName = $parent
-        .prevAll('h2, h3, h4, strong')
-        .first()
-        .text()
-        .replace('Current Leagues', '')
-        .trim();
+    // Try to get league name from heading or strong tag
+    const $heading = $parent.prevAll('h2, h3, h4, strong').first();
+    if ($heading.length) {
+      leagueName = $heading.text().trim();
     }
 
     // If still no league name, use parent text minus season/division
     if (!leagueName) {
       leagueName = parentText
-        .split('Fixtures')[0]
-        .split('Standings')[0]
-        .replace(seasonName, '')
-        .replace(divisionName, '')
-        .replace(/[()-]/g, '')
+        .replace(seasonMatch?.[0] || '', '')
+        .replace(divisionMatch?.[0] || '', '')
+        .replace(/Fixtures|Standings/gi, '')
+        .replace(/\s+/g, ' ')
         .trim();
     }
 
-    if (!leagueName || leagueName.length < 3) return;
+    // Skip if we couldn't determine a meaningful league name
+    if (!leagueName || leagueName.length < 3) {
+      return;
+    }
 
     const region = inferRegion(leagueName);
     regions.add(region);
@@ -168,22 +179,27 @@ export function parseLeagueList(html: string): ParsedLeagueList {
       seasonId,
       divisionId,
       leagueName,
-      seasonName,
-      divisionName,
+      seasonName: seasonName || `Season ${seasonId}`,
+      divisionName: divisionName || 'Division',
       region,
     };
 
+    // Validate with Zod
     const result = ScrapedLeagueListItemSchema.safeParse(item);
     if (result.success) {
+      // Avoid duplicates (same division)
       const exists = items.some(
         (i) => i.leagueId === leagueId && i.seasonId === seasonId && i.divisionId === divisionId
       );
-      if (!exists) items.push(result.data);
+      if (!exists) {
+        items.push(result.data);
+      }
     } else {
       logger.warn({ item, errors: result.error.errors }, 'Invalid league list item');
     }
   });
 
   logger.info({ itemCount: items.length, regionCount: regions.size }, 'Parsed league list');
+
   return { items, regions, seasons };
 }
