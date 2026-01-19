@@ -67,7 +67,7 @@ router.post('/sync/full', async (_req, res) => {
 router.post('/sync/division', async (req, res) => {
   const { leagueId, seasonId, divisionId } = req.body;
 
-  if (!leagueId || !seasonId || !divisionId) {
+  if (leagueId === undefined || seasonId === undefined || divisionId === undefined) {
     res.status(400).json({
       success: false,
       error: { code: 'BAD_REQUEST', message: 'leagueId, seasonId, and divisionId are required' },

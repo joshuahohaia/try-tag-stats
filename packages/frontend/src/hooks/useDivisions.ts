@@ -11,7 +11,7 @@ export function useDivisionStandings(divisionId: number) {
       );
       return extractData(response);
     },
-    enabled: !!divisionId,
+    enabled: divisionId !== undefined,
   });
 }
 
@@ -24,7 +24,7 @@ export function useDivisionFixtures(divisionId: number) {
       );
       return extractData(response);
     },
-    enabled: !!divisionId,
+    enabled: divisionId !== undefined,
   });
 }
 
@@ -37,7 +37,7 @@ export function useDivisionStatistics(divisionId: number) {
       );
       return extractData(response);
     },
-    enabled: !!divisionId,
+    enabled: divisionId !== undefined,
   });
 }
 

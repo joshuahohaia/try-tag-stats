@@ -48,6 +48,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('standings');
 
+  // Track if we've tried other seasons when current has no divisions
+  const [triedSeasons, setTriedSeasons] = useState<Set<string>>(new Set());
+
   // Set default season (current one or last one)
   useEffect(() => {
     if (seasons && seasons.length > 0 && !selectedSeasonId) {
@@ -66,6 +69,29 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     leagueId,
     selectedSeasonId ? parseInt(selectedSeasonId, 10) : 0
   );
+
+  // If current season has no divisions, try other seasons
+  useEffect(() => {
+    if (
+      seasons &&
+      seasons.length > 0 &&
+      divisions !== undefined &&
+      divisions.length === 0 &&
+      selectedSeasonId &&
+      !divisionsLoading
+    ) {
+      // Mark this season as tried
+      if (!triedSeasons.has(selectedSeasonId)) {
+        setTriedSeasons(prev => new Set([...prev, selectedSeasonId]));
+
+        // Find another season we haven't tried
+        const otherSeason = seasons.find(s => !triedSeasons.has(String(s.id)) && String(s.id) !== selectedSeasonId);
+        if (otherSeason) {
+          setSelectedSeasonId(String(otherSeason.id));
+        }
+      }
+    }
+  }, [seasons, divisions, selectedSeasonId, divisionsLoading, triedSeasons]);
 
   // Set default division
   useEffect(() => {

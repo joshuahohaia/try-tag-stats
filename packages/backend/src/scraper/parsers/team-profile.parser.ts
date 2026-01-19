@@ -439,7 +439,7 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
     const seasonId = extractParam(href, 'SeasonId');
     const divisionId = extractParam(href, 'DivisionId');
 
-    if (!seasonId || !divisionId) return;
+    if (seasonId === null || divisionId === null) return;
 
     const seasonName = $link.text().trim();
 
