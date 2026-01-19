@@ -16,6 +16,7 @@ import {
   IconTrophy,
   IconUsers,
   IconCalendar,
+  IconSettings,
 } from '@tabler/icons-react';
 import { Link, useRouterState } from '@tanstack/react-router';
 
@@ -63,6 +64,7 @@ function RootLayout() {
     { to: '/leagues', label: 'Leagues', icon: IconTrophy },
     { to: '/fixtures', label: 'Fixtures', icon: IconCalendar },
     { to: '/teams', label: 'Teams', icon: IconUsers },
+    { to: '/settings', label: 'Settings', icon: IconSettings },
   ];
 
   return (
