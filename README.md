@@ -7,7 +7,7 @@ A full-stack application for tracking Try Tag Rugby leagues, teams, and player s
 This is a monorepo managed with npm workspaces:
 
 - `packages/frontend`: React application built with Vite, Mantine UI, and TanStack Router.
-- `packages/backend`: Node.js Express server with Drizzle ORM (SQLite).
+- `packages/backend`: Node.js Express server with better-sqlite3.
 - `packages/shared`: Shared TypeScript types and Zod schemas used by both frontend and backend.
 
 ## Features
@@ -16,7 +16,8 @@ This is a monorepo managed with npm workspaces:
 - **Standings**: Real-time division standings including points, wins, losses, and point difference.
 - **Fixtures & Results**: Track upcoming matches and recent results.
 - **Team Profiles**: Detailed team statistics, position history charts, and player awards.
-- **Favorites**: Star Your favourite Teams for quick access to their fixtures and standings on the home page.
+- **Favorites**: Star your favourite teams for quick access to their fixtures and standings on the home page.
+- **Settings**: Manage favorites and access support links.
 - **Mobile Friendly**: Fully responsive design with a dedicated mobile navigation bar.
 
 ## Getting Started
@@ -70,8 +71,11 @@ You can check the status of the synchronization:
 curl http://localhost:3000/api/v1/admin/sync/status
 ```
 
+#### Scheduled Sync (GitHub Actions)
+A GitHub Actions workflow (`.github/workflows/sync-cron.yml`) runs every 6 hours to automatically sync data. This requires setting the `BACKEND_URL` secret in your GitHub repository settings pointing to your deployed backend.
+
 #### Team Profiles
-Detailed team statistics and position history are fetched on-demand when a specific team profile is viewed and then cached in the database.
+Detailed team statistics and position history are fetched on-demand when a specific team profile is viewed.
 
 ## Development Scripts
 
@@ -106,6 +110,15 @@ The backend includes a utility for debugging statistics:
 
 - **Frontend**: Runs on [http://localhost:5173](http://localhost:5173)
 - **Backend API**: Runs on [http://localhost:3000](http://localhost:3000)
+
+## Deployment
+
+The application can be deployed on platforms like Railway. The backend serves both the API and the built frontend static files in production.
+
+Key environment variables for production:
+- `NODE_ENV`: Set to `production`
+- `PORT`: The port for the server (Railway sets this automatically)
+- `DATABASE_PATH`: Path to the SQLite database file
 
 ## License
 
