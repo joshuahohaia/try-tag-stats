@@ -314,10 +314,18 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
 
   const tables = $('table');
 
-  tables.each((_, table) => {
+  logger.debug({ tableCount: tables.length, teamName }, 'Found tables in team profile');
+
+  tables.each((tableIdx, table) => {
     const $table = $(table);
     const $rows = $table.find('tr');
     const rowArray = $rows.toArray();
+
+    // Log first row of each table for debugging
+    if (rowArray.length > 0) {
+      const firstRowText = $(rowArray[0]).text().toLowerCase().replace(/\s+/g, ' ').trim();
+      logger.debug({ tableIdx, rowCount: rowArray.length, firstRow: firstRowText.substring(0, 150) }, 'Scanning table');
+    }
 
     // Find the header row - it may not be the first row (there could be a title row first)
     let headerRowIndex = -1;
@@ -328,9 +336,11 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       // Check if this row has both "date" and "opposition" - this is our header row
       const hasDate = rowText.includes('date');
       const hasOpposition = rowText.includes('opposition') || rowText.includes('opponent');
+      const hasResult = rowText.includes('result');
 
       if (hasDate && hasOpposition) {
         headerRowIndex = rowIdx;
+        logger.debug({ tableIdx, headerRowIndex, hasResult, rowText: rowText.substring(0, 100) }, 'Found fixtures table header');
         break;
       }
     }
@@ -353,10 +363,12 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       const cellText = $(cell).text().toLowerCase().trim();
       if (cellText.includes('date')) dateCol = idx;
       else if (cellText.includes('time')) timeCol = idx;
-      else if (cellText.includes('court') || cellText.includes('pitch')) courtCol = idx;
-      else if (cellText.includes('opposition') || cellText.includes('opponent')) oppCol = idx;
-      else if (cellText.includes('result') || cellText.includes('score')) resultCol = idx;
+      else if (cellText.includes('court') || cellText.includes('pitch') || cellText.includes('field')) courtCol = idx;
+      else if (cellText.includes('opposition') || cellText.includes('opponent') || cellText.includes('vs') || cellText.includes('against')) oppCol = idx;
+      else if (cellText.includes('result') || cellText.includes('score') || cellText.includes('points') || cellText.includes('outcome')) resultCol = idx;
     });
+
+    logger.debug({ dateCol, timeCol, courtCol, oppCol, resultCol, teamName }, 'Column indices detected');
 
     // Process data rows (all rows after the header row)
     const dataRows = $rows.slice(headerRowIndex + 1);
@@ -405,18 +417,59 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       }
 
       // Extract result/score - first number is team's score, second is opponent's
-      const resultText = resultCol >= 0 ? $cells.eq(resultCol).text().trim() : $row.text();
-      const scoreMatch = resultText.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+      // Check result column first, then fall back to entire row
+      const resultText = resultCol >= 0 ? $cells.eq(resultCol).text().trim() : '';
+      const fullRowText = $row.text();
+
+      // Try multiple score patterns with various dash types (hyphen, en-dash, em-dash, minus)
+      const scorePatterns = [
+        /(\d{1,2})\s*[-–—−]\s*(\d{1,2})/,  // Standard: "5-3", "5–3", "5—3"
+        /[WwLlDd]\s*(\d{1,2})\s*[-–—−]\s*(\d{1,2})/,  // With result prefix: "W 5-3", "L 3-5"
+        /(\d{1,2})\s*:\s*(\d{1,2})/,  // Colon format: "5:3"
+        /(\d{1,2})\s+(\d{1,2})/,  // Space separated in result column: "5 3"
+      ];
 
       let teamScore: number | null = null;
       let oppScore: number | null = null;
       let status: FixtureStatus = 'scheduled';
 
-      if (scoreMatch) {
-        teamScore = parseInt(scoreMatch[1], 10);
-        oppScore = parseInt(scoreMatch[2], 10);
-        status = 'completed';
+      // Try result column first
+      for (const pattern of scorePatterns) {
+        const match = resultText.match(pattern);
+        if (match) {
+          // For patterns with W/L prefix, scores are in groups 1 and 2
+          const scoreIdx = match[0].match(/^[WwLlDd]/) ? 1 : 1;
+          teamScore = parseInt(match[scoreIdx], 10);
+          oppScore = parseInt(match[scoreIdx + 1], 10);
+          status = 'completed';
+          break;
+        }
       }
+
+      // If no score found in result column, try the entire row
+      if (teamScore === null && resultCol < 0) {
+        for (const pattern of scorePatterns) {
+          const match = fullRowText.match(pattern);
+          if (match) {
+            const scoreIdx = match[0].match(/^[WwLlDd]/) ? 1 : 1;
+            teamScore = parseInt(match[scoreIdx], 10);
+            oppScore = parseInt(match[scoreIdx + 1], 10);
+            status = 'completed';
+            break;
+          }
+        }
+      }
+
+      // Log score extraction details for debugging
+      logger.debug({
+        oppTeamName,
+        date,
+        resultCol,
+        resultText: resultText || '(empty)',
+        teamScore,
+        oppScore,
+        status,
+      }, 'Processed fixture row');
 
       const fixture = {
         date,
@@ -458,6 +511,144 @@ export function parseTeamProfile(html: string, teamId: number): ParsedTeamProfil
       historicalSeasons.push({ seasonId, seasonName, divisionId });
     }
   });
+
+  // Fallback: If no fixtures found in tables, try parsing from page structure
+  if (fixtureHistory.length === 0 && upcomingFixtures.length === 0) {
+    logger.debug({ teamName }, 'No fixtures found in tables, trying fallback parser');
+
+    // Log HTML snippet to understand structure
+    const bodyText = $('body').text().substring(0, 500).replace(/\s+/g, ' ');
+    const allLinks = $('a').length;
+    const teamProfileLinks = $('a[href*="TeamProfile"]').length;
+
+    // Check if "Fixtures and Results" section exists
+    const hasFixturesSection = $('body').text().includes('Fixtures and Results');
+
+    logger.debug({
+      allLinks,
+      teamProfileLinks,
+      hasFixturesSection,
+      bodySnippet: bodyText,
+    }, 'Fallback parser HTML analysis');
+
+    // Find all team links that could be opponents
+    const teamLinks = $('a[href*="TeamId"]');
+    logger.debug({ linkCount: teamLinks.length }, 'Found team links for fallback parser');
+
+    teamLinks.each((idx, link) => {
+      const $link = $(link);
+      const href = $link.attr('href') || '';
+
+      // Skip if this is the current team's link or a standings link
+      if (href.includes('Standings')) {
+        return;
+      }
+
+      const oppTeamId = extractParam(href, 'TeamId');
+      const oppTeamName = $link.text().trim();
+
+      // Skip if this is the current team
+      if (oppTeamId === teamId) {
+        return;
+      }
+
+      if (!oppTeamId || !oppTeamName) return;
+
+      // Look for date and score near this link - try multiple parent levels
+      const $parent = $link.parent();
+      const $grandparent = $parent.parent();
+      const $greatGrandparent = $grandparent.parent();
+      const $container = $greatGrandparent.parent();
+
+      // Get surrounding text to find date and score
+      const parentText = $parent.text();
+      const grandparentText = $grandparent.text();
+      const containerText = $container.text();
+
+      // Log first few links for debugging
+      if (idx < 3) {
+        logger.debug({
+          idx,
+          oppTeamName,
+          oppTeamId,
+          parentText: parentText.substring(0, 100),
+          grandparentText: grandparentText.substring(0, 150),
+        }, 'Fallback: examining team link');
+      }
+
+      // Look for date pattern in nearby text - try multiple containers
+      let dateMatch = grandparentText.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i);
+      if (!dateMatch) {
+        dateMatch = containerText.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i);
+      }
+
+      if (!dateMatch) {
+        if (idx < 3) {
+          logger.debug({ oppTeamName }, 'Fallback: no date found near link');
+        }
+        return;
+      }
+
+      const date = parseDate(dateMatch[0]);
+      if (!date) return;
+
+      // Look for time
+      const timeMatch = containerText.match(/(\d{1,2}:\d{2})/);
+      const time = timeMatch ? timeMatch[1] : null;
+
+      // Look for pitch
+      const pitchMatch = containerText.match(/Pitch\s+[A-Z0-9]/i);
+      const pitch = pitchMatch ? pitchMatch[0] : null;
+
+      // Look for score pattern near the opponent name
+      const scorePatterns = [
+        /(\d{1,2})\s*[-–—−]\s*(\d{1,2})/,
+        /(\d{1,2})\s*:\s*(\d{1,2})/,
+      ];
+
+      let teamScore: number | null = null;
+      let oppScore: number | null = null;
+      let status: FixtureStatus = 'scheduled';
+
+      for (const pattern of scorePatterns) {
+        const scoreMatch = parentText.match(pattern) || containerText.match(pattern);
+        if (scoreMatch) {
+          teamScore = parseInt(scoreMatch[1], 10);
+          oppScore = parseInt(scoreMatch[2], 10);
+          status = 'completed';
+          break;
+        }
+      }
+
+      // Check if we already have this fixture
+      const isDuplicate = [...fixtureHistory, ...upcomingFixtures].some(
+        f => f.date === date && f.awayTeamId === oppTeamId
+      );
+
+      if (!isDuplicate) {
+        const fixture: ScrapedFixture = {
+          date,
+          time,
+          pitch,
+          homeTeamId: teamId,
+          homeTeamName: teamName,
+          awayTeamId: oppTeamId,
+          awayTeamName: oppTeamName,
+          homeScore: teamScore,
+          awayScore: oppScore,
+          status,
+        };
+
+        if (status === 'completed') {
+          fixtureHistory.push(fixture);
+        } else {
+          upcomingFixtures.push(fixture);
+        }
+
+        logger.debug({ oppTeamName, date, teamScore, oppScore, status }, 'Fallback parser found fixture');
+      }
+    });
+  }
 
   logger.info(
     {

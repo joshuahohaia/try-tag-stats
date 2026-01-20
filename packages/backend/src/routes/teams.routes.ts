@@ -9,6 +9,9 @@ import {
   standingRepository,
   fixtureRepository,
   playerAwardRepository,
+  divisionRepository,
+  leagueRepository,
+  seasonRepository,
 } from '../database/repositories/index.js';
 import { scraperOrchestrator } from '../scraper/index.js';
 
@@ -78,14 +81,28 @@ router.get('/:id', async (req, res) => {
     // Only fetch if we have an external team ID
     if (team.externalTeamId) {
       try {
-        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId) as any;
+        // Build context from first standing (for getting external IDs needed by Spawtz)
+        let context: { leagueId?: number; seasonId?: number; divisionId?: number } | undefined;
+        if (standings.length > 0) {
+          const division = divisionRepository.findById(standings[0].divisionId);
+          if (division) {
+            const league = leagueRepository.findById(division.leagueId);
+            const season = seasonRepository.findById(division.seasonId);
+            context = {
+              leagueId: league?.externalLeagueId,
+              seasonId: season?.externalSeasonId,
+              divisionId: division.externalDivisionId,
+            };
+          }
+        }
+        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context) as any;
         if (profileData) {
           positionHistory = profileData.positionHistory;
           seasonStats = profileData.seasonStats;
           previousSeasons = profileData.previousSeasons;
 
           // If any fixture history is found from the scraped profile, use it
-          if (profileData.fixtureHistory.length > 0) {
+          if (profileData.fixtureHistory && profileData.fixtureHistory.length > 0) {
             // Transform scraped fixtures to match FixtureWithTeams format
             const sortedFixtures = [...profileData.fixtureHistory].sort((a, b) => {
               const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -126,7 +143,7 @@ router.get('/:id', async (req, res) => {
           }
 
           // If any upcoming fixtures are found from the scraped profile, use them
-          if (profileData.upcomingFixtures.length > 0) {
+          if (profileData.upcomingFixtures && profileData.upcomingFixtures.length > 0) {
             const sortedFixtures = [...profileData.upcomingFixtures].sort((a, b) => {
               const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
               if (dateCompare !== 0) return dateCompare;

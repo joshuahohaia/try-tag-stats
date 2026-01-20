@@ -354,19 +354,35 @@ class ScraperOrchestrator {
     this.errors.push(`${message}: ${errorMessage}`);
   }
 
-  async fetchTeamProfile(externalTeamId: number): Promise<{
+  async fetchTeamProfile(
+    externalTeamId: number,
+    context?: {
+      leagueId?: number;
+      seasonId?: number;
+      divisionId?: number;
+    }
+  ): Promise<{
     positionHistory: TeamPositionHistory[];
     seasonStats: TeamSeasonStats[];
     previousSeasons: TeamPreviousSeason[];
     playerAwards: ScrapedPlayerAward[];
     fixtureHistory: ScrapedFixture[];
+    upcomingFixtures: ScrapedFixture[];
   } | null> {
     try {
-      logger.info({ externalTeamId }, 'Fetching team profile from website...');
+      logger.info({ externalTeamId, context }, 'Fetching team profile from website...');
 
-      const html = await scraperClient.fetchWithParams(ENDPOINTS.TEAM_PROFILE, {
+      // Build params - include context if available for fixtures to load
+      const params: Record<string, number> = {
         TeamId: externalTeamId,
-      });
+        VenueId: 0,
+      };
+
+      if (context?.leagueId) params.LeagueId = context.leagueId;
+      if (context?.seasonId) params.SeasonId = context.seasonId;
+      if (context?.divisionId) params.DivisionId = context.divisionId;
+
+      const html = await scraperClient.fetchWithParams(ENDPOINTS.TEAM_PROFILE, params);
 
       const profile = parseTeamProfile(html, externalTeamId);
 
@@ -377,6 +393,7 @@ class ScraperOrchestrator {
         previousSeasonsCount: profile.previousSeasons.length,
         playerAwardsCount: profile.playerAwards.length,
         fixtureHistoryCount: profile.fixtureHistory.length,
+        upcomingFixturesCount: profile.upcomingFixtures.length,
       }, 'Team profile fetched successfully');
 
       return {
@@ -385,6 +402,7 @@ class ScraperOrchestrator {
         previousSeasons: profile.previousSeasons,
         playerAwards: profile.playerAwards,
         fixtureHistory: profile.fixtureHistory,
+        upcomingFixtures: profile.upcomingFixtures,
       };
     } catch (err) {
       this.logError(`Failed to fetch team profile for ${externalTeamId}`, err);
