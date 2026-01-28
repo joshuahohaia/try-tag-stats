@@ -1,13 +1,13 @@
 # Try Tag Stats
 
-A full-stack application for tracking Try Tag Rugby leagues, teams, and player statistics.
+Track fixtures, standings, and stats for Try Tag Rugby leagues.
 
 ## Project Structure
 
 This is a monorepo managed with npm workspaces:
 
 - `packages/frontend`: React application built with Vite, Mantine UI, and TanStack Router.
-- `packages/backend`: Node.js Express server with better-sqlite3.
+- `packages/backend`: Node.js Express server with Turso (libSQL).
 - `packages/shared`: Shared TypeScript types and Zod schemas used by both frontend and backend.
 
 ## Features
@@ -45,7 +45,7 @@ This is a monorepo managed with npm workspaces:
 
 ## Database & Data Synchronization
 
-The project uses SQLite with `better-sqlite3`. The database file location is configured in the backend environment variables (defaults to `packages/backend/data/trytag.db`).
+The project uses Turso (libSQL), a SQLite-compatible cloud database. Configure your database URL and auth token via environment variables.
 
 ### Initialization
 The database schema is automatically initialized when the backend server starts for the first time.
@@ -113,12 +113,18 @@ The backend includes a utility for debugging statistics:
 
 ## Deployment
 
-The application can be deployed on platforms like Railway. The backend serves both the API and the built frontend static files in production.
+The application is deployed using:
+- **Backend**: Render.com (Docker)
+- **Frontend**: Vercel
+- **Database**: Turso (libSQL)
 
 Key environment variables for production:
 - `NODE_ENV`: Set to `production`
-- `PORT`: The port for the server (Railway sets this automatically)
-- `DATABASE_PATH`: Path to the SQLite database file
+- `PORT`: The port for the server
+- `TURSO_DATABASE_URL`: Your Turso database URL
+- `TURSO_AUTH_TOKEN`: Your Turso auth token
+- `CRON_SECRET`: Secret for securing sync endpoints
+- `VITE_API_URL`: Backend API URL (for frontend build)
 
 ## License
 
