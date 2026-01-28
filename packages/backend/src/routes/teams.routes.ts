@@ -18,8 +18,8 @@ import { scraperOrchestrator } from '../scraper/index.js';
 const router = Router();
 
 // GET /api/v1/teams - Get all teams
-router.get('/', (_req, res) => {
-  const teams = teamRepository.findAll();
+router.get('/', async (_req, res) => {
+  const teams = await teamRepository.findAll();
   res.json({
     success: true,
     data: teams,
@@ -28,7 +28,7 @@ router.get('/', (_req, res) => {
 });
 
 // GET /api/v1/teams/batch - Get multiple teams by IDs
-router.get('/batch', (req, res) => {
+router.get('/batch', async (req, res) => {
   const idsParam = req.query.ids as string;
   if (!idsParam) {
     res.status(400).json({
@@ -39,7 +39,7 @@ router.get('/batch', (req, res) => {
   }
 
   const ids = idsParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
-  const teams = teamRepository.findByIds(ids);
+  const teams = await teamRepository.findByIds(ids);
 
   res.json({
     success: true,
@@ -54,9 +54,9 @@ router.get('/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
 
     // Try to find by internal ID first, then fall back to external ID
-    let team = teamRepository.findById(id);
+    let team = await teamRepository.findById(id);
     if (!team) {
-      team = teamRepository.findByExternalId(id);
+      team = await teamRepository.findByExternalId(id);
     }
 
     if (!team) {
@@ -68,10 +68,10 @@ router.get('/:id', async (req, res) => {
     }
 
     const teamId = team.id; // Use internal ID for all lookups
-    const standings = standingRepository.findByTeam(teamId);
-    let upcomingFixtures = fixtureRepository.findUpcoming(teamId, 5);
-    let recentFixtures = fixtureRepository.findRecent(teamId, 10);
-    const playerAwards = playerAwardRepository.findByTeam(teamId);
+    const standings = await standingRepository.findByTeam(teamId);
+    let upcomingFixtures = await fixtureRepository.findUpcoming(teamId, 5);
+    let recentFixtures = await fixtureRepository.findRecent(teamId, 10);
+    const playerAwards = await playerAwardRepository.findByTeam(teamId);
 
     // Fetch live profile data from website (position history, stats, previous seasons, fixture history)
     let positionHistory: TeamPositionHistory[] = [];
@@ -84,10 +84,10 @@ router.get('/:id', async (req, res) => {
         // Build context from first standing (for getting external IDs needed by Spawtz)
         let context: { leagueId?: number; seasonId?: number; divisionId?: number } | undefined;
         if (standings.length > 0) {
-          const division = divisionRepository.findById(standings[0].divisionId);
+          const division = await divisionRepository.findById(standings[0].divisionId);
           if (division) {
-            const league = leagueRepository.findById(division.leagueId);
-            const season = seasonRepository.findById(division.seasonId);
+            const league = await leagueRepository.findById(division.leagueId);
+            const season = await seasonRepository.findById(division.seasonId);
             context = {
               leagueId: league?.externalLeagueId,
               seasonId: season?.externalSeasonId,
@@ -112,9 +112,11 @@ router.get('/:id', async (req, res) => {
               if (!b.time) return -1;
               return b.time.localeCompare(a.time);
             });
-            recentFixtures = sortedFixtures.map((f, idx) => {
-              const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
-              return {
+            const transformedFixtures = [];
+            for (let idx = 0; idx < sortedFixtures.length; idx++) {
+              const f = sortedFixtures[idx];
+              const opponentTeam = await teamRepository.findByExternalId(f.awayTeamId);
+              transformedFixtures.push({
                 id: -idx - 1,
                 externalFixtureId: null,
                 divisionId: 0,
@@ -138,8 +140,9 @@ router.get('/:id', async (req, res) => {
                   externalTeamId: f.awayTeamId,
                   name: opponentTeam?.name || f.awayTeamName,
                 },
-              };
-            });
+              });
+            }
+            recentFixtures = transformedFixtures;
           }
 
           // If any upcoming fixtures are found from the scraped profile, use them
@@ -152,9 +155,11 @@ router.get('/:id', async (req, res) => {
               if (!b.time) return 1;
               return a.time.localeCompare(b.time);
             });
-            upcomingFixtures = sortedFixtures.map((f, idx) => {
-              const opponentTeam = teamRepository.findByExternalId(f.awayTeamId);
-              return {
+            const transformedFixtures = [];
+            for (let idx = 0; idx < sortedFixtures.length; idx++) {
+              const f = sortedFixtures[idx];
+              const opponentTeam = await teamRepository.findByExternalId(f.awayTeamId);
+              transformedFixtures.push({
                 id: -idx - 1,
                 externalFixtureId: null,
                 divisionId: 0,
@@ -178,8 +183,9 @@ router.get('/:id', async (req, res) => {
                   externalTeamId: f.awayTeamId,
                   name: opponentTeam?.name || f.awayTeamName,
                 },
-              };
-            });
+              });
+            }
+            upcomingFixtures = transformedFixtures;
           }
         }
       } catch (scraperError) {
@@ -211,9 +217,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // GET /api/v1/teams/:id/standings - Get team standings across divisions
-router.get('/:id/standings', (req, res) => {
+router.get('/:id/standings', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const standings = standingRepository.findByTeam(id);
+  const standings = await standingRepository.findByTeam(id);
 
   res.json({
     success: true,
@@ -223,9 +229,9 @@ router.get('/:id/standings', (req, res) => {
 });
 
 // GET /api/v1/teams/:id/fixtures - Get team fixtures
-router.get('/:id/fixtures', (req, res) => {
+router.get('/:id/fixtures', async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const fixtures = fixtureRepository.findByTeam(id);
+  const fixtures = await fixtureRepository.findByTeam(id);
 
   res.json({
     success: true,
@@ -235,10 +241,10 @@ router.get('/:id/fixtures', (req, res) => {
 });
 
 // GET /api/v1/teams/:id/fixtures/upcoming - Get upcoming team fixtures
-router.get('/:id/fixtures/upcoming', (req, res) => {
+router.get('/:id/fixtures/upcoming', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
-  const fixtures = fixtureRepository.findUpcoming(id, limit);
+  const fixtures = await fixtureRepository.findUpcoming(id, limit);
 
   res.json({
     success: true,
@@ -248,10 +254,10 @@ router.get('/:id/fixtures/upcoming', (req, res) => {
 });
 
 // GET /api/v1/teams/:id/fixtures/results - Get team results
-router.get('/:id/fixtures/results', (req, res) => {
+router.get('/:id/fixtures/results', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
-  const fixtures = fixtureRepository.findRecent(id, limit);
+  const fixtures = await fixtureRepository.findRecent(id, limit);
 
   res.json({
     success: true,

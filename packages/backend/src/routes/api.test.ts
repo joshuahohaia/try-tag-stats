@@ -7,10 +7,11 @@ import type { Express } from 'express';
 describe('API Endpoints', () => {
   let app: Express;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Use in-memory database for tests
-    process.env.DATABASE_PATH = ':memory:';
-    initializeSchema();
+    process.env.TURSO_DATABASE_URL = 'file::memory:';
+    process.env.TURSO_AUTH_TOKEN = '';
+    await initializeSchema();
     app = createApp();
   });
 

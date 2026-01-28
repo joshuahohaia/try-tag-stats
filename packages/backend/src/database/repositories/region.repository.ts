@@ -1,5 +1,6 @@
 import { getDatabase } from '../connection.js';
 import type { Region } from '@trytag/shared';
+import type { Row } from '@libsql/client';
 
 interface RegionRow {
   id: number;
@@ -9,44 +10,52 @@ interface RegionRow {
   updated_at: string;
 }
 
-function rowToRegion(row: RegionRow): Region {
+function rowToRegion(row: Row): Region {
   return {
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
+    id: row.id as number,
+    name: row.name as string,
+    slug: row.slug as string,
   };
 }
 
 export const regionRepository = {
-  findAll(): Region[] {
+  async findAll(): Promise<Region[]> {
     const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM regions ORDER BY name').all() as RegionRow[];
-    return rows.map(rowToRegion);
+    const result = await db.execute('SELECT * FROM regions ORDER BY name');
+    return result.rows.map(rowToRegion);
   },
 
-  findById(id: number): Region | null {
+  async findById(id: number): Promise<Region | null> {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM regions WHERE id = ?').get(id) as RegionRow | undefined;
-    return row ? rowToRegion(row) : null;
+    const result = await db.execute({
+      sql: 'SELECT * FROM regions WHERE id = ?',
+      args: [id],
+    });
+    return result.rows[0] ? rowToRegion(result.rows[0]) : null;
   },
 
-  findBySlug(slug: string): Region | null {
+  async findBySlug(slug: string): Promise<Region | null> {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM regions WHERE slug = ?').get(slug) as RegionRow | undefined;
-    return row ? rowToRegion(row) : null;
+    const result = await db.execute({
+      sql: 'SELECT * FROM regions WHERE slug = ?',
+      args: [slug],
+    });
+    return result.rows[0] ? rowToRegion(result.rows[0]) : null;
   },
 
-  upsert(name: string, slug: string): Region {
+  async upsert(name: string, slug: string): Promise<Region> {
     const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO regions (name, slug, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(name) DO UPDATE SET
-        slug = excluded.slug,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(name, slug) as RegionRow;
-    return rowToRegion(row);
+    const result = await db.execute({
+      sql: `
+        INSERT INTO regions (name, slug, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(name) DO UPDATE SET
+          slug = excluded.slug,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+      `,
+      args: [name, slug],
+    });
+    return rowToRegion(result.rows[0]);
   },
 };

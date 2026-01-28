@@ -1,28 +1,27 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient, Client } from '@libsql/client';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
-let db: Database.Database | null = null;
+let client: Client | null = null;
 
-export function getDatabase(): Database.Database {
-  if (!db) {
-    const dbPath = path.resolve(process.cwd(), config.databasePath);
-    logger.info(`Connecting to database at ${dbPath}`);
+export function getDatabase(): Client {
+  if (!client) {
+    logger.info(`Connecting to Turso database at ${config.turso.databaseUrl}`);
 
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
+    client = createClient({
+      url: config.turso.databaseUrl,
+      authToken: config.turso.authToken,
+    });
 
     logger.info('Database connected successfully');
   }
-  return db;
+  return client;
 }
 
-export function closeDatabase(): void {
-  if (db) {
-    db.close();
-    db = null;
+export async function closeDatabase(): Promise<void> {
+  if (client) {
+    client.close();
+    client = null;
     logger.info('Database connection closed');
   }
 }

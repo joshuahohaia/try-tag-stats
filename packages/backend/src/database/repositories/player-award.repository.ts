@@ -1,56 +1,40 @@
 import { getDatabase } from '../connection.js';
 import type { PlayerAward, PlayerAwardWithDetails } from '@trytag/shared';
+import type { Row } from '@libsql/client';
 
-interface PlayerAwardRow {
-  id: number;
-  player_id: number;
-  team_id: number;
-  division_id: number;
-  fixture_id: number | null;
-  award_type: string;
-  award_count: number;
-  created_at: string;
-}
-
-interface PlayerAwardWithDetailsRow extends PlayerAwardRow {
-  player_name: string;
-  external_player_id: number | null;
-  team_name: string;
-  external_team_id: number;
-}
-
-function rowToPlayerAward(row: PlayerAwardRow): PlayerAward {
+function rowToPlayerAward(row: Row): PlayerAward {
   return {
-    id: row.id,
-    playerId: row.player_id,
-    teamId: row.team_id,
-    divisionId: row.division_id,
-    fixtureId: row.fixture_id,
-    awardType: row.award_type,
-    awardCount: row.award_count,
+    id: row.id as number,
+    playerId: row.player_id as number,
+    teamId: row.team_id as number,
+    divisionId: row.division_id as number,
+    fixtureId: row.fixture_id as number | null,
+    awardType: row.award_type as string,
+    awardCount: row.award_count as number,
   };
 }
 
-function rowToPlayerAwardWithDetails(row: PlayerAwardWithDetailsRow): PlayerAwardWithDetails {
+function rowToPlayerAwardWithDetails(row: Row): PlayerAwardWithDetails {
   return {
     ...rowToPlayerAward(row),
     player: {
-        id: row.player_id,
-        externalPlayerId: row.external_player_id,
-        name: row.player_name
+      id: row.player_id as number,
+      externalPlayerId: row.external_player_id as number | null,
+      name: row.player_name as string,
     },
     team: {
-        id: row.team_id,
-        externalTeamId: row.external_team_id,
-        name: row.team_name
-    }
+      id: row.team_id as number,
+      externalTeamId: row.external_team_id as number,
+      name: row.team_name as string,
+    },
   };
 }
 
 export const playerAwardRepository = {
-  findByDivision(divisionId: number): PlayerAwardWithDetails[] {
+  async findByDivision(divisionId: number): Promise<PlayerAwardWithDetails[]> {
     const db = getDatabase();
-    const rows = db.prepare(`
+    const result = await db.execute({
+      sql: `
         SELECT pa.*,
                p.name as player_name, p.external_player_id,
                t.name as team_name, t.external_team_id
@@ -59,16 +43,18 @@ export const playerAwardRepository = {
         INNER JOIN teams t ON pa.team_id = t.id
         WHERE pa.division_id = ?
         ORDER BY pa.award_count DESC, p.name ASC
-    `).all(divisionId) as PlayerAwardWithDetailsRow[];
-
-    return rows.map(rowToPlayerAwardWithDetails);
+      `,
+      args: [divisionId],
+    });
+    return result.rows.map(rowToPlayerAwardWithDetails);
   },
 
-  findByDivisionIds(divisionIds: number[]): PlayerAwardWithDetails[] {
+  async findByDivisionIds(divisionIds: number[]): Promise<PlayerAwardWithDetails[]> {
     if (divisionIds.length === 0) return [];
     const db = getDatabase();
     const placeholders = divisionIds.map(() => '?').join(',');
-    const rows = db.prepare(`
+    const result = await db.execute({
+      sql: `
         SELECT pa.*,
                p.name as player_name, p.external_player_id,
                t.name as team_name, t.external_team_id
@@ -77,14 +63,16 @@ export const playerAwardRepository = {
         INNER JOIN teams t ON pa.team_id = t.id
         WHERE pa.division_id IN (${placeholders})
         ORDER BY pa.division_id, pa.award_count DESC, p.name ASC
-    `).all(...divisionIds) as PlayerAwardWithDetailsRow[];
-
-    return rows.map(rowToPlayerAwardWithDetails);
+      `,
+      args: divisionIds,
+    });
+    return result.rows.map(rowToPlayerAwardWithDetails);
   },
 
-  findByTeam(teamId: number): PlayerAwardWithDetails[] {
+  async findByTeam(teamId: number): Promise<PlayerAwardWithDetails[]> {
     const db = getDatabase();
-    const rows = db.prepare(`
+    const result = await db.execute({
+      sql: `
         SELECT pa.*,
                p.name as player_name, p.external_player_id,
                t.name as team_name, t.external_team_id
@@ -93,32 +81,33 @@ export const playerAwardRepository = {
         INNER JOIN teams t ON pa.team_id = t.id
         WHERE pa.team_id = ?
         ORDER BY pa.award_count DESC, p.name ASC
-    `).all(teamId) as PlayerAwardWithDetailsRow[];
-
-    return rows.map(rowToPlayerAwardWithDetails);
+      `,
+      args: [teamId],
+    });
+    return result.rows.map(rowToPlayerAwardWithDetails);
   },
 
-  upsert(data: Omit<PlayerAward, 'id'>): PlayerAward {
+  async upsert(data: Omit<PlayerAward, 'id'>): Promise<PlayerAward> {
     const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO player_awards (player_id, team_id, division_id, fixture_id, award_type, award_count)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(player_id, division_id, award_type) DO UPDATE SET
-        award_count = excluded.award_count,
-        team_id = excluded.team_id,
-        fixture_id = excluded.fixture_id
-      RETURNING *
-    `);
-    
-    const row = stmt.get(
-      data.playerId,
-      data.teamId,
-      data.divisionId,
-      data.fixtureId,
-      data.awardType,
-      data.awardCount
-    ) as PlayerAwardRow;
-    
-    return rowToPlayerAward(row);
+    const result = await db.execute({
+      sql: `
+        INSERT INTO player_awards (player_id, team_id, division_id, fixture_id, award_type, award_count)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(player_id, division_id, award_type) DO UPDATE SET
+          award_count = excluded.award_count,
+          team_id = excluded.team_id,
+          fixture_id = excluded.fixture_id
+        RETURNING *
+      `,
+      args: [
+        data.playerId,
+        data.teamId,
+        data.divisionId,
+        data.fixtureId,
+        data.awardType,
+        data.awardCount,
+      ],
+    });
+    return rowToPlayerAward(result.rows[0]);
   },
 };

@@ -1,89 +1,86 @@
 import { getDatabase } from '../connection.js';
 import type { Division } from '@trytag/shared';
+import type { Row } from '@libsql/client';
 
-interface DivisionRow {
-  id: number;
-  external_division_id: number;
-  league_id: number;
-  season_id: number;
-  name: string;
-  tier: number | null;
-  created_at: string;
-  updated_at: string;
-  last_scraped_at: string | null;
-}
-
-function rowToDivision(row: DivisionRow): Division {
+function rowToDivision(row: Row): Division {
   return {
-    id: row.id,
-    externalDivisionId: row.external_division_id,
-    leagueId: row.league_id,
-    seasonId: row.season_id,
-    name: row.name,
-    tier: row.tier,
+    id: row.id as number,
+    externalDivisionId: row.external_division_id as number,
+    leagueId: row.league_id as number,
+    seasonId: row.season_id as number,
+    name: row.name as string,
+    tier: row.tier as number | null,
   };
 }
 
 export const divisionRepository = {
-  findAll(): Division[] {
+  async findAll(): Promise<Division[]> {
     const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM divisions ORDER BY name').all() as DivisionRow[];
-    return rows.map(rowToDivision);
+    const result = await db.execute('SELECT * FROM divisions ORDER BY name');
+    return result.rows.map(rowToDivision);
   },
 
-  findById(id: number): Division | null {
+  async findById(id: number): Promise<Division | null> {
     const db = getDatabase();
-    const row = db.prepare('SELECT * FROM divisions WHERE id = ?').get(id) as DivisionRow | undefined;
-    return row ? rowToDivision(row) : null;
+    const result = await db.execute({
+      sql: 'SELECT * FROM divisions WHERE id = ?',
+      args: [id],
+    });
+    return result.rows[0] ? rowToDivision(result.rows[0]) : null;
   },
 
-  findByLeagueAndSeason(leagueId: number, seasonId: number): Division[] {
+  async findByLeagueAndSeason(leagueId: number, seasonId: number): Promise<Division[]> {
     const db = getDatabase();
-    const rows = db
-      .prepare('SELECT * FROM divisions WHERE league_id = ? AND season_id = ? ORDER BY tier, name')
-      .all(leagueId, seasonId) as DivisionRow[];
-    return rows.map(rowToDivision);
+    const result = await db.execute({
+      sql: 'SELECT * FROM divisions WHERE league_id = ? AND season_id = ? ORDER BY tier, name',
+      args: [leagueId, seasonId],
+    });
+    return result.rows.map(rowToDivision);
   },
 
-  findByExternalId(externalDivisionId: number, leagueId: number, seasonId: number): Division | null {
+  async findByExternalId(externalDivisionId: number, leagueId: number, seasonId: number): Promise<Division | null> {
     const db = getDatabase();
-    const row = db
-      .prepare(
-        'SELECT * FROM divisions WHERE external_division_id = ? AND league_id = ? AND season_id = ?'
-      )
-      .get(externalDivisionId, leagueId, seasonId) as DivisionRow | undefined;
-    return row ? rowToDivision(row) : null;
+    const result = await db.execute({
+      sql: 'SELECT * FROM divisions WHERE external_division_id = ? AND league_id = ? AND season_id = ?',
+      args: [externalDivisionId, leagueId, seasonId],
+    });
+    return result.rows[0] ? rowToDivision(result.rows[0]) : null;
   },
 
-  upsert(data: {
+  async upsert(data: {
     externalDivisionId: number;
     leagueId: number;
     seasonId: number;
     name: string;
     tier?: number;
-  }): Division {
+  }): Promise<Division> {
     const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(external_division_id, league_id, season_id) DO UPDATE SET
-        name = excluded.name,
-        tier = excluded.tier,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
-    `);
-    const row = stmt.get(
-      data.externalDivisionId,
-      data.leagueId,
-      data.seasonId,
-      data.name,
-      data.tier ?? null
-    ) as DivisionRow;
-    return rowToDivision(row);
+    const result = await db.execute({
+      sql: `
+        INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, updated_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(external_division_id, league_id, season_id) DO UPDATE SET
+          name = excluded.name,
+          tier = excluded.tier,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+      `,
+      args: [
+        data.externalDivisionId,
+        data.leagueId,
+        data.seasonId,
+        data.name,
+        data.tier ?? null,
+      ],
+    });
+    return rowToDivision(result.rows[0]);
   },
 
-  updateLastScraped(id: number): void {
+  async updateLastScraped(id: number): Promise<void> {
     const db = getDatabase();
-    db.prepare('UPDATE divisions SET last_scraped_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
+    await db.execute({
+      sql: 'UPDATE divisions SET last_scraped_at = CURRENT_TIMESTAMP WHERE id = ?',
+      args: [id],
+    });
   },
 };

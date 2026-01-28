@@ -46,9 +46,6 @@ COPY --from=builder /app/packages/frontend/dist ./packages/frontend/dist
 # Install production dependencies
 RUN npm ci --omit=dev --workspace=packages/backend --workspace=packages/shared
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
-
 # Set environment
 ENV NODE_ENV=production
 ENV PORT=3001
