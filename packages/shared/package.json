@@ -24,6 +24,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:vercel": "tsc",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"

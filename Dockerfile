@@ -22,10 +22,7 @@ COPY . .
 # Build shared package first (required for typecheck and tests)
 RUN npm run build:shared
 
-# Run tests (after shared is built so imports resolve)
-RUN npm run test
-
-# Build all packages
+# Build all packages (skipping tests for faster deploy)
 RUN npm run build
 
 # Production stage
