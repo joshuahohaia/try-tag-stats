@@ -88,7 +88,7 @@ function LeaguesPage() {
             </div>
           </Stack>
         </Container>
-        <Container size="xl" p="md">
+        <Container size="xl" p="md" w="100%" flex={1}>
           <LeagueCardSkeleton count={6} />
         </Container>
       </Stack>
