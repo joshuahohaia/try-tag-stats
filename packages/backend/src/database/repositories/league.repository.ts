@@ -57,6 +57,9 @@ export const leagueRepository = {
     format?: string;
   }): Promise<League> {
     const db = getDatabase();
+    // Clean up name - remove trailing/leading dashes and spaces (e.g., " - -")
+    // Include various dash characters: hyphen (-), en-dash (–), em-dash (—)
+    const cleanName = data.name.replace(/[\s\-–—]+$/g, '').replace(/^[\s\-–—]+/g, '').trim();
     const result = await db.execute({
       sql: `
         INSERT INTO leagues (external_league_id, name, region_id, venue_name, day_of_week, format, updated_at)
@@ -72,7 +75,7 @@ export const leagueRepository = {
       `,
       args: [
         data.externalLeagueId,
-        data.name,
+        cleanName,
         data.regionId ?? null,
         data.venueName ?? null,
         data.dayOfWeek ?? null,

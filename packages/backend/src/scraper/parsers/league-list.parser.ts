@@ -166,6 +166,13 @@ export function parseLeagueList(html: string): ParsedLeagueList {
         .trim();
     }
 
+    // Clean up trailing dashes and separators (e.g., " - -" or " - ")
+    // Include various dash characters: hyphen (-), en-dash (–), em-dash (—)
+    leagueName = leagueName
+      .replace(/[\s\-–—]+$/g, '')  // Remove trailing spaces and dashes
+      .replace(/^[\s\-–—]+/g, '')  // Remove leading spaces and dashes
+      .trim();
+
     // Skip if we couldn't determine a meaningful league name
     if (!leagueName || leagueName.length < 3) {
       return;
