@@ -96,7 +96,7 @@ router.get('/:id', async (req, res) => {
             };
           }
         }
-        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context) as any;
+        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context);
         if (profileData) {
           positionHistory = profileData.positionHistory;
           seasonStats = profileData.seasonStats;
@@ -117,27 +117,32 @@ router.get('/:id', async (req, res) => {
             for (let idx = 0; idx < sortedFixtures.length; idx++) {
               const f = sortedFixtures[idx];
               const opponentTeam = await teamRepository.findByExternalId(f.awayTeamId);
+              const opponentId = opponentTeam?.id || f.awayTeamId;
+
+              // Try to find matching fixture in database to get real ID
+              const dbFixture = await fixtureRepository.findByTeamsAndDate(team.id, opponentId, f.date);
+
               transformedFixtures.push({
-                id: -idx - 1,
-                externalFixtureId: null,
-                divisionId: 0,
+                id: dbFixture?.id ?? -idx - 1,
+                externalFixtureId: dbFixture?.externalFixtureId ?? null,
+                divisionId: dbFixture?.divisionId ?? 0,
                 homeTeamId: team.id,
-                awayTeamId: opponentTeam?.id || f.awayTeamId,
+                awayTeamId: opponentId,
                 fixtureDate: f.date,
                 fixtureTime: f.time,
                 pitch: f.pitch,
-                roundNumber: null,
+                roundNumber: dbFixture?.roundNumber ?? null,
                 homeScore: f.homeScore,
                 awayScore: f.awayScore,
                 status: f.status,
-                isForfeit: false,
+                isForfeit: dbFixture?.isForfeit ?? false,
                 homeTeam: {
                   id: team.id,
                   externalTeamId: team.externalTeamId,
                   name: team.name,
                 },
                 awayTeam: {
-                  id: opponentTeam?.id || f.awayTeamId,
+                  id: opponentId,
                   externalTeamId: f.awayTeamId,
                   name: opponentTeam?.name || f.awayTeamName,
                 },
@@ -160,27 +165,32 @@ router.get('/:id', async (req, res) => {
             for (let idx = 0; idx < sortedFixtures.length; idx++) {
               const f = sortedFixtures[idx];
               const opponentTeam = await teamRepository.findByExternalId(f.awayTeamId);
+              const opponentId = opponentTeam?.id || f.awayTeamId;
+
+              // Try to find matching fixture in database to get real ID
+              const dbFixture = await fixtureRepository.findByTeamsAndDate(team.id, opponentId, f.date);
+
               transformedFixtures.push({
-                id: -idx - 1,
-                externalFixtureId: null,
-                divisionId: 0,
+                id: dbFixture?.id ?? -idx - 1,
+                externalFixtureId: dbFixture?.externalFixtureId ?? null,
+                divisionId: dbFixture?.divisionId ?? 0,
                 homeTeamId: team.id,
-                awayTeamId: opponentTeam?.id || f.awayTeamId,
+                awayTeamId: opponentId,
                 fixtureDate: f.date,
                 fixtureTime: f.time,
                 pitch: f.pitch,
-                roundNumber: null,
+                roundNumber: dbFixture?.roundNumber ?? null,
                 homeScore: f.homeScore,
                 awayScore: f.awayScore,
                 status: f.status,
-                isForfeit: false,
+                isForfeit: dbFixture?.isForfeit ?? false,
                 homeTeam: {
                   id: team.id,
                   externalTeamId: team.externalTeamId,
                   name: team.name,
                 },
                 awayTeam: {
-                  id: opponentTeam?.id || f.awayTeamId,
+                  id: opponentId,
                   externalTeamId: f.awayTeamId,
                   name: opponentTeam?.name || f.awayTeamName,
                 },

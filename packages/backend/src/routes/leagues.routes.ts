@@ -7,6 +7,18 @@ import {
 
 const router = Router();
 
+// GET /api/v1/leagues/summary - List all leagues with summary data
+router.get('/summary', async (req, res) => {
+  const regionId = req.query.region ? parseInt(req.query.region as string, 10) : undefined;
+  const leagues = await leagueRepository.findAllWithSummary(regionId);
+
+  res.json({
+    success: true,
+    data: leagues,
+    meta: { total: leagues.length },
+  });
+});
+
 // GET /api/v1/leagues - List all leagues
 router.get('/', async (req, res) => {
   const regionId = req.query.region ? parseInt(req.query.region as string, 10) : undefined;

@@ -8,6 +8,25 @@ import {
 
 const router = Router();
 
+// GET /api/v1/divisions/batch - Get multiple divisions by IDs
+router.get('/batch', async (req, res) => {
+  const idsParam = req.query.ids as string;
+  if (!idsParam) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'BAD_REQUEST', message: 'ids query parameter required' },
+    });
+    return;
+  }
+  const ids = idsParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+  const divisions = await divisionRepository.findByIds(ids);
+  res.json({
+    success: true,
+    data: divisions,
+    meta: { total: divisions.length },
+  });
+});
+
 // GET /api/v1/divisions/:id - Get division details
 router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);

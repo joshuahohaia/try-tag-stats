@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useMediaQuery } from '@mantine/hooks';
 import {
   Title,
   Text,
@@ -9,20 +8,19 @@ import {
   Badge,
   Group,
   Button,
-  Table,
   Accordion,
   ScrollArea,
   Container,
   HoverCard,
-  Skeleton,
+  Table,
 } from '@mantine/core';
 import { FixtureCardSkeleton } from '../components/skeletons';
-import { IconStar, IconStarFilled, IconTrophy, IconAward, IconSparkles } from '@tabler/icons-react';
+import { PositionHistoryChart } from '../components/charts';
+import { FixturesList } from '../components';
+import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-react';
 import { useTeam } from '../hooks/useTeams';
-import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
-import { getFixtureInsights } from '../utils/fixtures';
+import { useDivisionStandings, useDivisionStatistics, useDivisions } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatDate, formatTime } from '../utils/format';
 import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
 
 // Form component showing last 5 results as W/L/D badges
@@ -85,115 +83,6 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
         );
       })}
     </Group>
-  );
-}
-
-function PositionChart({ positionHistory }: { positionHistory: { week: number; position: number }[] }) {
-  if (!positionHistory || positionHistory.length === 0) return null;
-
-  const maxPosition = Math.max(...positionHistory.map(p => p.position), 5);
-  const minPosition = 1;
-
-  // Chart dimensions in pixels
-  const width = 500;
-  const height = 150;
-  const padding = { top: 20, right: 20, bottom: 30, left: 35 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-
-  // Calculate points for the line
-  const points = positionHistory.map((p, i) => {
-    const x = padding.left + (i / (positionHistory.length - 1 || 1)) * chartWidth;
-    // Invert Y so position 1 is at top
-    const y = padding.top + ((p.position - minPosition) / (maxPosition - minPosition || 1)) * chartHeight;
-    return { x, y, week: p.week, position: p.position };
-  });
-
-  // Create SVG path
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-  // Y-axis positions to show
-  const yAxisPositions = Array.from(new Set([1, Math.ceil(maxPosition / 2), maxPosition])).sort((a, b) => a - b);
-
-  return (
-    <Card withBorder>
-      <Title order={3} mb="md">Position History</Title>
-      <svg
-        width="100%"
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ maxWidth: width }}
-      >
-        {/* Y-axis labels */}
-        {yAxisPositions.map((pos) => {
-          const y = padding.top + ((pos - minPosition) / (maxPosition - minPosition || 1)) * chartHeight;
-          return (
-            <text
-              key={`label-${pos}`}
-              x={padding.left - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize="12"
-              fill="var(--mantine-color-dimmed)"
-            >
-              {pos}
-            </text>
-          );
-        })}
-
-        {/* Grid lines */}
-        {yAxisPositions.map((pos) => {
-          const y = padding.top + ((pos - minPosition) / (maxPosition - minPosition || 1)) * chartHeight;
-          return (
-            <line
-              key={`grid-${pos}`}
-              x1={padding.left}
-              y1={y}
-              x2={width - padding.right}
-              y2={y}
-              stroke="var(--mantine-color-gray-3)"
-              strokeWidth="1"
-              strokeDasharray="4,4"
-            />
-          );
-        })}
-
-        {/* Line */}
-        <path
-          d={linePath}
-          fill="none"
-          stroke="var(--mantine-color-brand-6)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Points and labels */}
-        {points.map((p, i) => (
-          <g key={i}>
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r="5"
-              fill={p.position === 1 ? 'var(--mantine-color-yellow-5)' : 'var(--mantine-color-brand-6)'}
-              stroke="white"
-              strokeWidth="2"
-            />
-            {/* Week label */}
-            <text
-              x={p.x}
-              y={height - 8}
-              textAnchor="middle"
-              fontSize="11"
-              fill="var(--mantine-color-dimmed)"
-            >
-              W{p.week}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </Card>
   );
 }
 
@@ -263,11 +152,11 @@ function TeamDetailPage() {
   const { teamId } = Route.useParams();
   const { data: teamProfile, isLoading } = useTeam(parseInt(teamId, 10));
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const currentDivisionId = teamProfile?.standings?.[0]?.divisionId;
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(currentDivisionId ?? 0);
   const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(currentDivisionId ?? 0);
+  const { data: divisions, isLoading: divisionsLoading } = useDivisions(currentDivisionId ? [currentDivisionId] : []);
 
   if (isLoading) {
     return (
@@ -276,36 +165,9 @@ function TeamDetailPage() {
           <Stack gap="md">
             <Group justify="space-between" align="flex-start">
               <Stack gap="xs">
-                <Skeleton height={32} width={200} radius="sm" />
-                <Skeleton height={16} width={100} radius="sm" />
+                <Text>Loading...</Text>
               </Stack>
-              <Skeleton height={36} width={150} radius="sm" />
             </Group>
-            <Card withBorder>
-              <Skeleton height={20} width={150} radius="sm" mb="md" />
-              <SimpleGrid cols={{ base: 2, sm: 4, md: 6 }}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Stack key={i} gap={4}>
-                    <Skeleton height={12} width={60} radius="sm" />
-                    <Skeleton height={28} width={40} radius="sm" />
-                  </Stack>
-                ))}
-              </SimpleGrid>
-            </Card>
-            <SimpleGrid cols={{ base: 1, md: 2 }}>
-              <Card withBorder>
-                <Skeleton height={20} width={120} radius="sm" mb="md" />
-                <Stack gap="sm">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} height={40} radius="sm" />
-                  ))}
-                </Stack>
-              </Card>
-              <Card withBorder>
-                <Skeleton height={20} width={150} radius="sm" mb="md" />
-                <FixtureCardSkeleton count={3} />
-              </Card>
-            </SimpleGrid>
           </Stack>
         </Container>
       </ScrollArea>
@@ -398,7 +260,7 @@ function TeamDetailPage() {
             )}
 
             {teamProfile.positionHistory && teamProfile.positionHistory.length > 0 && (
-              <PositionChart positionHistory={teamProfile.positionHistory} />
+              <PositionHistoryChart positionHistory={teamProfile.positionHistory} />
             )}
           </SimpleGrid>
 
@@ -422,169 +284,26 @@ function TeamDetailPage() {
             </Card>
           )}
 
-          <SimpleGrid cols={{ base: 1, md: 2 }}>
-            <Card withBorder>
-              <Group justify="space-between" mb="md">
-                <Title order={3}>Recent Results</Title>
-                <Button component={Link} to="/fixtures" variant="light" size="xs">
-                  View all
-                </Button>
-              </Group>
-              {standingsLoading || statsLoading ? (
-                <Stack gap="sm">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} height={50} radius="sm" />
-                  ))}
-                </Stack>
-              ) : teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
-                <Table>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Date</Table.Th>
-                      <Table.Th>Opponent</Table.Th>
-                      <Table.Th>Result</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {teamProfile.recentFixtures
-                      .filter(f => f.status === 'completed')
-                      .slice(0, 10)
-                      .map((fixture, idx) => {
-                        const isHome = fixture.homeTeam?.id === teamProfile.id;
-                        const opponent = isHome ? fixture.awayTeam : fixture.homeTeam;
-                        const teamScore = isHome ? fixture.homeScore : fixture.awayScore;
-                        const oppScore = isHome ? fixture.awayScore : fixture.homeScore;
-                        const result = teamScore !== null && oppScore !== null
-                          ? teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D'
-                          : '-';
-
-                        return (
-                          <Table.Tr key={fixture.id || idx}>
-                            <Table.Td>
-                              <Text size="sm">{formatDate(fixture.fixtureDate)}</Text>
-                              <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
-                            </Table.Td>
-                            <Table.Td>
-                              {opponent?.id && opponent.id > 0 ? (
-                                <Link
-                                  to="/teams/$teamId"
-                                  params={{ teamId: String(opponent.id) }}
-                                  style={{ color: 'inherit', textDecoration: 'none' }}
-                                >
-                                  <Text size="sm" c="blue">{opponent?.name || 'Unknown'}</Text>
-                                </Link>
-                              ) : (
-                                <Text size="sm">{opponent?.name || 'Unknown'}</Text>
-                              )}
-                            </Table.Td>
-                            <Table.Td>
-                              <Group>
-                                <Badge
-                                  fullWidth
-                                  color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
-                                  variant="filled"
-                                >
-                                  {result} {teamScore !== null && `${teamScore}-${oppScore}`}
-                                </Badge>
-                              </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        );
-                      })}
-                  </Table.Tbody>
-                </Table>
-              ) : (
-                <Text c="dimmed" ta="center" py="md">No recent results available</Text>
-              )}
-            </Card>
-
-            <Card withBorder>
-              <Group justify="space-between" mb="md">
-                <Title order={3}>Upcoming Fixtures</Title>
-                <Button component={Link} to="/fixtures" variant="light" size="xs">
-                  View all
-                </Button>
-              </Group>
-              {standingsLoading || statsLoading ? (
-                <FixtureCardSkeleton count={3} />
-              ) : teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
-                <Stack gap="sm">
-                  {teamProfile.upcomingFixtures.map((fixture, idx) => {
-                    const insights = getFixtureInsights(fixture, standings, statistics);
-                    const insightIcons = insights.map((insight) => (
-                      <HoverCard key={insight.type} width={200} withArrow shadow="md">
-                        <HoverCard.Target>
-                          {insight.type === 'top-clash' ? (
-                            <IconTrophy size={16} color="orange" />
-                          ) : (
-                            <IconSparkles size={16} color="purple" />
-                          )}
-                        </HoverCard.Target>
-                        <HoverCard.Dropdown>
-                          <Text size="xs">{insight.text}</Text>
-                        </HoverCard.Dropdown>
-                      </HoverCard>
-                    ));
-                    const isPastScheduled = fixture.status === 'scheduled' &&
-                      new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
-
-                    const fixtureBadge = isPastScheduled ? (
-                      <Badge variant="light" color="orange">Awaiting Results</Badge>
-                    ) : (
-                      <Badge variant="light">{fixture.status}</Badge>
-                    );
-
-                    return (
-                      <Card key={fixture.id || idx} withBorder padding="sm">
-                        <Group justify="space-between" align="flex-start" wrap="nowrap">
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <Stack gap={0}>
-                              {fixture.homeTeam ? (
-                                <Link to="/teams/$teamId" params={{ teamId: String(fixture.homeTeam.id) }} style={{ textDecoration: 'none' }}>
-                                  <Text fw={500} c="blue" truncate="end">{fixture.homeTeam.name}</Text>
-                                </Link>
-                              ) : (
-                                <Text fw={500}>TBD</Text>
-                              )}
-                              <Text fw={500}>vs</Text>
-                              {fixture.awayTeam ? (
-                                <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
-                                  <Text fw={500} c="blue" truncate="end">{fixture.awayTeam.name}</Text>
-                                </Link>
-                              ) : (
-                                <Text fw={500}>TBD</Text>
-                              )}
-                            </Stack>
-                            <Stack gap={0}>
-                              <Text size="sm" c="dimmed">
-                                {formatDate(fixture.fixtureDate)}
-                              </Text>
-                              <Text size="sm" c="dimmed">
-                                {formatTime(fixture.fixtureTime)}
-                              </Text>
-                            </Stack>
-                          </div>
-                          {isMobile ? (
-                            <Stack align="flex-end" gap="xs">
-                              {fixtureBadge}
-                              <Group gap="xs">{insightIcons}</Group>
-                            </Stack>
-                          ) : (
-                            <Group>
-                              {insightIcons}
-                              {fixtureBadge}
-                            </Group>
-                          )}
-                        </Group>
-                      </Card>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Text c="dimmed" ta="center" py="md">No upcoming fixtures</Text>
-              )}
-            </Card>
-          </SimpleGrid>
+          <Card withBorder>
+            <Group justify="space-between" mb="md">
+              <Title order={3}>Fixtures</Title>
+              <Button component={Link} to="/fixtures" variant="light" size="xs">
+                View all
+              </Button>
+            </Group>
+            {statsLoading || standingsLoading || divisionsLoading ? (
+              <FixtureCardSkeleton count={5} />
+            ) : (
+              <FixturesList
+                fixtures={[...teamProfile.upcomingFixtures, ...teamProfile.recentFixtures]}
+                standings={standings}
+                statistics={statistics}
+                divisions={divisions}
+                favoriteTeamIds={[teamProfile.id]}
+                defaultSort="latest"
+              />
+            )}
+          </Card>
 
           {teamProfile.previousSeasons && teamProfile.previousSeasons.length > 0 && (
             <Card withBorder>

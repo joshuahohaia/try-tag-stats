@@ -2,14 +2,6 @@ import { getDatabase } from '../connection.js';
 import type { Region } from '@trytag/shared';
 import type { Row } from '@libsql/client';
 
-interface RegionRow {
-  id: number;
-  name: string;
-  slug: string;
-  created_at: string;
-  updated_at: string;
-}
-
 function rowToRegion(row: Row): Region {
   return {
     id: row.id as number,

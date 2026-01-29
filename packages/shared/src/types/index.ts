@@ -18,6 +18,14 @@ export interface League {
   format: string | null;
 }
 
+export interface LeagueSummary extends League {
+  teamCount: number;
+  leaderTeamName: string | null;
+  fixturesPlayed: number;
+  fixturesRemaining: number;
+  nextFixtureDate: string | null;
+}
+
 export interface Season {
   id: number;
   externalSeasonId: number;
@@ -139,6 +147,26 @@ export interface Fixture {
 export interface FixtureWithTeams extends Fixture {
   homeTeam: Team;
   awayTeam: Team;
+}
+
+export interface TeamComparisonData {
+  standing: StandingWithTeam | null;
+  recentForm: string;
+  seasonStats: TeamSeasonStats[];
+  playerAwards: PlayerAwardWithDetails[];
+}
+
+export interface HeadToHeadData {
+  homeWins: number;
+  awayWins: number;
+  draws: number;
+  recentMeetings: FixtureWithTeams[];
+}
+
+export interface FixtureDetail extends FixtureWithTeams {
+  homeTeamProfile: TeamComparisonData;
+  awayTeamProfile: TeamComparisonData;
+  headToHead: HeadToHeadData;
 }
 
 // ============================================

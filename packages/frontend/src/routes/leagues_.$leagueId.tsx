@@ -19,7 +19,6 @@ import {
   StandingsTable,
   FixturesList,
 } from '../components';
-import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import {
@@ -38,7 +37,6 @@ function LeagueDetailPage() {
 function LeagueContent({ leagueId }: { leagueId: number }) {
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
   const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
@@ -108,7 +106,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
     selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
   );
-  const { data: fixtures, isLoading: fixturesLoading } = useDivisionFixtures(
+  const { data: fixtures } = useDivisionFixtures(
     selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
   );
   const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(
@@ -228,8 +226,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   fixtures={fixtures || []}
                   standings={standings || []}
                   statistics={statistics || []}
-                  isLoading={fixturesLoading}
-                  isMobile={isMobile || false}
+                  divisions={divisions || []}
                 />
               )}
             </Box>

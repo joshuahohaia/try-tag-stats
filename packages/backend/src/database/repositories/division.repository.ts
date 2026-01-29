@@ -29,6 +29,17 @@ export const divisionRepository = {
     return result.rows[0] ? rowToDivision(result.rows[0]) : null;
   },
 
+  async findByIds(ids: number[]): Promise<Division[]> {
+    if (ids.length === 0) return [];
+    const db = getDatabase();
+    const placeholders = ids.map(() => '?').join(',');
+    const result = await db.execute({
+      sql: `SELECT * FROM divisions WHERE id IN (${placeholders})`,
+      args: ids,
+    });
+    return result.rows.map(rowToDivision);
+  },
+
   async findByLeagueAndSeason(leagueId: number, seasonId: number): Promise<Division[]> {
     const db = getDatabase();
     const result = await db.execute({

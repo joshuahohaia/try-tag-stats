@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useMediaQuery } from '@mantine/hooks';
 import {
   Title,
   Text,
@@ -8,32 +7,28 @@ import {
   Stack,
   Button,
   Group,
-  Badge,
   Table,
   ActionIcon,
   rem,
   ScrollArea,
   Container,
   Flex,
-  HoverCard,
 } from '@mantine/core';
 import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconSparkles } from '@tabler/icons-react';
+import { FixturesList } from '../components';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { formatDate, formatTime } from '../utils/format';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
-import { useDivisionStandings, useDivisionStatistics, useDivisionsStandings, useDivisionsStatistics } from '../hooks/useDivisions';
-import { getFixtureInsights } from '../utils/fixtures';
+import { useDivisions, useDivisionsStandings, useDivisionsStatistics, useDivisionStatistics } from '../hooks/useDivisions';
 import type { Team, StandingWithDivision } from '@trytag/shared';
 
 interface TeamProfile extends Team {
   standings: StandingWithDivision[];
 }
-
 interface ActiveDivision {
   id: number;
   name: string;
@@ -48,8 +43,8 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentDivision = divisions[currentIndex];
 
-  const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
-    currentDivision ? currentDivision.id : 0
+  const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(
+    currentDivision ? [currentDivision.id] : []
   );
 
   if (divisions.length === 0) return null;
@@ -221,7 +216,6 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
@@ -274,6 +268,7 @@ function HomePage() {
 
   const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(divisionIds);
   const { data: statistics, isLoading: statsLoading } = useDivisionsStatistics(divisionIds);
+  const { data: divisions, isLoading: divisionsLoading } = useDivisions(divisionIds);
 
   return (
     <ScrollArea h="100%" type="auto">
@@ -319,94 +314,18 @@ function HomePage() {
                   View All
                 </Button>
               </Group>
-              {fixturesLoading || standingsLoading || statsLoading ? (
+              {fixturesLoading || standingsLoading || statsLoading || divisionsLoading ? (
                 <FixtureCardSkeleton count={5} compact />
               ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
-                <Stack gap="xs">
-                  {upcomingFixtures.map((fixture) => {
-                    const fixtureStandings = standings?.filter(s => s.divisionId === fixture.divisionId);
-                    const fixtureStats = statistics?.filter(s => s.divisionId === fixture.divisionId);
-                    const insights = getFixtureInsights(fixture, fixtureStandings, fixtureStats);
-
-                    const insightIcons = insights.map((insight) => (
-                      <HoverCard key={insight.type} width={200} withArrow shadow="md">
-                        <HoverCard.Target>
-                          {insight.type === 'top-clash' ? (
-                            <IconTrophy size={16} color="orange" />
-                          ) : (
-                            <IconSparkles size={16} color="purple" />
-                          )}
-                        </HoverCard.Target>
-                        <HoverCard.Dropdown>
-                          <Text size="xs">{insight.text}</Text>
-                        </HoverCard.Dropdown>
-                      </HoverCard>
-                    ));
-
-                    const isPastScheduled = fixture.status === 'scheduled' &&
-                      new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
-
-                    const fixtureBadge = isPastScheduled ? (
-                      <Badge variant="light" size="xs" color="orange">Awaiting Results</Badge>
-                    ) : (
-                      <Badge variant="light" size="xs">{fixture.status}</Badge>
-                    );
-
-                    return (
-                      <Card
-                        key={fixture.id}
-                        withBorder
-                        padding="xs"
-                        style={{ position: 'relative' }} // Required for absolute child positioning
-                      >
-                        <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
-                          {isMobile ? (
-                            <Stack align="flex-end" gap="xs">
-                              {fixtureBadge}
-                              <Group gap="xs">{insightIcons}</Group>
-                            </Stack>
-                          ) : (
-                            <Group>
-                              {insightIcons}
-                              {fixtureBadge}
-                            </Group>
-                          )}
-                        </div>
-
-                        <div>
-                          <Group gap={4} mb={4} pr={60}> {/* Added padding-right to avoid overlapping text with the badge */}
-                            <Link
-                              to="/teams/$teamId"
-                              params={{ teamId: String(fixture.homeTeam.id) }}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Text size="sm" fw={500} c="blue">{fixture.homeTeam.name}</Text>
-                            </Link>
-
-                            <Text size="sm" fw={500}>vs</Text>
-
-                            <Link
-                              to="/teams/$teamId"
-                              params={{ teamId: String(fixture.awayTeam.id) }}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Text size="sm" fw={500} c="blue">{fixture.awayTeam.name}</Text>
-                            </Link>
-                          </Group>
-
-                          <Stack gap={0}>
-                            <Text size="xs" c="dimmed">
-                              {formatDate(fixture.fixtureDate)}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {formatTime(fixture.fixtureTime)}
-                            </Text>
-                          </Stack>
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </Stack>
+                <FixturesList
+                  fixtures={upcomingFixtures}
+                  standings={standings}
+                  statistics={statistics}
+                  divisions={divisions}
+                  favoriteTeamIds={favoriteIds}
+                  compact
+                  hideDivision
+                />
               ) : (
                 <Text c="dimmed">
                   {hasFavorites

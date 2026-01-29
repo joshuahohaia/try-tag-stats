@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
-import type { League, Season, Division } from '@trytag/shared';
+import type { League, LeagueSummary, Season, Division } from '@trytag/shared';
 
 // Leagues, seasons, and divisions are static structure - cache for 24 hours
 const STATIC_STALE_TIME = 1000 * 60 * 60 * 24; // 24 hours
@@ -14,6 +14,24 @@ export function useLeagues(regionId?: number) {
       return extractData(response);
     },
     staleTime: STATIC_STALE_TIME,
+  });
+}
+
+// Summary stale time is shorter since it includes dynamic fixture data
+const SUMMARY_STALE_TIME = 1000 * 60 * 30; // 30 minutes
+
+export function useLeaguesSummary(regionId?: number) {
+  return useQuery({
+    queryKey: ['leagues', 'summary', regionId],
+    queryFn: async () => {
+      const params = regionId ? { region: regionId } : {};
+      const response = await apiClient.get<{ success: boolean; data: LeagueSummary[] }>(
+        '/leagues/summary',
+        { params }
+      );
+      return extractData(response);
+    },
+    staleTime: SUMMARY_STALE_TIME,
   });
 }
 

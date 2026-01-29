@@ -75,6 +75,73 @@ export const fixtureRepository = {
     return result.rows.map(rowToFixtureWithTeams);
   },
 
+  async findById(id: number): Promise<FixtureWithTeams | null> {
+    const db = getDatabase();
+    const result = await db.execute({
+      sql: `
+        SELECT f.*,
+          ht.name as home_team_name, ht.external_team_id as home_team_external_id,
+          at.name as away_team_name, at.external_team_id as away_team_external_id
+        FROM fixtures f
+        INNER JOIN teams ht ON f.home_team_id = ht.id
+        INNER JOIN teams at ON f.away_team_id = at.id
+        WHERE f.id = ?
+      `,
+      args: [id],
+    });
+    return result.rows[0] ? rowToFixtureWithTeams(result.rows[0]) : null;
+  },
+
+  async findByTeamsAndDate(
+    teamId1: number,
+    teamId2: number,
+    date: string
+  ): Promise<FixtureWithTeams | null> {
+    const db = getDatabase();
+    const result = await db.execute({
+      sql: `
+        SELECT f.*,
+          ht.name as home_team_name, ht.external_team_id as home_team_external_id,
+          at.name as away_team_name, at.external_team_id as away_team_external_id
+        FROM fixtures f
+        INNER JOIN teams ht ON f.home_team_id = ht.id
+        INNER JOIN teams at ON f.away_team_id = at.id
+        WHERE f.fixture_date = ?
+          AND ((f.home_team_id = ? AND f.away_team_id = ?)
+            OR (f.home_team_id = ? AND f.away_team_id = ?))
+        LIMIT 1
+      `,
+      args: [date, teamId1, teamId2, teamId2, teamId1],
+    });
+    return result.rows[0] ? rowToFixtureWithTeams(result.rows[0]) : null;
+  },
+
+  async findHeadToHead(
+    homeTeamId: number,
+    awayTeamId: number,
+    limit = 5
+  ): Promise<FixtureWithTeams[]> {
+    const db = getDatabase();
+    const result = await db.execute({
+      sql: `
+        SELECT f.*,
+          ht.name as home_team_name, ht.external_team_id as home_team_external_id,
+          at.name as away_team_name, at.external_team_id as away_team_external_id
+        FROM fixtures f
+        INNER JOIN teams ht ON f.home_team_id = ht.id
+        INNER JOIN teams at ON f.away_team_id = at.id
+        WHERE f.home_score IS NOT NULL
+          AND f.away_score IS NOT NULL
+          AND ((f.home_team_id = ? AND f.away_team_id = ?)
+            OR (f.home_team_id = ? AND f.away_team_id = ?))
+        ORDER BY f.fixture_date DESC
+        LIMIT ?
+      `,
+      args: [homeTeamId, awayTeamId, awayTeamId, homeTeamId, limit],
+    });
+    return result.rows.map(rowToFixtureWithTeams);
+  },
+
   async findUpcoming(teamId?: number, limit = 10): Promise<FixtureWithTeams[]> {
     const db = getDatabase();
     const today = new Date().toISOString().split('T')[0];

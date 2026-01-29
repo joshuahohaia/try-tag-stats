@@ -12,13 +12,12 @@ import {
   Badge,
   ScrollArea,
   Container,
-  Box,
 } from '@mantine/core';
 import { LeagueCardSkeleton } from '../components/skeletons';
-import { IconSearch, IconStarFilled, IconMapPin, IconCalendar } from '@tabler/icons-react';
+import { IconSearch, IconStarFilled, IconMapPin, IconCalendar, IconTrophy, IconUsers } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
-import { useLeagues } from '../hooks/useLeagues';
+import { useLeaguesSummary } from '../hooks/useLeagues';
 import { useRegions } from '../hooks/useRegions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 
@@ -52,7 +51,7 @@ function LeaguesPage() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 48em)');
 
-  const { data: leagues, isLoading: leaguesLoading } = useLeagues();
+  const { data: leagues, isLoading: leaguesLoading } = useLeaguesSummary();
   const { data: regions, isLoading: regionsLoading } = useRegions();
   const { hasTeamInLeague } = useFavoriteTeams();
 
@@ -191,8 +190,8 @@ function LeaguesPage() {
                           )}
                         </div>
 
-                        {/* Middle section - day and format */}
-                        <Group gap="xs">
+                        {/* Middle section - day, format, and stats */}
+                        <Group gap="xs" wrap="wrap">
                           {league.dayOfWeek && (
                             <Badge
                               variant="light"
@@ -208,17 +207,40 @@ function LeaguesPage() {
                               {league.format}
                             </Badge>
                           )}
+                          {league.teamCount > 0 && (
+                            <Badge
+                              variant="light"
+                              color="blue"
+                              size="sm"
+                              leftSection={<IconUsers size={12} />}
+                            >
+                              {league.teamCount} teams
+                            </Badge>
+                          )}
                         </Group>
 
-                        {/* Footer - venue */}
-                        {league.venueName ? (
-                          <Box>
-                            <Text size="sm" c="dimmed" lineClamp={1}>
-                              {league.venueName}
+                        {/* Leader and progress */}
+                        <Stack gap={4}>
+                          {league.leaderTeamName && (
+                            <Group gap={4}>
+                              <IconTrophy size={14} style={{ color: 'var(--mantine-color-yellow-6)' }} />
+                              <Text size="sm" c="dimmed" lineClamp={1}>
+                                {league.leaderTeamName}
+                              </Text>
+                            </Group>
+                          )}
+                          {(league.fixturesPlayed > 0 || league.fixturesRemaining > 0) && (
+                            <Text size="xs" c="dimmed">
+                              {league.fixturesPlayed}/{league.fixturesPlayed + league.fixturesRemaining} fixtures played
                             </Text>
-                          </Box>
-                        ) : (
-                          <Box style={{ minHeight: 20 }} />
+                          )}
+                        </Stack>
+
+                        {/* Footer - venue */}
+                        {league.venueName && (
+                          <Text size="sm" c="dimmed" lineClamp={1}>
+                            {league.venueName}
+                          </Text>
                         )}
                       </Stack>
                     </Card>

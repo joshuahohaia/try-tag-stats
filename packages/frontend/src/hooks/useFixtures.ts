@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
-import type { FixtureWithTeams } from '@trytag/shared';
+import type { FixtureWithTeams, FixtureDetail } from '@trytag/shared';
 
 // Fixtures update daily - use default 1 hour staleTime from main.tsx
 // Today's fixtures may change during viewing - shorter staleTime
@@ -64,5 +64,19 @@ export function useTodayFixtures() {
       return extractData(response);
     },
     staleTime: TODAY_STALE_TIME, // Shorter cache for live/today data
+  });
+}
+
+export function useFixtureDetail(fixtureId: number) {
+  return useQuery({
+    queryKey: ['fixtures', fixtureId, 'detail'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: FixtureDetail }>(
+        `/fixtures/${fixtureId}`
+      );
+      return extractData(response);
+    },
+    enabled: !!fixtureId && fixtureId > 0,
+    staleTime: TODAY_STALE_TIME,
   });
 }

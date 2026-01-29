@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
-import type { StandingWithTeam, FixtureWithTeams, PlayerAwardWithDetails } from '@trytag/shared';
+import type { StandingWithTeam, FixtureWithTeams, PlayerAwardWithDetails, Division } from '@trytag/shared';
 
 export function useDivisionStandings(divisionId: number) {
   return useQuery({
@@ -60,6 +60,19 @@ export function useDivisionsStatistics(divisionIds: number[]) {
     queryFn: async () => {
       const response = await apiClient.get<{ success: boolean; data: PlayerAwardWithDetails[] }>(
         `/divisions/statistics/batch?ids=${divisionIds.join(',')}`
+      );
+      return extractData(response);
+    },
+    enabled: divisionIds.length > 0,
+  });
+}
+
+export function useDivisions(divisionIds: number[]) {
+  return useQuery({
+    queryKey: ['divisions', 'batch', divisionIds],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: Division[] }>(
+        `/divisions/batch?ids=${divisionIds.join(',')}`
       );
       return extractData(response);
     },
