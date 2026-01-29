@@ -15,26 +15,32 @@ import {
   Container,
   HoverCard,
 } from '@mantine/core';
-import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton, DivisionSkeleton, PageHeaderSkeleton } from '../components/skeletons';
+import {
+  FixtureCardSkeleton,
+  StandingsTableSkeleton,
+  StatsTableSkeleton,
+  DivisionSkeleton,
+  PageHeaderSkeleton,
+} from '../components/skeletons';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconAward, IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
-import { useDivisionStandings, useDivisionFixtures, useDivisionStatistics } from '../hooks/useDivisions';
+import {
+  useDivisionStandings,
+  useDivisionFixtures,
+  useDivisionStatistics,
+} from '../hooks/useDivisions';
 import { getFixtureInsights } from '../utils/fixtures';
 import { formatDate, formatTime } from '../utils/format';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-
-
 
 function LeagueDetailPage() {
   const { leagueId } = Route.useParams();
   const parsedLeagueId = parseInt(leagueId, 10);
 
-  return (
-    <LeagueContent leagueId={parsedLeagueId} />
-  );
+  return <LeagueContent leagueId={parsedLeagueId} />;
 }
 
 function LeagueContent({ leagueId }: { leagueId: number }) {
@@ -53,7 +59,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   // Set default season (current one or last one)
   useEffect(() => {
     if (seasons && seasons.length > 0 && !selectedSeasonId) {
-      const current = seasons.find(s => s.isCurrent);
+      const current = seasons.find((s) => s.isCurrent);
       if (current) {
         setSelectedSeasonId(String(current.id));
       } else {
@@ -81,10 +87,12 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     ) {
       // Mark this season as tried
       if (!triedSeasons.has(selectedSeasonId)) {
-        setTriedSeasons(prev => new Set([...prev, selectedSeasonId]));
+        setTriedSeasons((prev) => new Set([...prev, selectedSeasonId]));
 
         // Find another season we haven't tried
-        const otherSeason = seasons.find(s => !triedSeasons.has(String(s.id)) && String(s.id) !== selectedSeasonId);
+        const otherSeason = seasons.find(
+          (s) => !triedSeasons.has(String(s.id)) && String(s.id) !== selectedSeasonId
+        );
         if (otherSeason) {
           setSelectedSeasonId(String(otherSeason.id));
         }
@@ -97,7 +105,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     if (divisions && divisions.length > 0) {
       // Try to keep the same division selection if switching seasons, otherwise default to first
       // For now just default to first if not set or invalid
-      const exists = divisions.some(d => String(d.id) === selectedDivisionId);
+      const exists = divisions.some((d) => String(d.id) === selectedDivisionId);
       if (!selectedDivisionId || !exists) {
         setSelectedDivisionId(String(divisions[0].id));
       }
@@ -117,11 +125,11 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   );
 
   const divisionOptions = useMemo(() => {
-    return divisions?.map(d => ({ value: String(d.id), label: d.name })) || [];
+    return divisions?.map((d) => ({ value: String(d.id), label: d.name })) || [];
   }, [divisions]);
 
   const seasonOptions = useMemo(() => {
-    return seasons?.map(s => ({ value: String(s.id), label: s.name })) || [];
+    return seasons?.map((s) => ({ value: String(s.id), label: s.name })) || [];
   }, [seasons]);
 
   if (leagueLoading || seasonsLoading) {
@@ -135,7 +143,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   if (!league) {
     return (
       <Card withBorder>
-        <Text c="dimmed" ta="center" py="xl">League not found</Text>
+        <Text c="dimmed" ta="center" py="xl">
+          League not found
+        </Text>
       </Card>
     );
   }
@@ -147,7 +157,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
         <Container size="xl" p="md">
           <Group justify="space-between" align="flex-start" mb="md">
             <div>
-              <Title lineClamp={2} order={1} mb="xs">{league.name}</Title>
+              <Title lineClamp={2} order={1} mb="xs">
+                {league.name}
+              </Title>
               <Group gap="xs">
                 {league.dayOfWeek && <Badge variant="light">{league.dayOfWeek}</Badge>}
                 {league.format && <Badge variant="outline">{league.format}</Badge>}
@@ -185,9 +197,12 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
       {/* Scrollable Content */}
       {!selectedDivisionId ? (
-        <Container size="xl" p="md">
-          {divisionsLoading ? (
-            <DivisionSkeleton />
+        <Container size="xl" p="md" w="100%" flex={1}>
+          {!divisionsLoading ? (
+            <Stack gap="md">
+              <DivisionSkeleton />
+              <DivisionSkeleton />
+            </Stack>
           ) : (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
@@ -236,9 +251,15 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     onClick={() => toggleFavorite(standing.team, leagueId)}
                                   >
                                     {isFavorite(standing.team.id) ? (
-                                      <IconStarFilled size={16} style={{ color: 'var(--mantine-warning-6)' }} />
+                                      <IconStarFilled
+                                        size={16}
+                                        style={{ color: 'var(--mantine-warning-6)' }}
+                                      />
                                     ) : (
-                                      <IconStar size={16} style={{ color: 'var(--mantine-color-gray-5)' }} />
+                                      <IconStar
+                                        size={16}
+                                        style={{ color: 'var(--mantine-color-gray-5)' }}
+                                      />
                                     )}
                                   </Button>
                                 </Table.Td>
@@ -248,7 +269,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     params={{ teamId: String(standing.team.id) }}
                                     style={{ color: 'inherit', textDecoration: 'none' }}
                                   >
-                                    <Text span fw={500} c="blue">{standing.team.name}</Text>
+                                    <Text span fw={500} c="blue">
+                                      {standing.team.name}
+                                    </Text>
                                   </Link>
                                 </Table.Td>
 
@@ -274,7 +297,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                     <StatsTableSkeleton rows={5} />
                   ) : statistics && statistics.length > 0 ? (
                     <Card withBorder>
-                      <Title order={3} mb="md">Player of the Match Awards</Title>
+                      <Title order={3} mb="md">
+                        Player of the Match Awards
+                      </Title>
                       <Table highlightOnHover>
                         <Table.Thead>
                           <Table.Tr>
@@ -286,8 +311,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                         </Table.Thead>
                         <Table.Tbody>
                           {statistics.map((stat) => {
-                            const uniqueCounts = [...new Set(statistics.map(s => s.awardCount))]
-                              .sort((a, b) => b - a);
+                            const uniqueCounts = [
+                              ...new Set(statistics.map((s) => s.awardCount)),
+                            ].sort((a, b) => b - a);
 
                             const awardCountPosition = uniqueCounts.indexOf(stat.awardCount) + 1;
                             return (
@@ -300,7 +326,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     params={{ teamId: String(stat.team.id) }}
                                     style={{ color: 'inherit', textDecoration: 'none' }}
                                   >
-                                    <Text span c="blue">{stat.team.name}</Text>
+                                    <Text span c="blue">
+                                      {stat.team.name}
+                                    </Text>
                                   </Link>
                                 </Table.Td>
                                 <Table.Td>
@@ -345,18 +373,22 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                           </HoverCard>
                         ));
 
-                        const isPastScheduled = fixture.status === 'scheduled' &&
+                        const isPastScheduled =
+                          fixture.status === 'scheduled' &&
                           new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
 
-                        const fixtureBadge = fixture.status === 'completed' && fixture.homeScore !== null ? (
-                          <Badge size="lg" variant="filled">
-                            {fixture.homeScore} - {fixture.awayScore}
-                          </Badge>
-                        ) : isPastScheduled ? (
-                          <Badge variant="light" color="orange">Awaiting Results</Badge>
-                        ) : (
-                          <Badge variant="light">{fixture.status}</Badge>
-                        );
+                        const fixtureBadge =
+                          fixture.status === 'completed' && fixture.homeScore !== null ? (
+                            <Badge size="lg" variant="filled">
+                              {fixture.homeScore} - {fixture.awayScore}
+                            </Badge>
+                          ) : isPastScheduled ? (
+                            <Badge variant="light" color="orange">
+                              Awaiting Results
+                            </Badge>
+                          ) : (
+                            <Badge variant="light">{fixture.status}</Badge>
+                          );
 
                         return (
                           <Card key={fixture.id} withBorder padding="sm">
@@ -368,7 +400,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     params={{ teamId: String(fixture.homeTeam.id) }}
                                     style={{ textDecoration: 'none', color: 'inherit' }}
                                   >
-                                    <Text fw={500} c="blue">{fixture.homeTeam.name}</Text>
+                                    <Text fw={500} c="blue">
+                                      {fixture.homeTeam.name}
+                                    </Text>
                                   </Link>
                                   <Text fw={500}>vs</Text>
                                   <Link
@@ -376,7 +410,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                                     params={{ teamId: String(fixture.awayTeam.id) }}
                                     style={{ textDecoration: 'none', color: 'inherit' }}
                                   >
-                                    <Text fw={500} c="blue">{fixture.awayTeam.name}</Text>
+                                    <Text fw={500} c="blue">
+                                      {fixture.awayTeam.name}
+                                    </Text>
                                   </Link>
                                 </Group>
                                 <Stack gap={0}>

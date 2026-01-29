@@ -1,10 +1,12 @@
 import { Skeleton, Card, Stack, Group, SimpleGrid } from '@mantine/core';
 
-export function DivisionSkeleton() {
+export function DivisionSkeleton({ count = 8 }: { count?: number }) {
   return (
     <Card withBorder>
       <Stack align="center" py="xl" gap="md">
-        <Skeleton height={16} width={150} radius="sm" />
+        {Array.from({ length: count }).map((_, i) => (
+          <Skeleton key={i} height={16} width="100%" radius="sm" />
+        ))}
       </Stack>
     </Card>
   );
