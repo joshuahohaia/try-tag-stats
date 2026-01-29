@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logger } from '../utils/logger.js';
 import {
   TeamPositionHistory,
   TeamSeasonStats,
@@ -190,7 +191,7 @@ router.get('/:id', async (req, res) => {
         }
       } catch (scraperError) {
         // Log but don't fail the request if scraper fails
-        console.error('Failed to fetch team profile from scraper:', scraperError);
+        logger.error({ error: scraperError }, 'Failed to fetch team profile from scraper');
       }
     }
 
@@ -208,7 +209,7 @@ router.get('/:id', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching team profile:', error);
+    logger.error({ error }, 'Error fetching team profile');
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch team profile' },

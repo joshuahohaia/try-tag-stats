@@ -33,10 +33,6 @@ export function useLeagueSeasons(leagueId: number) {
   return useQuery({
     queryKey: ['leagues', leagueId, 'seasons'],
     queryFn: async () => {
-      // Note: The backend endpoint is /leagues/:id/seasons
-      // It currently returns ALL seasons, not specific to the league,
-      // but based on the backend code: `router.get('/:id/seasons', ...)` returns `seasonRepository.findAll()`
-      // So this is correct for now, although the backend implementation is a bit generic.
       const response = await apiClient.get<{ success: boolean; data: Season[] }>(`/leagues/${leagueId}/seasons`);
       return extractData(response);
     },

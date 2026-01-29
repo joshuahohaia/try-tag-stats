@@ -166,16 +166,6 @@ export interface PlayerAwardWithDetails extends PlayerAward {
   team: Team;
 }
 
-export interface PlayerStatistics {
-  id: number;
-  playerId: number;
-  teamId: number;
-  divisionId: number;
-  totalPomAwards: number;
-  totalTries: number;
-  gamesPlayed: number;
-}
-
 // ============================================
 // API RESPONSE TYPES
 // ============================================

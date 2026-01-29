@@ -16,11 +16,6 @@ export function useUpcomingFixtures(teamIds?: number | number[], limit = 20) {
   return useQuery({
     queryKey: ['fixtures', 'upcoming', teamIds, limit],
     queryFn: async () => {
-      // If single team ID provided, use the optimized endpoint (optional, but good for consistency)
-      // Actually, let's just use the main endpoint for everything to keep it simple
-      // unless we want to preserve the specific /teams/id endpoints.
-      // The previous code used /teams/:id/fixtures/upcoming for single team.
-      
       const params: FixtureParams = { limit, type: 'upcoming' };
       
       if (typeof teamIds === 'number') {
