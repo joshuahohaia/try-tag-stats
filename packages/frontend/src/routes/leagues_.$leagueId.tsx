@@ -125,8 +125,13 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
   if (leagueLoading || seasonsLoading) {
     return (
-      <Container size="xl" p="md">
-        <PageHeaderSkeleton />
+
+      <Container size="xl" p="md" >
+        <Stack gap="md">
+          <PageHeaderSkeleton />
+          <DivisionSkeleton />
+          <DivisionSkeleton />
+        </Stack>
       </Container>
     );
   }

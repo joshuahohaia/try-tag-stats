@@ -437,65 +437,65 @@ function TeamDetailPage() {
                   ))}
                 </Stack>
               ) : teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
-                  <Table>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Date</Table.Th>
-                        <Table.Th>Opponent</Table.Th>
-                        <Table.Th>Result</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {teamProfile.recentFixtures
-                        .filter(f => f.status === 'completed')
-                        .slice(0, 10)
-                        .map((fixture, idx) => {
-                          const isHome = fixture.homeTeam?.id === teamProfile.id;
-                          const opponent = isHome ? fixture.awayTeam : fixture.homeTeam;
-                          const teamScore = isHome ? fixture.homeScore : fixture.awayScore;
-                          const oppScore = isHome ? fixture.awayScore : fixture.homeScore;
-                          const result = teamScore !== null && oppScore !== null
-                            ? teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D'
-                            : '-';
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Date</Table.Th>
+                      <Table.Th>Opponent</Table.Th>
+                      <Table.Th>Result</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {teamProfile.recentFixtures
+                      .filter(f => f.status === 'completed')
+                      .slice(0, 10)
+                      .map((fixture, idx) => {
+                        const isHome = fixture.homeTeam?.id === teamProfile.id;
+                        const opponent = isHome ? fixture.awayTeam : fixture.homeTeam;
+                        const teamScore = isHome ? fixture.homeScore : fixture.awayScore;
+                        const oppScore = isHome ? fixture.awayScore : fixture.homeScore;
+                        const result = teamScore !== null && oppScore !== null
+                          ? teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D'
+                          : '-';
 
-                          return (
-                            <Table.Tr key={fixture.id || idx}>
-                              <Table.Td>
-                                <Text size="sm">{formatDate(fixture.fixtureDate)}</Text>
-                                <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
-                              </Table.Td>
-                              <Table.Td>
-                                {opponent?.id && opponent.id > 0 ? (
-                                  <Link
-                                    to="/teams/$teamId"
-                                    params={{ teamId: String(opponent.id) }}
-                                    style={{ color: 'inherit', textDecoration: 'none' }}
-                                  >
-                                    <Text size="sm" c="blue">{opponent?.name || 'Unknown'}</Text>
-                                  </Link>
-                                ) : (
-                                  <Text size="sm">{opponent?.name || 'Unknown'}</Text>
-                                )}
-                              </Table.Td>
-                              <Table.Td>
-                                <Group>
-                                  <Badge
-                                    fullWidth
-                                    color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
-                                    variant="filled"
-                                  >
-                                    {result} {teamScore !== null && `${teamScore}-${oppScore}`}
-                                  </Badge>
-                                </Group>
-                              </Table.Td>
-                            </Table.Tr>
-                          );
-                        })}
-                    </Table.Tbody>
-                  </Table>
-                ) : (
-                  <Text c="dimmed" ta="center" py="md">No recent results available</Text>
-                )}
+                        return (
+                          <Table.Tr key={fixture.id || idx}>
+                            <Table.Td>
+                              <Text size="sm">{formatDate(fixture.fixtureDate)}</Text>
+                              <Text size="xs" c="dimmed">{formatTime(fixture.fixtureTime)}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              {opponent?.id && opponent.id > 0 ? (
+                                <Link
+                                  to="/teams/$teamId"
+                                  params={{ teamId: String(opponent.id) }}
+                                  style={{ color: 'inherit', textDecoration: 'none' }}
+                                >
+                                  <Text size="sm" c="blue">{opponent?.name || 'Unknown'}</Text>
+                                </Link>
+                              ) : (
+                                <Text size="sm">{opponent?.name || 'Unknown'}</Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              <Group>
+                                <Badge
+                                  fullWidth
+                                  color={result === 'W' ? 'green' : result === 'L' ? 'red' : 'gray'}
+                                  variant="filled"
+                                >
+                                  {result} {teamScore !== null && `${teamScore}-${oppScore}`}
+                                </Badge>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
+                        );
+                      })}
+                  </Table.Tbody>
+                </Table>
+              ) : (
+                <Text c="dimmed" ta="center" py="md">No recent results available</Text>
+              )}
             </Card>
 
             <Card withBorder>
@@ -508,81 +508,81 @@ function TeamDetailPage() {
               {standingsLoading || statsLoading ? (
                 <FixtureCardSkeleton count={3} />
               ) : teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
-                  <Stack gap="sm">
-                    {teamProfile.upcomingFixtures.map((fixture, idx) => {
-                      const insights = getFixtureInsights(fixture, standings, statistics);
-                      const insightIcons = insights.map((insight) => (
-                        <HoverCard key={insight.type} width={200} withArrow shadow="md">
-                          <HoverCard.Target>
-                            {insight.type === 'top-clash' ? (
-                              <IconTrophy size={16} color="orange" />
-                            ) : (
-                              <IconSparkles size={16} color="purple" />
-                            )}
-                          </HoverCard.Target>
-                          <HoverCard.Dropdown>
-                            <Text size="xs">{insight.text}</Text>
-                          </HoverCard.Dropdown>
-                        </HoverCard>
-                      ));
-                      const isPastScheduled = fixture.status === 'scheduled' &&
-                        new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+                <Stack gap="sm">
+                  {teamProfile.upcomingFixtures.map((fixture, idx) => {
+                    const insights = getFixtureInsights(fixture, standings, statistics);
+                    const insightIcons = insights.map((insight) => (
+                      <HoverCard key={insight.type} width={200} withArrow shadow="md">
+                        <HoverCard.Target>
+                          {insight.type === 'top-clash' ? (
+                            <IconTrophy size={16} color="orange" />
+                          ) : (
+                            <IconSparkles size={16} color="purple" />
+                          )}
+                        </HoverCard.Target>
+                        <HoverCard.Dropdown>
+                          <Text size="xs">{insight.text}</Text>
+                        </HoverCard.Dropdown>
+                      </HoverCard>
+                    ));
+                    const isPastScheduled = fixture.status === 'scheduled' &&
+                      new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
 
-                      const fixtureBadge = isPastScheduled ? (
-                        <Badge variant="light" color="orange">Awaiting Results</Badge>
-                      ) : (
-                        <Badge variant="light">{fixture.status}</Badge>
-                      );
+                    const fixtureBadge = isPastScheduled ? (
+                      <Badge variant="light" color="orange">Awaiting Results</Badge>
+                    ) : (
+                      <Badge variant="light">{fixture.status}</Badge>
+                    );
 
-                      return (
-                        <Card key={fixture.id || idx} withBorder padding="sm">
-                          <Group justify="space-between" align="flex-start" wrap="nowrap">
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <Stack gap={0}>
-                                {fixture.homeTeam ? (
-                                  <Link to="/teams/$teamId" params={{ teamId: String(fixture.homeTeam.id) }} style={{ textDecoration: 'none' }}>
-                                    <Text fw={500} c="blue" truncate="end">{fixture.homeTeam.name}</Text>
-                                  </Link>
-                                ) : (
-                                  <Text fw={500}>TBD</Text>
-                                )}
-                                <Text fw={500}>vs</Text>
-                                {fixture.awayTeam ? (
-                                  <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
-                                    <Text fw={500} c="blue" truncate="end">{fixture.awayTeam.name}</Text>
-                                  </Link>
-                                ) : (
-                                  <Text fw={500}>TBD</Text>
-                                )}
-                              </Stack>
-                              <Stack gap={0}>
-                                <Text size="sm" c="dimmed">
-                                  {formatDate(fixture.fixtureDate)}
-                                </Text>
-                                <Text size="sm" c="dimmed">
-                                  {formatTime(fixture.fixtureTime)}
-                                </Text>
-                              </Stack>
-                            </div>
-                            {isMobile ? (
-                              <Stack align="flex-end" gap="xs">
-                                {fixtureBadge}
-                                <Group gap="xs">{insightIcons}</Group>
-                              </Stack>
-                            ) : (
-                              <Group>
-                                {insightIcons}
-                                {fixtureBadge}
-                              </Group>
-                            )}
-                          </Group>
-                        </Card>
-                      );
-                    })}
-                  </Stack>
-                ) : (
-                  <Text c="dimmed" ta="center" py="md">No upcoming fixtures</Text>
-                )}
+                    return (
+                      <Card key={fixture.id || idx} withBorder padding="sm">
+                        <Group justify="space-between" align="flex-start" wrap="nowrap">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <Stack gap={0}>
+                              {fixture.homeTeam ? (
+                                <Link to="/teams/$teamId" params={{ teamId: String(fixture.homeTeam.id) }} style={{ textDecoration: 'none' }}>
+                                  <Text fw={500} c="blue" truncate="end">{fixture.homeTeam.name}</Text>
+                                </Link>
+                              ) : (
+                                <Text fw={500}>TBD</Text>
+                              )}
+                              <Text fw={500}>vs</Text>
+                              {fixture.awayTeam ? (
+                                <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
+                                  <Text fw={500} c="blue" truncate="end">{fixture.awayTeam.name}</Text>
+                                </Link>
+                              ) : (
+                                <Text fw={500}>TBD</Text>
+                              )}
+                            </Stack>
+                            <Stack gap={0}>
+                              <Text size="sm" c="dimmed">
+                                {formatDate(fixture.fixtureDate)}
+                              </Text>
+                              <Text size="sm" c="dimmed">
+                                {formatTime(fixture.fixtureTime)}
+                              </Text>
+                            </Stack>
+                          </div>
+                          {isMobile ? (
+                            <Stack align="flex-end" gap="xs">
+                              {fixtureBadge}
+                              <Group gap="xs">{insightIcons}</Group>
+                            </Stack>
+                          ) : (
+                            <Group>
+                              {insightIcons}
+                              {fixtureBadge}
+                            </Group>
+                          )}
+                        </Group>
+                      </Card>
+                    );
+                  })}
+                </Stack>
+              ) : (
+                <Text c="dimmed" ta="center" py="md">No upcoming fixtures</Text>
+              )}
             </Card>
           </SimpleGrid>
 
