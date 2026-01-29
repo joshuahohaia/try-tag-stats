@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import type { FixtureWithTeams } from '@trytag/shared';
 
+// Fixtures update daily - use default 1 hour staleTime from main.tsx
+// Today's fixtures may change during viewing - shorter staleTime
+const TODAY_STALE_TIME = 1000 * 60 * 5; // 5 minutes
+
 interface FixtureParams {
   limit: number;
   type: 'upcoming' | 'recent';
@@ -64,5 +68,6 @@ export function useTodayFixtures() {
       );
       return extractData(response);
     },
+    staleTime: TODAY_STALE_TIME, // Shorter cache for live/today data
   });
 }

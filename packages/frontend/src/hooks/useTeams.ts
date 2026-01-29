@@ -10,6 +10,11 @@ import type {
   PlayerAwardWithDetails,
 } from '@trytag/shared';
 
+// Team list is static - cache for 24 hours
+const STATIC_STALE_TIME = 1000 * 60 * 60 * 24; // 24 hours
+// Team profiles contain dynamic data (fixtures, standings) - shorter cache
+const PROFILE_STALE_TIME = 1000 * 60 * 5; // 5 minutes
+
 export interface TeamProfile extends Team {
   standings: StandingWithDivision[];
   upcomingFixtures: FixtureWithTeams[];
@@ -27,6 +32,7 @@ export function useTeams() {
       const response = await apiClient.get<{ success: boolean; data: Team[] }>('/teams');
       return extractData(response);
     },
+    staleTime: STATIC_STALE_TIME, // Team list rarely changes
   });
 }
 
@@ -38,6 +44,7 @@ export function useTeam(id: number) {
       return extractData(response);
     },
     enabled: !!id,
+    staleTime: PROFILE_STALE_TIME, // Profiles have dynamic fixture/standings data
   });
 }
 
@@ -51,5 +58,6 @@ export function useTeamsBatch(ids: number[]) {
       return extractData(response);
     },
     enabled: ids.length > 0,
+    staleTime: STATIC_STALE_TIME, // Batch is just basic team info
   });
 }

@@ -1,19 +1,33 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { MantineProvider, createTheme } from '@mantine/core';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 import '@mantine/core/styles.css';
 import './styles/global.css';
 
+// Cache time constants
+const ONE_HOUR = 1000 * 60 * 60;
+const ONE_DAY = ONE_HOUR * 24;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      staleTime: ONE_HOUR,           // Default: 1 hour (data considered fresh)
+      gcTime: ONE_DAY,               // Keep unused data in cache for 24 hours
       retry: 1,
+      refetchOnWindowFocus: false,   // Don't refetch on tab focus (reduces API calls)
     },
   },
+});
+
+// Persist React Query cache to localStorage
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'trytag-query-cache',
 });
 
 const router = createRouter({ routeTree });
@@ -110,10 +124,16 @@ const theme = createTheme({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: ONE_DAY,  // Cache persists for 24 hours
+      }}
+    >
       <MantineProvider theme={theme}>
         <RouterProvider router={router} />
       </MantineProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </React.StrictMode>
 );

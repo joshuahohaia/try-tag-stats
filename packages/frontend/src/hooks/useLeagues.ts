@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import type { League, Season, Division } from '@trytag/shared';
 
+// Leagues, seasons, and divisions are static structure - cache for 24 hours
+const STATIC_STALE_TIME = 1000 * 60 * 60 * 24; // 24 hours
+
 export function useLeagues(regionId?: number) {
   return useQuery({
     queryKey: ['leagues', regionId],
@@ -10,6 +13,7 @@ export function useLeagues(regionId?: number) {
       const response = await apiClient.get<{ success: boolean; data: League[] }>('/leagues', { params });
       return extractData(response);
     },
+    staleTime: STATIC_STALE_TIME,
   });
 }
 
@@ -21,6 +25,7 @@ export function useLeague(id: number) {
       return extractData(response);
     },
     enabled: !!id,
+    staleTime: STATIC_STALE_TIME,
   });
 }
 
@@ -29,13 +34,14 @@ export function useLeagueSeasons(leagueId: number) {
     queryKey: ['leagues', leagueId, 'seasons'],
     queryFn: async () => {
       // Note: The backend endpoint is /leagues/:id/seasons
-      // It currently returns ALL seasons, not specific to the league, 
+      // It currently returns ALL seasons, not specific to the league,
       // but based on the backend code: `router.get('/:id/seasons', ...)` returns `seasonRepository.findAll()`
       // So this is correct for now, although the backend implementation is a bit generic.
       const response = await apiClient.get<{ success: boolean; data: Season[] }>(`/leagues/${leagueId}/seasons`);
       return extractData(response);
     },
     enabled: !!leagueId,
+    staleTime: STATIC_STALE_TIME,
   });
 }
 
@@ -49,5 +55,6 @@ export function useLeagueDivisions(leagueId: number, seasonId: number) {
       return extractData(response);
     },
     enabled: !!leagueId && !!seasonId,
+    staleTime: STATIC_STALE_TIME,
   });
 }
