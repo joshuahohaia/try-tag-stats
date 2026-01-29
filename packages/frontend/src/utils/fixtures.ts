@@ -5,6 +5,29 @@ export interface FixtureInsight {
   text: string;
 }
 
+/**
+ * Calculate dense rank positions for player statistics.
+ * Players with the same award count share the same position.
+ * e.g., [5, 5, 4, 3] -> positions [1, 1, 2, 3]
+ */
+function getPlayerPositions(statistics: PlayerAwardWithDetails[]): Map<number, number> {
+  const positions = new Map<number, number>();
+  if (statistics.length === 0) return positions;
+
+  let currentPosition = 1;
+  let previousAwardCount = statistics[0].awardCount;
+
+  statistics.forEach((stat, index) => {
+    if (index > 0 && stat.awardCount < previousAwardCount) {
+      currentPosition++;
+      previousAwardCount = stat.awardCount;
+    }
+    positions.set(stat.player.id, currentPosition);
+  });
+
+  return positions;
+}
+
 export const getFixtureInsights = (
   fixture: FixtureWithTeams,
   standings: StandingWithTeam[] | undefined,
@@ -29,19 +52,34 @@ export const getFixtureInsights = (
     }
   }
 
-  // Player of the Match watch
-  if (statistics && statistics.length >= 3) {
-    const topPlayerIds = statistics.slice(0, 6).map((s) => s.player.id);
-    const fixturePlayerIds = statistics
+  // Player of the Match watch - based on actual leaderboard positions
+  if (statistics && statistics.length >= 2) {
+    const playerPositions = getPlayerPositions(statistics);
+
+    // Find players in this fixture who are in top 2 positions
+    const fixtureTopPlayers = statistics
       .filter((s) => s.team.id === fixture.homeTeam.id || s.team.id === fixture.awayTeam.id)
-      .map((s) => s.player.id);
+      .filter((s) => {
+        const position = playerPositions.get(s.player.id);
+        return position !== undefined && position <= 2;
+      });
 
-    const topPlayersInFixture = fixturePlayerIds.filter((p) => topPlayerIds.includes(p));
+    // Show insight if players from BOTH teams are in top 2 positions
+    const homeTeamHasTop = fixtureTopPlayers.some((s) => s.team.id === fixture.homeTeam.id);
+    const awayTeamHasTop = fixtureTopPlayers.some((s) => s.team.id === fixture.awayTeam.id);
 
-    if (topPlayersInFixture.length >= 2) {
+    if (homeTeamHasTop && awayTeamHasTop) {
       insights.push({
         type: 'star-player',
-        text: 'Top Player of the Season contenders face off',
+        text: 'Player of the Season leaders face off',
+      });
+    } else if (fixtureTopPlayers.length >= 1) {
+      // At least one top player in the fixture
+      const topPlayer = fixtureTopPlayers[0];
+      const position = playerPositions.get(topPlayer.player.id);
+      insights.push({
+        type: 'star-player',
+        text: `${position === 1 ? 'League leader' : '2nd place'} in Player of the Season`,
       });
     }
   }
