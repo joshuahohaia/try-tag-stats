@@ -5,8 +5,6 @@ import {
   Card,
   Stack,
   Table,
-  Loader,
-  Center,
   Tabs,
   Badge,
   Group,
@@ -17,6 +15,7 @@ import {
   Container,
   HoverCard,
 } from '@mantine/core';
+import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton, DivisionSkeleton, PageHeaderSkeleton } from '../components/skeletons';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconStar, IconStarFilled, IconAward, IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -127,9 +126,9 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
   if (leagueLoading || seasonsLoading) {
     return (
-      <Center h={400}>
-        <Loader size="lg" />
-      </Center>
+      <Container size="xl" p="md">
+        <PageHeaderSkeleton />
+      </Container>
     );
   }
 
@@ -187,11 +186,15 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
       {/* Scrollable Content */}
       {!selectedDivisionId ? (
         <Container size="xl" p="md">
-          <Card withBorder>
-            <Text c="dimmed" ta="center" py="xl">
-              {divisionsLoading ? 'Loading divisions...' : 'No divisions found for this season.'}
-            </Text>
-          </Card>
+          {divisionsLoading ? (
+            <DivisionSkeleton />
+          ) : (
+            <Card withBorder>
+              <Text c="dimmed" ta="center" py="xl">
+                No divisions found for this season.
+              </Text>
+            </Card>
+          )}
         </Container>
       ) : (
         <ScrollArea flex={1} type="auto">
@@ -200,7 +203,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
               {activeTab === 'standings' && (
                 <Stack gap="md">
                   {standingsLoading ? (
-                    <Center h={200}><Loader /></Center>
+                    <StandingsTableSkeleton rows={8} />
                   ) : standings && standings.length > 0 ? (
                     <Card withBorder p={0}>
                       <ScrollArea type="auto">
@@ -268,7 +271,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                   )}
 
                   {statsLoading ? (
-                    <Center h={200}><Loader /></Center>
+                    <StatsTableSkeleton rows={5} />
                   ) : statistics && statistics.length > 0 ? (
                     <Card withBorder>
                       <Title order={3} mb="md">Player of the Match Awards</Title>
@@ -321,7 +324,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
               {activeTab === 'fixtures' && (
                 <>
                   {fixturesLoading ? (
-                    <Center h={200}><Loader /></Center>
+                    <FixtureCardSkeleton count={5} />
                   ) : fixtures && fixtures.length > 0 ? (
                     <Stack gap="sm">
                       {fixtures.map((fixture) => {
@@ -342,10 +345,15 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                           </HoverCard>
                         ));
 
+                        const isPastScheduled = fixture.status === 'scheduled' &&
+                          new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+
                         const fixtureBadge = fixture.status === 'completed' && fixture.homeScore !== null ? (
                           <Badge size="lg" variant="filled">
                             {fixture.homeScore} - {fixture.awayScore}
                           </Badge>
+                        ) : isPastScheduled ? (
+                          <Badge variant="light" color="orange">Awaiting Results</Badge>
                         ) : (
                           <Badge variant="light">{fixture.status}</Badge>
                         );

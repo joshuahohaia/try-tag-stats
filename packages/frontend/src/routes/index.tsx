@@ -11,14 +11,13 @@ import {
   Badge,
   Table,
   ActionIcon,
-  Center,
-  Loader,
   rem,
   ScrollArea,
   Container,
   Flex,
   HoverCard,
 } from '@mantine/core';
+import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconSparkles } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
@@ -88,7 +87,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
           </div>
 
           {standingsLoading ? (
-            <Center h={150}><Loader size="sm" /></Center>
+            <StandingsTableSkeleton rows={5} compact />
           ) : (
             <Table highlightOnHover withTableBorder>
               <Table.Thead>
@@ -187,7 +186,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
           </div>
 
           {isLoading ? (
-            <Center h={150}><Loader size="sm" /></Center>
+            <StatsTableSkeleton rows={5} />
           ) : stats && stats.length > 0 ? (
             /* SimpleGrid creates the two-column layout automatically */
             <SimpleGrid cols={2} spacing="xl" verticalSpacing="sm">
@@ -304,7 +303,7 @@ function HomePage() {
               {activeDivisions.length > 0 ? (
                 <ActiveLeaguesWidget divisions={activeDivisions} favoriteIds={favoriteIds} />
               ) : isLoadingTeams ? (
-                <Card withBorder><Center h={100}><Loader /></Center></Card>
+                <Card withBorder><StandingsTableSkeleton rows={5} compact /></Card>
               ) : null}
             </>
           )}
@@ -321,7 +320,7 @@ function HomePage() {
                 </Button>
               </Group>
               {fixturesLoading || standingsLoading || statsLoading ? (
-                <Text c="dimmed">Loading fixtures...</Text>
+                <FixtureCardSkeleton count={5} compact />
               ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
                 <Stack gap="xs">
                   {upcomingFixtures.map((fixture) => {
@@ -344,7 +343,14 @@ function HomePage() {
                       </HoverCard>
                     ));
 
-                    const fixtureBadge = <Badge variant="light" size="xs">{fixture.status}</Badge>;
+                    const isPastScheduled = fixture.status === 'scheduled' &&
+                      new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+
+                    const fixtureBadge = isPastScheduled ? (
+                      <Badge variant="light" size="xs" color="orange">Awaiting Results</Badge>
+                    ) : (
+                      <Badge variant="light" size="xs">{fixture.status}</Badge>
+                    );
 
                     return (
                       <Card

@@ -5,8 +5,6 @@ import {
   Text,
   Card,
   Stack,
-  Loader,
-  Center,
   SimpleGrid,
   Badge,
   Group,
@@ -16,7 +14,9 @@ import {
   ScrollArea,
   Container,
   HoverCard,
+  Skeleton,
 } from '@mantine/core';
+import { FixtureCardSkeleton } from '../components/skeletons';
 import { IconStar, IconStarFilled, IconTrophy, IconAward, IconSparkles } from '@tabler/icons-react';
 import { useTeam } from '../hooks/useTeams';
 import { useDivisionStandings, useDivisionStatistics } from '../hooks/useDivisions';
@@ -271,9 +271,44 @@ function TeamDetailPage() {
 
   if (isLoading) {
     return (
-      <Center h={400}>
-        <Loader size="lg" />
-      </Center>
+      <ScrollArea h="100%" type="auto">
+        <Container size="xl" p="md">
+          <Stack gap="md">
+            <Group justify="space-between" align="flex-start">
+              <Stack gap="xs">
+                <Skeleton height={32} width={200} radius="sm" />
+                <Skeleton height={16} width={100} radius="sm" />
+              </Stack>
+              <Skeleton height={36} width={150} radius="sm" />
+            </Group>
+            <Card withBorder>
+              <Skeleton height={20} width={150} radius="sm" mb="md" />
+              <SimpleGrid cols={{ base: 2, sm: 4, md: 6 }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Stack key={i} gap={4}>
+                    <Skeleton height={12} width={60} radius="sm" />
+                    <Skeleton height={28} width={40} radius="sm" />
+                  </Stack>
+                ))}
+              </SimpleGrid>
+            </Card>
+            <SimpleGrid cols={{ base: 1, md: 2 }}>
+              <Card withBorder>
+                <Skeleton height={20} width={120} radius="sm" mb="md" />
+                <Stack gap="sm">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} height={40} radius="sm" />
+                  ))}
+                </Stack>
+              </Card>
+              <Card withBorder>
+                <Skeleton height={20} width={150} radius="sm" mb="md" />
+                <FixtureCardSkeleton count={3} />
+              </Card>
+            </SimpleGrid>
+          </Stack>
+        </Container>
+      </ScrollArea>
     );
   }
 
@@ -395,8 +430,13 @@ function TeamDetailPage() {
                   View all
                 </Button>
               </Group>
-              {standingsLoading || statsLoading ? <Center><Loader /></Center> :
-                teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
+              {standingsLoading || statsLoading ? (
+                <Stack gap="sm">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} height={50} radius="sm" />
+                  ))}
+                </Stack>
+              ) : teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 ? (
                   <Table>
                     <Table.Thead>
                       <Table.Tr>
@@ -465,8 +505,9 @@ function TeamDetailPage() {
                   View all
                 </Button>
               </Group>
-              {standingsLoading || statsLoading ? <Center><Loader /></Center> :
-                teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
+              {standingsLoading || statsLoading ? (
+                <FixtureCardSkeleton count={3} />
+              ) : teamProfile.upcomingFixtures && teamProfile.upcomingFixtures.length > 0 ? (
                   <Stack gap="sm">
                     {teamProfile.upcomingFixtures.map((fixture, idx) => {
                       const insights = getFixtureInsights(fixture, standings, statistics);
@@ -484,7 +525,14 @@ function TeamDetailPage() {
                           </HoverCard.Dropdown>
                         </HoverCard>
                       ));
-                      const fixtureBadge = <Badge variant="light">{fixture.status}</Badge>;
+                      const isPastScheduled = fixture.status === 'scheduled' &&
+                        new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+
+                      const fixtureBadge = isPastScheduled ? (
+                        <Badge variant="light" color="orange">Awaiting Results</Badge>
+                      ) : (
+                        <Badge variant="light">{fixture.status}</Badge>
+                      );
 
                       return (
                         <Card key={fixture.id || idx} withBorder padding="sm">

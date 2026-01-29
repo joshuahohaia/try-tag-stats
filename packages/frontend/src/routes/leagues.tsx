@@ -10,12 +10,11 @@ import {
   Select,
   Group,
   Badge,
-  Loader,
-  Center,
   ScrollArea,
   Container,
   Box,
 } from '@mantine/core';
+import { LeagueCardSkeleton } from '../components/skeletons';
 import { IconSearch, IconStarFilled, IconMapPin, IconCalendar } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
@@ -80,9 +79,19 @@ function LeaguesPage() {
 
   if (leaguesLoading || regionsLoading) {
     return (
-      <Center h="100%">
-        <Loader size="lg" />
-      </Center>
+      <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
+        <Container size="xl" w="100%" p="md" flex={0}>
+          <Stack gap="md">
+            <div>
+              <Title order={1} mb="xs">Leagues</Title>
+              {!isMobile && <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>}
+            </div>
+          </Stack>
+        </Container>
+        <Container size="xl" p="md">
+          <LeagueCardSkeleton count={6} />
+        </Container>
+      </Stack>
     );
   }
 

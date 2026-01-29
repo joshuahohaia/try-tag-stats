@@ -7,14 +7,13 @@ import {
   Card,
   Group,
   Badge,
-  Center,
-  Loader,
   Container,
   SegmentedControl,
   ScrollArea,
   Button,
   HoverCard,
 } from '@mantine/core';
+import { FixtureCardSkeleton } from '../components/skeletons';
 import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
@@ -86,9 +85,7 @@ function FixturesPage() {
               </Stack>
             </Card>
           ) : isLoading || standingsLoading || statsLoading ? (
-            <Center h={200}>
-              <Loader size="lg" />
-            </Center>
+            <FixtureCardSkeleton count={5} />
           ) : fixtures && fixtures.length > 0 ? (
             <Stack gap="sm">
               {fixtures.map((fixture) => {
@@ -126,10 +123,15 @@ function FixturesPage() {
                   </HoverCard>
                 ));
 
+                const isPastScheduled = fixture.status === 'scheduled' &&
+                  new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+
                 const fixtureBadge = fixture.status === 'completed' && fixture.homeScore !== null ? (
                   <Badge size="lg" variant="filled" color={resultColor}>
                     {fixture.homeScore} - {fixture.awayScore}
                   </Badge>
+                ) : isPastScheduled ? (
+                  <Badge size="lg" variant="light" color="orange">Awaiting Results</Badge>
                 ) : (
                   <Badge size="lg" variant="light">{fixture.status}</Badge>
                 );

@@ -3,6 +3,7 @@ import {
   Title, Text, Card, Stack, TextInput, Center, ScrollArea, Container,
   ActionIcon, Group,
 } from '@mantine/core';
+import { TeamCardSkeleton } from '../components/skeletons';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -72,9 +73,7 @@ function TeamsPage() {
 
             <Stack gap="sm">
               {isLoading ? (
-                <Center>
-                  <Text>Loading teams...</Text>
-                </Center>
+                <TeamCardSkeleton count={10} />
               ) : teams.length > 0 ? (
                 <>
                   {filteredTeams.length > 0 ? (
