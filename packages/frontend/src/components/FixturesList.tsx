@@ -6,7 +6,7 @@ import {
   Badge,
   HoverCard,
 } from '@mantine/core';
-import { IconTrophy, IconSparkles } from '@tabler/icons-react';
+import { IconTrophy, IconSparkles, IconExternalLink } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails, Division } from '@trytag/shared';
@@ -106,12 +106,29 @@ export function FixturesList({
             <Badge variant="light">{fixture.status}</Badge>
           );
 
-        // Only link to fixture detail if we have a valid fixture ID (not scraped data with negative IDs)
+        // Link to fixture detail for DB fixtures, or external link for scraped data
         const canLinkToFixture = fixture.id > 0;
+        const isScrapedFixture = fixture.id <= 0;
+
+        // For scraped fixtures, determine which team's external profile to link to (prefer favorited team)
+        const getExternalTeamId = () => {
+          if (favoriteTeamIds.includes(fixture.homeTeam.id)) {
+            return fixture.homeTeam.externalTeamId;
+          }
+          if (favoriteTeamIds.includes(fixture.awayTeam.id)) {
+            return fixture.awayTeam.externalTeamId;
+          }
+          return fixture.homeTeam.externalTeamId;
+        };
 
         const handleCardClick = () => {
           if (canLinkToFixture) {
             navigate({ to: '/fixtures/$fixtureId', params: { fixtureId: String(fixture.id) } });
+          } else if (isScrapedFixture) {
+            const externalTeamId = getExternalTeamId();
+            if (externalTeamId) {
+              window.open(`https://trytagrugby.spawtz.com/Leagues/TeamProfile?TeamId=${externalTeamId}`, '_blank');
+            }
           }
         };
 
@@ -122,12 +139,14 @@ export function FixturesList({
 
         const divisionName = divisions?.find(d => d.id === fixture.divisionId)?.name;
 
+        const isClickable = canLinkToFixture || isScrapedFixture;
+
         return (
           <Card
             key={fixture.id}
             withBorder
             padding={compact ? 'xs' : 'sm'}
-            style={canLinkToFixture ? { cursor: 'pointer' } : {}}
+            style={isClickable ? { cursor: 'pointer' } : {}}
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
               <Group gap="xs" wrap='nowrap' justify='space-between' align='flex-start'>
@@ -152,7 +171,7 @@ export function FixturesList({
                     {fixture.awayTeam.name}
                   </Text>
                 </Stack>
-                <div onClick={handleCardClick} style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}>
+                <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined }}>
                   <Stack align="flex-end" gap={4}>
                     {fixtureBadge}
                     {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
@@ -163,7 +182,7 @@ export function FixturesList({
                 <Stack
                   gap={0}
                   onClick={handleCardClick}
-                  style={{ cursor: canLinkToFixture ? 'pointer' : undefined, flex: 1 }}
+                  style={{ cursor: isClickable ? 'pointer' : undefined, flex: 1 }}
                 >
                   <Text size="sm" c="dimmed">
                     {formatDate(fixture.fixtureDate)}
@@ -181,6 +200,14 @@ export function FixturesList({
                     <Text size="xs" c="blue" mt={2}>
                       View match details →
                     </Text>
+                  )}
+                  {isScrapedFixture && (
+                    <Group gap={4} mt={2}>
+                      <Text size="xs" c="blue">
+                        View on TryTag Rugby
+                      </Text>
+                      <IconExternalLink size={12} color="var(--mantine-color-blue-6)" />
+                    </Group>
                   )}
                 </Stack>
               </Group>

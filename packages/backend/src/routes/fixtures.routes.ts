@@ -29,10 +29,13 @@ router.get('/', async (req, res) => {
     const teamIds = teamIdsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
 
     if (type === 'recent') {
-      fixtures = await fixtureRepository.findRecentByTeams(teamIds, limit);
+      const dbFixtures = await fixtureRepository.findRecentByTeams(teamIds, limit);
 
-      // Fallback to scraper if DB returns empty
-      if (fixtures.length === 0 && teamIds.length > 0) {
+      // Check if DB has completed fixtures with scores
+      const hasCompletedFixtures = dbFixtures.some(f => f.status === 'completed' && f.homeScore !== null);
+
+      // Fallback to scraper if DB returns empty or no completed fixtures
+      if ((!hasCompletedFixtures || dbFixtures.length === 0) && teamIds.length > 0) {
         const allScrapedFixtures: FixtureWithTeams[] = [];
 
         for (const teamId of teamIds) {
@@ -77,10 +80,31 @@ router.get('/', async (req, res) => {
           }
         }
 
-        // Sort all scraped fixtures by date and limit
-        fixtures = allScrapedFixtures
+        // Merge DB fixtures (awaiting results) with scraped fixtures (completed results)
+        // Use a map to dedupe by date + teams, preferring scraped if it has scores
+        const fixtureMap = new Map<string, FixtureWithTeams>();
+
+        // Add DB fixtures first
+        for (const f of dbFixtures) {
+          const key = `${f.fixtureDate}-${f.homeTeamId}-${f.awayTeamId}`;
+          fixtureMap.set(key, f);
+        }
+
+        // Overwrite with scraped fixtures if they have scores
+        for (const f of allScrapedFixtures) {
+          const key = `${f.fixtureDate}-${f.homeTeamId}-${f.awayTeamId}`;
+          const existing = fixtureMap.get(key);
+          if (!existing || (f.homeScore !== null && existing.homeScore === null)) {
+            fixtureMap.set(key, f);
+          }
+        }
+
+        // Sort merged fixtures by date and limit
+        fixtures = Array.from(fixtureMap.values())
           .sort((a, b) => new Date(b.fixtureDate).getTime() - new Date(a.fixtureDate).getTime())
           .slice(0, limit);
+      } else {
+        fixtures = dbFixtures;
       }
     } else {
       fixtures = await fixtureRepository.findUpcomingByTeams(teamIds, limit);

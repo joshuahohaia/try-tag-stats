@@ -14,7 +14,8 @@ import {
   HoverCard,
   Table,
 } from '@mantine/core';
-import { FixtureCardSkeleton } from '../components/skeletons';
+import { FixtureCardSkeleton, PageHeaderSkeleton, StandingsTableSkeleton } from '../components/skeletons';
+import { Skeleton } from '@mantine/core';
 import { PositionHistoryChart } from '../components/charts';
 import { FixturesList } from '../components';
 import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-react';
@@ -163,11 +164,55 @@ function TeamDetailPage() {
       <ScrollArea h="100%" type="auto">
         <Container size="xl" p="md">
           <Stack gap="md">
+            {/* Header skeleton */}
             <Group justify="space-between" align="flex-start">
               <Stack gap="xs">
-                <Text>Loading...</Text>
+                <Skeleton height={36} width={250} radius="sm" />
+                <Skeleton height={16} width={100} radius="sm" />
               </Stack>
+              <Skeleton height={36} width={150} radius="sm" />
             </Group>
+
+            {/* Standing card skeleton */}
+            <Card withBorder>
+              <Group justify="space-between" mb="md">
+                <Skeleton height={24} width={150} radius="sm" />
+                <Skeleton height={24} width={200} radius="xl" />
+              </Group>
+              <SimpleGrid cols={{ base: 2, sm: 4, md: 6 }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Stack key={i} gap={4}>
+                    <Skeleton height={14} width={60} radius="sm" />
+                    <Skeleton height={28} width={40} radius="sm" />
+                  </Stack>
+                ))}
+              </SimpleGrid>
+            </Card>
+
+            {/* Stats and chart skeleton */}
+            <SimpleGrid cols={{ base: 1, md: 2 }}>
+              <Card withBorder>
+                <Skeleton height={24} width={120} radius="sm" mb="md" />
+                <Stack gap="sm">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} height={20} width="100%" radius="sm" />
+                  ))}
+                </Stack>
+              </Card>
+              <Card withBorder>
+                <Skeleton height={24} width={150} radius="sm" mb="md" />
+                <Skeleton height={200} width="100%" radius="sm" />
+              </Card>
+            </SimpleGrid>
+
+            {/* Fixtures skeleton */}
+            <Card withBorder>
+              <Group justify="space-between" mb="md">
+                <Skeleton height={24} width={80} radius="sm" />
+                <Skeleton height={28} width={80} radius="sm" />
+              </Group>
+              <FixtureCardSkeleton count={5} />
+            </Card>
           </Stack>
         </Container>
       </ScrollArea>
