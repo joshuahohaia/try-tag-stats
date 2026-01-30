@@ -40,10 +40,15 @@ function SettingsPage() {
   };
 
   return (
-    <ScrollArea h="100%" type="auto">
-      <Container size="sm" py="xl">
-        <Stack gap="lg">
-          <Title order={1}>Settings</Title>
+    <Stack h="100%" gap="0" style={{ overflow: 'hidden' }}>
+      <Container size="xl" w="100%" p="md" flex={0}>
+        <Title order={1} mb="xs">Settings</Title>
+        <Text c="dimmed">Manage your preferences and favorites</Text>
+      </Container>
+
+      <ScrollArea flex={1} type="auto">
+        <Container size="xl" p="md">
+          <Stack gap="lg">
 
         {/* Feedback & Support */}
         <Card withBorder>
@@ -190,9 +195,10 @@ function SettingsPage() {
             </Text>
           </Stack>
         </Card>
-        </Stack>
-      </Container>
-    </ScrollArea>
+          </Stack>
+        </Container>
+      </ScrollArea>
+    </Stack>
   );
 }
 

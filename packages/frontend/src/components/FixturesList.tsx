@@ -131,8 +131,31 @@ export function FixturesList({
             padding={compact ? 'xs' : 'sm'}
             style={canLinkToFixture ? { cursor: 'pointer' } : {}}
           >
-            <Group justify="space-between" align="flex-start">
-              <Stack gap={compact ? 2 : 4} style={{ flex: 1 }}>
+            <Stack gap={compact ? 'xs' : 'sm'}>
+              {/* Team names - stack vertically on mobile, horizontal on desktop */}
+              {isMobile ? (
+                <Stack gap={2}>
+                  <Text
+                    fw={500}
+                    size="sm"
+                    style={{ cursor: 'pointer' }}
+                    c="blue"
+                    onClick={(e) => handleTeamClick(e, fixture.homeTeam.id)}
+                  >
+                    {fixture.homeTeam.name}
+                  </Text>
+                  <Text c="dimmed" size="xs">vs</Text>
+                  <Text
+                    fw={500}
+                    size="sm"
+                    style={{ cursor: 'pointer' }}
+                    c="blue"
+                    onClick={(e) => handleTeamClick(e, fixture.awayTeam.id)}
+                  >
+                    {fixture.awayTeam.name}
+                  </Text>
+                </Stack>
+              ) : (
                 <Group gap="xs" wrap="nowrap">
                   <Text
                     fw={500}
@@ -156,12 +179,14 @@ export function FixturesList({
                     {fixture.awayTeam.name}
                   </Text>
                 </Group>
+              )}
 
+              {/* Match details and badge row */}
+              <Group justify="space-between" align="flex-start" wrap="nowrap">
                 <Stack
                   gap={0}
-                  mt={compact ? 0 : 'xs'}
                   onClick={handleCardClick}
-                  style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}
+                  style={{ cursor: canLinkToFixture ? 'pointer' : undefined, flex: 1 }}
                 >
                   <Text size="sm" c="dimmed">
                     {formatDate(fixture.fixtureDate)}
@@ -181,21 +206,14 @@ export function FixturesList({
                     </Text>
                   )}
                 </Stack>
-              </Stack>
-              <div onClick={handleCardClick} style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}>
-                {isMobile ? (
-                  <Stack align="flex-end" gap="xs">
+                <div onClick={handleCardClick} style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}>
+                  <Stack align="flex-end" gap={4}>
                     {fixtureBadge}
-                    <Group gap="xs">{insightIcons}</Group>
+                    {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
                   </Stack>
-                ) : (
-                  <Group>
-                    {insightIcons}
-                    {fixtureBadge}
-                  </Group>
-                )}
-              </div>
-            </Group>
+                </div>
+              </Group>
+            </Stack>
           </Card>
         );
       })}

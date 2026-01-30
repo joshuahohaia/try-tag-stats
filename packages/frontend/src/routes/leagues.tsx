@@ -225,21 +225,16 @@ function LeaguesPage() {
                           )}
                         </Group>
 
-                        {/* Leader and progress */}
-                        <Stack gap={4}>
-                          {league.leaderTeamName && (
-                            <Group gap={4}>
-                              <IconTrophy size={14} style={{ color: 'var(--mantine-color-yellow-6)' }} />
-                              <Text size="sm" c="dimmed" lineClamp={1}>
-                                {league.leaderTeamName}
+                        {/* Leaders by division */}
+                        <Stack gap={2}>
+                          {league.leaderTeamName && league.leaderTeamName.split(', ').map((leader, idx) => (
+                            <Group key={idx} gap={4} wrap="nowrap">
+                              <IconTrophy size={14} style={{ color: 'var(--mantine-color-yellow-6)', flexShrink: 0 }} />
+                              <Text size="xs" c="dimmed" truncate>
+                                {leader}
                               </Text>
                             </Group>
-                          )}
-                          {(league.fixturesPlayed > 0 || league.fixturesRemaining > 0) && (
-                            <Text size="xs" c="dimmed">
-                              {league.fixturesPlayed}/{league.fixturesPlayed + league.fixturesRemaining} fixtures played
-                            </Text>
-                          )}
+                          ))}
                         </Stack>
 
                         {/* Footer - venue */}

@@ -13,21 +13,25 @@ import {
   ScrollArea,
   Container,
   Flex,
+  Badge,
+  HoverCard,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
 import { FixturesList } from '../components';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconHistory, IconFlame } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { useUpcomingFixtures } from '../hooks/useFixtures';
+import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
 import { useDivisions, useDivisionsStandings, useDivisionsStatistics, useDivisionStatistics } from '../hooks/useDivisions';
-import type { Team, StandingWithDivision } from '@trytag/shared';
+import type { Team, StandingWithDivision, FixtureWithTeams } from '@trytag/shared';
 
 interface TeamProfile extends Team {
   standings: StandingWithDivision[];
+  recentFixtures?: FixtureWithTeams[];
 }
 interface ActiveDivision {
   id: number;
@@ -156,10 +160,21 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
     setCurrentIndex((prev) => (prev - 1 + divisions.length) % divisions.length);
   };
 
+  // Get medal color for top 3
+  const getMedalColor = (position: number) => {
+    if (position === 1) return 'yellow';
+    if (position === 2) return 'gray.5';
+    if (position === 3) return 'orange.7';
+    return 'gray.3';
+  };
+
   return (
     <Card withBorder>
       <Group justify="space-between" mb="md">
-        <Title fz={15} order={3}>Player of Match Leaders</Title>
+        <Group gap="xs">
+          <IconAward size={20} color="gold" />
+          <Title fz={15} order={3}>Player of Match Leaders</Title>
+        </Group>
         {divisions.length > 1 && (
           <Group gap="xs">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
@@ -183,27 +198,48 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
           {isLoading ? (
             <StatsTableSkeleton rows={5} />
           ) : stats && stats.length > 0 ? (
-            /* SimpleGrid creates the two-column layout automatically */
-            <SimpleGrid cols={2} spacing="xl" verticalSpacing="sm">
-              {stats.slice(0, 10).map((stat) => (
-                <Group key={stat.id} wrap="nowrap">
-                  <Group gap={4} wrap="nowrap">
-                    <IconAward size={16} color="gold" />
-                    <Text fw={700}>{stat.awardCount}</Text>
-                  </Group>
-
-                  <Stack gap={0} style={{ overflow: 'hidden' }}>
-                    <Text fw={500} size="sm" truncate>{stat.player.name}</Text>
-                    <Link
-                      to="/teams/$teamId"
-                      params={{ teamId: String(stat.team.id) }}
-                      style={{ textDecoration: 'none', color: 'inherit' }}
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md" verticalSpacing="xs">
+              {stats.slice(0, 12).map((stat, idx) => {
+                const position = idx + 1;
+                const isTopThree = position <= 3;
+                return (
+                  <Group
+                    key={stat.id}
+                    wrap="nowrap"
+                    gap="sm"
+                    p="xs"
+                    style={{
+                      borderRadius: 'var(--mantine-radius-sm)',
+                      backgroundColor: isTopThree ? 'var(--mantine-color-yellow-0)' : undefined,
+                    }}
+                  >
+                    <Badge
+                      circle
+                      size="lg"
+                      variant={isTopThree ? 'filled' : 'light'}
+                      color={getMedalColor(position)}
                     >
-                      <Text size="xs" c="blue" truncate>{stat.team.name}</Text>
-                    </Link>
-                  </Stack>
-                </Group>
-              ))}
+                      {position}
+                    </Badge>
+
+                    <Stack gap={0} style={{ overflow: 'hidden', flex: 1 }}>
+                      <Text fw={600} size="sm" truncate>{stat.player.name}</Text>
+                      <Link
+                        to="/teams/$teamId"
+                        params={{ teamId: String(stat.team.id) }}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <Text size="xs" c="blue" truncate>{stat.team.name}</Text>
+                      </Link>
+                    </Stack>
+
+                    <Group gap={4} wrap="nowrap">
+                      <IconTrophy size={16} color="var(--mantine-color-yellow-6)" />
+                      <Text fw={700} size="lg">{stat.awardCount}</Text>
+                    </Group>
+                  </Group>
+                );
+              })}
             </SimpleGrid>
           ) : (
             <Text c="dimmed" size="xs">No stats available</Text>
@@ -216,6 +252,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
 function HomePage() {
   const { favorites } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
@@ -261,6 +298,51 @@ function HomePage() {
     5
   );
 
+  const { data: recentFixtures, isLoading: recentLoading } = useRecentFixtures(
+    hasFavorites ? favoriteIds : undefined,
+    5
+  );
+
+  // Compute team form data (last 5 results per team)
+  const teamFormData = useMemo(() => {
+    if (!hasFavorites) return [];
+
+    return teamQueries
+      .filter(q => q.data?.recentFixtures && q.data.recentFixtures.length > 0)
+      .map(q => {
+        const team = q.data!;
+        const standing = team.standings?.[0];
+        const fixtures = team.recentFixtures!
+          .filter(f => f.homeScore !== null && f.awayScore !== null)
+          .slice(0, 5);
+
+        const form = fixtures.map(f => {
+          const isHome = f.homeTeamId === team.id;
+          const teamScore = isHome ? f.homeScore! : f.awayScore!;
+          const oppScore = isHome ? f.awayScore! : f.homeScore!;
+          const opponent = isHome ? f.awayTeam?.name : f.homeTeam?.name;
+
+          let result: 'W' | 'L' | 'D' = 'D';
+          if (teamScore > oppScore) result = 'W';
+          else if (teamScore < oppScore) result = 'L';
+
+          return { result, score: `${teamScore}-${oppScore}`, opponent };
+        });
+
+        return {
+          id: team.id,
+          name: team.name,
+          form: form.reverse(), // Oldest first, newest last
+          position: standing?.position,
+          wins: standing?.wins ?? 0,
+          losses: standing?.losses ?? 0,
+          draws: standing?.draws ?? 0,
+          totalPoints: standing?.totalPoints ?? 0,
+          pointDifference: standing?.pointDifference ?? 0,
+        };
+      });
+  }, [teamQueries, hasFavorites]);
+
   const divisionIds = useMemo(() => {
     if (!upcomingFixtures) return [];
     return [...new Set(upcomingFixtures.map(f => f.divisionId))];
@@ -295,6 +377,93 @@ function HomePage() {
           )}
           {hasFavorites && (
             <>
+              {/* Team Form Widget */}
+              {teamFormData.length > 0 && (
+                <Card withBorder>
+                  <Title fz={15} order={3} mb="md">
+                    <IconFlame size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                    Team Form
+                  </Title>
+                  <Stack gap="sm">
+                    {teamFormData.map((team) => (
+                      <Group key={team.id} justify="space-between" wrap="nowrap" gap="md">
+                        {/* Team name and position */}
+                        <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: isMobile ? 1 : undefined, width: isMobile ? undefined : 180 }}>
+                          {team.position && (
+                            <Badge size="sm" variant="light" color="gray">
+                              {team.position}
+                            </Badge>
+                          )}
+                          <Link
+                            to="/teams/$teamId"
+                            params={{ teamId: String(team.id) }}
+                            style={{ textDecoration: 'none', overflow: 'hidden' }}
+                          >
+                            <Text size="sm" fw={500} c="blue" truncate>
+                              {team.name}
+                            </Text>
+                          </Link>
+                        </Group>
+
+                        {/* Stats - only on desktop */}
+                        {!isMobile && (
+                          <Group gap="lg" wrap="nowrap" style={{ flex: 1 }}>
+                            <Group gap={4}>
+                              <Text size="xs" c="green" fw={600}>{team.wins}W</Text>
+                              <Text size="xs" c="dimmed">-</Text>
+                              <Text size="xs" c="red" fw={600}>{team.losses}L</Text>
+                              <Text size="xs" c="dimmed">-</Text>
+                              <Text size="xs" c="dimmed" fw={600}>{team.draws}D</Text>
+                            </Group>
+                            <Text size="xs" fw={600}>{team.totalPoints} pts</Text>
+                            <Text size="xs" c={team.pointDifference >= 0 ? 'green' : 'red'} fw={500}>
+                              {team.pointDifference >= 0 ? '+' : ''}{team.pointDifference}
+                            </Text>
+                          </Group>
+                        )}
+
+                        {/* Form badges */}
+                        <Group gap={4} wrap="nowrap">
+                          {team.form.map((f, idx) => {
+                            const color = f.result === 'W' ? 'green' : f.result === 'L' ? 'red' : 'gray';
+                            const isMostRecent = idx === team.form.length - 1;
+                            return (
+                              <HoverCard key={idx} width={180} withArrow shadow="md">
+                                <HoverCard.Target>
+                                  <Badge
+                                    circle
+                                    size="lg"
+                                    variant="filled"
+                                    color={color}
+                                    style={{
+                                      cursor: 'pointer',
+                                      outline: isMostRecent ? '2px solid var(--mantine-color-brand-3)' : 'none',
+                                      outlineOffset: '2px',
+                                    }}
+                                  >
+                                    {f.result}
+                                  </Badge>
+                                </HoverCard.Target>
+                                <HoverCard.Dropdown>
+                                  <Text size="xs">
+                                    {isMostRecent ? '(Latest) ' : ''}
+                                    {f.result === 'W' ? 'Won' : f.result === 'L' ? 'Lost' : 'Drew'} {f.score} vs {f.opponent}
+                                  </Text>
+                                </HoverCard.Dropdown>
+                              </HoverCard>
+                            );
+                          })}
+                          {team.form.length === 0 && (
+                            <Text size="xs" c="dimmed">No results</Text>
+                          )}
+                        </Group>
+                      </Group>
+                    ))}
+                  </Stack>
+                </Card>
+              )}
+
+              {/* Active League Standings */}
               {activeDivisions.length > 0 ? (
                 <ActiveLeaguesWidget divisions={activeDivisions} favoriteIds={favoriteIds} />
               ) : isLoadingTeams ? (
@@ -335,46 +504,78 @@ function HomePage() {
               )}
             </Card>
 
-            {hasFavorites && activeDivisions.length > 0 ? (
-              <PlayerStatsWidget divisions={activeDivisions} />
-            ) : (
-              <Card withBorder>
-                <Title fz={15} order={3} mb="md">
-                  <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Quick Links
+            <Card withBorder>
+              <Group justify="space-between" mb="md">
+                <Title fz={15} order={3}>
+                  <IconHistory size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                  Recent Results
                 </Title>
-                <Stack gap="sm">
-                  <Button
-                    variant="light"
-                    fullWidth
-                    leftSection={<IconTrophy size={18} />}
-                    component={Link}
-                    to="/leagues"
-                  >
-                    Browse All Leagues
-                  </Button>
-                  <Button
-                    variant="light"
-                    fullWidth
-                    leftSection={<IconCalendar size={18} />}
-                    component={Link}
-                    to="/fixtures"
-                  >
-                    View All Fixtures
-                  </Button>
-                  <Button
-                    variant="light"
-                    fullWidth
-                    leftSection={<IconCalendar size={18} />}
-                    component={Link}
-                    to="/teams"
-                  >
-                    View All Teams
-                  </Button>
-                </Stack>
-              </Card>
-            )}
+                <Button variant="subtle" component={Link} to="/fixtures" size="xs">
+                  View All
+                </Button>
+              </Group>
+              {recentLoading || standingsLoading || statsLoading || divisionsLoading ? (
+                <FixtureCardSkeleton count={5} compact />
+              ) : recentFixtures && recentFixtures.length > 0 ? (
+                <FixturesList
+                  fixtures={recentFixtures}
+                  standings={standings}
+                  statistics={statistics}
+                  divisions={divisions}
+                  favoriteTeamIds={favoriteIds}
+                  compact
+                  hideDivision
+                  defaultSort="latest"
+                />
+              ) : (
+                <Text c="dimmed">
+                  {hasFavorites
+                    ? "No recent results for your favourite teams."
+                    : "No recent results found."}
+                </Text>
+              )}
+            </Card>
           </SimpleGrid>
+
+          {hasFavorites && activeDivisions.length > 0 ? (
+            <PlayerStatsWidget divisions={activeDivisions} />
+          ) : (
+            <Card withBorder>
+              <Title fz={15} order={3} mb="md">
+                <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                Quick Links
+              </Title>
+              <Stack gap="sm">
+                <Button
+                  variant="light"
+                  fullWidth
+                  leftSection={<IconTrophy size={18} />}
+                  component={Link}
+                  to="/leagues"
+                >
+                  Browse All Leagues
+                </Button>
+                <Button
+                  variant="light"
+                  fullWidth
+                  leftSection={<IconCalendar size={18} />}
+                  component={Link}
+                  to="/fixtures"
+                >
+                  View All Fixtures
+                </Button>
+                <Button
+                  variant="light"
+                  fullWidth
+                  leftSection={<IconCalendar size={18} />}
+                  component={Link}
+                  to="/teams"
+                >
+                  View All Teams
+                </Button>
+              </Stack>
+            </Card>
+          )}
 
         </Stack>
       </Container>
