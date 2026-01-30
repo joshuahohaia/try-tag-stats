@@ -193,7 +193,7 @@ export const fixtureRepository = {
     }
 
     sql +=
-      " ORDER BY CASE f.status WHEN 'completed' THEN 0 ELSE 1 END, f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?";
+      " ORDER BY f.fixture_date DESC, CASE WHEN f.fixture_time IS NULL THEN 1 ELSE 0 END, f.fixture_time DESC LIMIT ?";
     args.push(limit);
 
     const result = await db.execute({ sql, args });

@@ -54,18 +54,7 @@ export function useRecentFixtures(teamIds?: number | number[], limit = 20) {
   });
 }
 
-export function useTodayFixtures() {
-  return useQuery({
-    queryKey: ['fixtures', 'today'],
-    queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
-        '/fixtures/today'
-      );
-      return extractData(response);
-    },
-    staleTime: TODAY_STALE_TIME, // Shorter cache for live/today data
-  });
-}
+
 
 export function useFixtureDetail(fixtureId: number) {
   return useQuery({

@@ -155,36 +155,7 @@ router.get('/', async (req, res) => {
   });
 });
 
-// GET /api/v1/fixtures/today - Get today's fixtures
-router.get('/today', async (_req, res) => {
-  const fixtures = await fixtureRepository.findUpcoming(undefined, 50);
-  const today = new Date().toISOString().split('T')[0];
-  const todayFixtures = fixtures.filter((f) => f.fixtureDate === today);
 
-  res.json({
-    success: true,
-    data: todayFixtures,
-    meta: { total: todayFixtures.length },
-  });
-});
-
-// GET /api/v1/fixtures/week - Get this week's fixtures
-router.get('/week', async (_req, res) => {
-  const fixtures = await fixtureRepository.findUpcoming(undefined, 100);
-  const today = new Date();
-  const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-  const weekFixtures = fixtures.filter((f) => {
-    const fixtureDate = new Date(f.fixtureDate);
-    return fixtureDate >= today && fixtureDate <= weekFromNow;
-  });
-
-  res.json({
-    success: true,
-    data: weekFixtures,
-    meta: { total: weekFixtures.length },
-  });
-});
 
 // GET /api/v1/fixtures/:id - Get fixture detail with head-to-head data
 router.get('/:id', async (req, res) => {
