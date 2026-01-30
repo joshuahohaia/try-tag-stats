@@ -14,7 +14,7 @@ import {
   HoverCard,
   Table,
 } from '@mantine/core';
-import { FixtureCardSkeleton, PageHeaderSkeleton, StandingsTableSkeleton } from '../components/skeletons';
+import { FixtureCardSkeleton } from '../components/skeletons';
 import { Skeleton } from '@mantine/core';
 import { PositionHistoryChart } from '../components/charts';
 import { FixturesList } from '../components';
