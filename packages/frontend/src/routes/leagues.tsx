@@ -14,7 +14,7 @@ import {
   Container,
 } from '@mantine/core';
 import { LeagueCardSkeleton } from '../components/skeletons';
-import { IconSearch, IconStarFilled, IconMapPin, IconCalendar, IconTrophy, IconUsers } from '@tabler/icons-react';
+import { IconSearch, IconStarFilled, IconMapPin, IconCalendar, IconTrophy, IconUsers, IconLayoutGrid } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
 import { useLeaguesSummary } from '../hooks/useLeagues';
@@ -164,19 +164,19 @@ function LeaguesPage() {
                     >
                       <Stack gap="sm" justify="space-between" h="100%">
                         {/* Header with name and favourite star */}
-                        <div>
-                          <Group justify="space-between" align="flex-start" wrap="nowrap" mb="xs">
-                            <Text fw={600} size="lg" style={{ flex: 1, lineHeight: 1.3 }}>
-                              {league.name}
-                            </Text>
-                            {hasFavorite && (
-                              <IconStarFilled
-                                size={20}
-                                style={{ color: 'var(--mantine-color-warning-5)', flexShrink: 0 }}
-                              />
-                            )}
-                          </Group>
+                        <Group justify="space-between" align="flex-start" wrap="nowrap" >
+                          <Text fw={600} size="lg" style={{ flex: 1, lineHeight: 1.3 }}>
+                            {league.name}
+                          </Text>
+                          {hasFavorite && (
+                            <IconStarFilled
+                              size={20}
+                              style={{ color: 'var(--mantine-color-warning-5)', flexShrink: 0 }}
+                            />
+                          )}
+                        </Group>
 
+                        <Group gap="xs" wrap="wrap">
                           {/* Region badge */}
                           {regionName && (
                             <Badge
@@ -188,10 +188,6 @@ function LeaguesPage() {
                               {regionName}
                             </Badge>
                           )}
-                        </div>
-
-                        {/* Middle section - day, format, and stats */}
-                        <Group gap="xs" wrap="wrap">
                           {league.dayOfWeek && (
                             <Badge
                               variant="light"
@@ -215,6 +211,16 @@ function LeaguesPage() {
                               leftSection={<IconUsers size={12} />}
                             >
                               {league.teamCount} teams
+                            </Badge>
+                          )}
+                          {league.divisionCount > 0 && (
+                            <Badge
+                              variant="light"
+                              color="violet"
+                              size="sm"
+                              leftSection={<IconLayoutGrid size={12} />}
+                            >
+                              {league.divisionCount} {league.divisionCount === 1 ? 'division' : 'divisions'}
                             </Badge>
                           )}
                         </Group>

@@ -20,6 +20,7 @@ export interface League {
 
 export interface LeagueSummary extends League {
   teamCount: number;
+  divisionCount: number;
   leaderTeamName: string | null;
   fixturesPlayed: number;
   fixturesRemaining: number;

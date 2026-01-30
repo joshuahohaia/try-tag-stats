@@ -90,6 +90,7 @@ export const leagueRepository = {
     const regionFilter = regionId ? 'WHERE l.region_id = ?' : '';
     const args = regionId ? [regionId] : [];
 
+    // Use the most recent season (highest season_id) for each league instead of is_current flag
     const result = await db.execute({
       sql: `
         SELECT
@@ -98,38 +99,49 @@ export const leagueRepository = {
             SELECT COUNT(DISTINCT s.team_id)
             FROM standings s
             JOIN divisions d ON s.division_id = d.id
-            JOIN seasons se ON d.season_id = se.id
-            WHERE d.league_id = l.id AND se.is_current = 1
+            WHERE d.league_id = l.id AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
           ), 0) as team_count,
+          COALESCE((
+            SELECT COUNT(*)
+            FROM divisions d
+            WHERE d.league_id = l.id AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
+          ), 0) as division_count,
           (
-            SELECT t.name
+            SELECT GROUP_CONCAT(t.name, ', ')
             FROM standings s
             JOIN divisions d ON s.division_id = d.id
-            JOIN seasons se ON d.season_id = se.id
             JOIN teams t ON s.team_id = t.id
-            WHERE d.league_id = l.id AND se.is_current = 1 AND s.position = 1
-            LIMIT 1
+            WHERE d.league_id = l.id AND s.position = 1 AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
           ) as leader_team_name,
           COALESCE((
             SELECT COUNT(*)
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
-            JOIN seasons se ON d.season_id = se.id
-            WHERE d.league_id = l.id AND se.is_current = 1 AND f.status = 'completed'
+            WHERE d.league_id = l.id AND f.home_score IS NOT NULL AND f.away_score IS NOT NULL AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
           ), 0) as fixtures_played,
           COALESCE((
             SELECT COUNT(*)
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
-            JOIN seasons se ON d.season_id = se.id
-            WHERE d.league_id = l.id AND se.is_current = 1 AND f.status = 'scheduled'
+            WHERE d.league_id = l.id AND f.home_score IS NULL AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
           ), 0) as fixtures_remaining,
           (
             SELECT MIN(f.fixture_date)
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
-            JOIN seasons se ON d.season_id = se.id
-            WHERE d.league_id = l.id AND se.is_current = 1 AND f.status = 'scheduled' AND f.fixture_date >= date('now')
+            WHERE d.league_id = l.id AND f.home_score IS NULL AND f.fixture_date >= date('now') AND d.season_id = (
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+            )
           ) as next_fixture_date
         FROM leagues l
         ${regionFilter}
@@ -141,6 +153,7 @@ export const leagueRepository = {
     return result.rows.map((row): LeagueSummary => ({
       ...rowToLeague(row),
       teamCount: row.team_count as number,
+      divisionCount: row.division_count as number,
       leaderTeamName: row.leader_team_name as string | null,
       fixturesPlayed: row.fixtures_played as number,
       fixturesRemaining: row.fixtures_remaining as number,
