@@ -6,7 +6,6 @@ import {
   Badge,
   HoverCard,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
 import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
@@ -36,7 +35,6 @@ export function FixturesList({
   defaultSort = 'upcoming',
 }: FixturesListProps) {
   const navigate = useNavigate();
-  const isMobile = useMediaQuery(`(max-width: 48em)`);
 
   const sortedFixtures = useMemo(() => {
     if (!fixtures) return [];
@@ -44,9 +42,9 @@ export function FixturesList({
       const dateA = new Date(a.fixtureDate).getTime();
       const dateB = new Date(b.fixtureDate).getTime();
       if (defaultSort === 'latest') {
-        return dateB - dateA; // Most recent first
+        return dateB - dateA;
       }
-      return dateA - dateB; // Upcoming first
+      return dateA - dateB;
     });
     return sorted;
   }, [fixtures, defaultSort]);
@@ -75,7 +73,7 @@ export function FixturesList({
             resultColor = 'gray';
           }
         }
-		
+
         const insightIcons = insights.map((insight) => (
           <HoverCard key={insight.type} width={200} withArrow shadow="md">
             <HoverCard.Target>
@@ -132,8 +130,7 @@ export function FixturesList({
             style={canLinkToFixture ? { cursor: 'pointer' } : {}}
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
-              {/* Team names - stack vertically on mobile, horizontal on desktop */}
-              {isMobile ? (
+              <Group gap="xs" wrap='nowrap' justify='space-between' align='flex-start'>
                 <Stack gap={2}>
                   <Text
                     fw={500}
@@ -155,33 +152,13 @@ export function FixturesList({
                     {fixture.awayTeam.name}
                   </Text>
                 </Stack>
-              ) : (
-                <Group gap="xs" wrap="nowrap">
-                  <Text
-                    fw={500}
-                    size={compact ? 'sm' : 'lg'}
-                    lineClamp={1}
-                    style={{ wordBreak: 'break-word', cursor: 'pointer' }}
-                    c="blue"
-                    onClick={(e) => handleTeamClick(e, fixture.homeTeam.id)}
-                  >
-                    {fixture.homeTeam.name}
-                  </Text>
-                  <Text c="dimmed" size={compact ? 'xs' : 'sm'}>vs</Text>
-                  <Text
-                    fw={500}
-                    size={compact ? 'sm' : 'lg'}
-                    lineClamp={1}
-                    style={{ wordBreak: 'break-word', cursor: 'pointer' }}
-                    c="blue"
-                    onClick={(e) => handleTeamClick(e, fixture.awayTeam.id)}
-                  >
-                    {fixture.awayTeam.name}
-                  </Text>
-                </Group>
-              )}
-
-              {/* Match details and badge row */}
+                <div onClick={handleCardClick} style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}>
+                  <Stack align="flex-end" gap={4}>
+                    {fixtureBadge}
+                    {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
+                  </Stack>
+                </div>
+              </Group>
               <Group justify="space-between" align="flex-start" wrap="nowrap">
                 <Stack
                   gap={0}
@@ -206,12 +183,6 @@ export function FixturesList({
                     </Text>
                   )}
                 </Stack>
-                <div onClick={handleCardClick} style={{ cursor: canLinkToFixture ? 'pointer' : undefined }}>
-                  <Stack align="flex-end" gap={4}>
-                    {fixtureBadge}
-                    {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
-                  </Stack>
-                </div>
               </Group>
             </Stack>
           </Card>
