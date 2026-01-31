@@ -25,7 +25,7 @@ import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { useUpcomingFixtures, useRecentFixtures } from '../hooks/useFixtures';
+import { useUpcomingFixtures } from '../hooks/useFixtures';
 import { useDivisions, useDivisionsStandings, useDivisionsStatistics, useDivisionStatistics } from '../hooks/useDivisions';
 import type { Team, StandingWithDivision, FixtureWithTeams } from '@trytag/shared';
 
@@ -298,10 +298,29 @@ function HomePage() {
     5
   );
 
-  const { data: recentFixtures, isLoading: recentLoading } = useRecentFixtures(
-    hasFavorites ? favoriteIds : undefined,
-    5
-  );
+  // Derive recent fixtures from team profiles (already fetched) instead of separate API call
+  const recentFixtures = useMemo(() => {
+    if (!hasFavorites) return [];
+
+    const allRecentFixtures: FixtureWithTeams[] = [];
+    teamQueries.forEach((query) => {
+      if (query.data?.recentFixtures) {
+        allRecentFixtures.push(...query.data.recentFixtures);
+      }
+    });
+
+    const seen = new Set<string>();
+    const deduped = allRecentFixtures.filter((f) => {
+      const key = `${f.fixtureDate}-${f.homeTeamId}-${f.awayTeamId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return deduped
+      .sort((a, b) => new Date(b.fixtureDate).getTime() - new Date(a.fixtureDate).getTime())
+      .slice(0, 5);
+  }, [teamQueries, hasFavorites]);
 
   // Compute team form data (last 5 results per team)
   const teamFormData = useMemo(() => {
@@ -514,7 +533,7 @@ function HomePage() {
                   View All
                 </Button>
               </Group>
-              {recentLoading || standingsLoading || statsLoading || divisionsLoading ? (
+              {isLoadingTeams || standingsLoading || statsLoading || divisionsLoading ? (
                 <FixtureCardSkeleton count={5} compact />
               ) : recentFixtures && recentFixtures.length > 0 ? (
                 <FixturesList
