@@ -8,7 +8,7 @@ const TODAY_STALE_TIME = 1000 * 60 * 5; // 5 minutes
 
 interface FixtureParams {
   limit: number;
-  type: 'upcoming' | 'recent';
+  type: 'upcoming';
   teamIds?: string;
 }
 
@@ -32,28 +32,6 @@ export function useUpcomingFixtures(teamIds?: number | number[], limit = 20) {
     },
   });
 }
-
-export function useRecentFixtures(teamIds?: number | number[], limit = 20) {
-  return useQuery({
-    queryKey: ['fixtures', 'recent', teamIds, limit],
-    queryFn: async () => {
-      const params: FixtureParams = { limit, type: 'recent' };
-      
-      if (typeof teamIds === 'number') {
-        params.teamIds = String(teamIds);
-      } else if (Array.isArray(teamIds) && teamIds.length > 0) {
-        params.teamIds = teamIds.join(',');
-      }
-
-      const response = await apiClient.get<{ success: boolean; data: FixtureWithTeams[] }>(
-        '/fixtures',
-        { params }
-      );
-      return extractData(response);
-    },
-  });
-}
-
 
 
 export function useFixtureDetail(fixtureId: number) {
