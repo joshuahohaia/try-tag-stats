@@ -30,14 +30,17 @@ export interface HeadToHeadRecord {
 }
 
 export interface HeadToHeadResult {
-  /** Games with no label next to them. These make up the headline record. */
+  /** Every recorded game between the two teams, labelled or not. */
   record: HeadToHeadRecord;
-  counted: HeadToHeadMeeting[];
+  /** All recorded games, newest first. Each carries any labels printed next to it. */
+  meetings: HeadToHeadMeeting[];
   /**
-   * Games with a label next to them (friendly, playoff, ...). Spawtz does not say
-   * which neighbouring game a label belongs to, so these are listed but not counted.
+   * How many of those games have a label printed next to them on the Spawtz page.
+   * Spawtz does not say which neighbouring game a label belongs to, and the labels
+   * differ between the two teams' pages, so this is a count of uncertainty, not of
+   * friendlies or playoffs.
    */
-  uncounted: HeadToHeadMeeting[];
+  labelledCount: number;
   seasonsCovered: string[];
 }
 
@@ -53,8 +56,7 @@ function outcome(a: number, b: number): 'W' | 'D' | 'L' {
  */
 export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]): HeadToHeadResult {
   const seen = new Set<string>();
-  const counted: HeadToHeadMeeting[] = [];
-  const uncounted: HeadToHeadMeeting[] = [];
+  const meetings: HeadToHeadMeeting[] = [];
   const covered: string[] = [];
 
   for (const season of seasons) {
@@ -76,16 +78,15 @@ export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]
         result: outcome(row.teamScore, row.opponentScore),
         labels,
       };
-      (labels.length === 0 ? counted : uncounted).push(meeting);
+      meetings.push(meeting);
     }
   }
 
   const byDateDesc = (a: HeadToHeadMeeting, b: HeadToHeadMeeting) =>
     `${b.date} ${b.time ?? ''}`.localeCompare(`${a.date} ${a.time ?? ''}`);
-  counted.sort(byDateDesc);
-  uncounted.sort(byDateDesc);
+  meetings.sort(byDateDesc);
 
-  const record = counted.reduce<HeadToHeadRecord>(
+  const record = meetings.reduce<HeadToHeadRecord>(
     (acc, m) => ({
       played: acc.played + 1,
       won: acc.won + (m.result === 'W' ? 1 : 0),
@@ -97,7 +98,12 @@ export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]
     { played: 0, won: 0, drawn: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
   );
 
-  return { record, counted, uncounted, seasonsCovered: covered };
+  return {
+    record,
+    meetings,
+    labelledCount: meetings.filter((m) => m.labels.length > 0).length,
+    seasonsCovered: covered,
+  };
 }
 
 function invertMeeting(m: HeadToHeadMeeting): HeadToHeadMeeting {
@@ -121,7 +127,6 @@ export function invertHeadToHead(r: HeadToHeadResult): HeadToHeadResult {
       pointsFor: r.record.pointsAgainst,
       pointsAgainst: r.record.pointsFor,
     },
-    counted: r.counted.map(invertMeeting),
-    uncounted: r.uncounted.map(invertMeeting),
+    meetings: r.meetings.map(invertMeeting),
   };
 }
