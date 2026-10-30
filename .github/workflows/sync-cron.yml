@@ -1,0 +1,92 @@
+name: Sync data
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = only test the secrets and read the sync status (default). sync = start a full sync.'
+        type: choice
+        options:
+          - check
+          - sync
+        default: check
+  # Daily schedule is off until BACKEND_URL and CRON_SECRET are set and a manual
+  # run has succeeded. To enable, uncomment. GitHub cron is UTC only: 06:17 UTC is
+  # 06:17 in London in winter and 07:17 in summer. Runs can start several minutes late.
+  # schedule:
+  #   - cron: '17 6 * * *'
+
+concurrency:
+  group: sync-data
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Trigger backend sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Check secrets
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL and CRON_SECRET repository secrets are required"
+            exit 1
+          fi
+
+      - name: Start sync and wait for it to finish
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          MODE: ${{ inputs.mode || 'sync' }}
+        run: |
+          set -u
+          base="${BACKEND_URL%/}"
+          # BACKEND_URL is the API base, e.g. https://example.onrender.com/api/v1
+
+          # Free hosts can take about a minute to wake from idle; allow for it.
+          curl -fsS --retry 6 --retry-delay 20 --retry-all-errors --max-time 120 "$base/health" > /dev/null
+
+          if [ "$MODE" = "check" ]; then
+            # Read-only: proves the secrets work without starting a sync.
+            curl -fsS --max-time 60 -H "x-api-key: $CRON_SECRET" "$base/admin/sync/status" > /tmp/status.json
+            jq '.data | {syncInProgress, lastSync: (.lastSync | if . then {timestamp, success, errorCount: (.errors | length)} else null end)}' /tmp/status.json
+            echo "Check passed: BACKEND_URL and CRON_SECRET work. No sync was started."
+            exit 0
+          fi
+
+          started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          code=$(curl -sS -o /tmp/start.json -w '%{http_code}' --max-time 120 \
+            -X POST -H "x-api-key: $CRON_SECRET" "$base/admin/sync/full")
+          if [ "$code" = "409" ]; then
+            echo "A sync is already running; waiting for it."
+            started_at="1970-01-01T00:00:00Z"
+          elif [ "$code" != "200" ]; then
+            echo "Sync start failed with HTTP $code"
+            exit 1
+          fi
+
+          # The sync runs in the server process, so keep polling until it ends.
+          # Polling also keeps the service from idling out mid-sync.
+          for i in $(seq 1 55); do
+            sleep 60
+            curl -fsS --retry 3 --retry-delay 10 --max-time 60 \
+              -H "x-api-key: $CRON_SECRET" "$base/admin/sync/status" > /tmp/status.json || continue
+            if [ "$(jq -r '.data.syncInProgress' /tmp/status.json)" = "false" ]; then
+              jq '.data.lastSync | if . then {timestamp, success, duration, itemsProcessed, errorCount: (.errors | length)} else null end' /tmp/status.json
+              # The status lives in server memory. If the host restarted mid-sync, it has no
+              # result newer than this run's start, so report that instead of a stale success.
+              finished=$(jq -r '.data.lastSync.timestamp // ""' /tmp/status.json)
+              if [ -z "$finished" ] || [[ "$finished" < "$started_at" ]]; then
+                echo "No result from this run: the service may have restarted mid-sync. Check the service logs."
+                exit 1
+              fi
+              [ "$(jq -r '.data.lastSync.success' /tmp/status.json)" = "true" ] && exit 0
+              echo "Last sync reported errors"
+              exit 1
+            fi
+          done
+          echo "Sync still running after 55 minutes"
+          exit 1
