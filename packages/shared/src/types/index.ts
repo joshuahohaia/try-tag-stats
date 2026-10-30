@@ -43,6 +43,10 @@ export interface Division {
   seasonId: number;
   name: string;
   tier: number | null;
+  /** Spawtz PhaseId for divisions found on a later phase page; null for the first phase. */
+  phaseId?: number | null;
+  /** Phase label such as "Phase 2"; null for the first phase. */
+  phaseName?: string | null;
 }
 
 // ============================================

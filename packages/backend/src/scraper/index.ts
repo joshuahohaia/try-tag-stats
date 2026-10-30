@@ -1,10 +1,12 @@
 import { ENDPOINTS } from '@trytag/shared';
 import type { TeamPositionHistory, TeamSeasonStats, TeamPreviousSeason, ScrapedPlayerAward, ScrapedFixture } from '@trytag/shared';
 import { scraperClient } from './client.js';
+import type { StandingsPhase } from './parsers/standings.parser.js';
 import { pickCurrentSeasonId, shouldMarkUnseenInactive } from './season-utils.js';
 import {
   parseLeagueList,
   parseStandings,
+  parsePhases,
   parseFixtures,
   parseStatistics,
   parseTeamProfile,
@@ -117,6 +119,7 @@ class ScraperOrchestrator {
 
       // Step 4: Save leagues and divisions, then sync division data
       const processedDivisions = new Set<string>();
+      const processedPhaseLeagues = new Set<string>();
 
       for (const item of items) {
         try {
@@ -157,7 +160,22 @@ class ScraperOrchestrator {
           processedDivisions.add(divKey);
 
           // Sync division data (standings and fixtures)
-          await this.syncDivisionData(division.id, item.leagueId, item.seasonId, item.divisionId, result);
+          const phases = await this.syncDivisionData(division.id, item.leagueId, item.seasonId, item.divisionId, result);
+
+          // Later phases (e.g. Cup and Plate) are not on the league list. Fetch each extra
+          // phase page once per league and season, only when the dropdown offers one.
+          const phaseKey = `${item.leagueId}-${item.seasonId}`;
+          if (!processedPhaseLeagues.has(phaseKey)) {
+            processedPhaseLeagues.add(phaseKey);
+            for (const phase of phases.filter((p) => p.phaseId !== 0)) {
+              try {
+                const ids = await this.syncPhase(league.id, season.id, item.leagueId, item.seasonId, phase, result);
+                for (const id of ids) processedDivisions.add(`${item.leagueId}-${item.seasonId}-${id}`);
+              } catch (err) {
+                this.logError(`Failed to sync phase ${phase.name} for league ${item.leagueName}`, err);
+              }
+            }
+          }
 
         } catch (err) {
           this.logError(`Failed to process league item ${item.leagueName}`, err);
@@ -216,48 +234,25 @@ class ScraperOrchestrator {
     seasonId: number,
     externalDivisionId: number,
     result: SyncResult
-  ): Promise<void> {
+  ): Promise<StandingsPhase[]> {
     const params = {
       VenueId: '0',
       LeagueId: leagueId,
       SeasonId: seasonId,
       DivisionId: externalDivisionId,
     };
+    let phases: StandingsPhase[] = [];
 
     // Sync standings
     try {
       logger.debug({ divisionId }, 'Fetching standings...');
       const standingsHtml = await scraperClient.fetchWithParams(ENDPOINTS.STANDINGS, params);
       const { standings } = parseStandings(standingsHtml);
+      phases = parsePhases(standingsHtml);
 
       logger.info({ count: standings.length }, 'Standings parsed');
 
-      for (const standing of standings) {
-        logger.debug({ teamName: standing.teamName }, 'Processing standing');
-        // Upsert team
-        const team = await teamRepository.upsert(standing.teamId, standing.teamName);
-        await teamRepository.linkToDivision(team.id, divisionId);
-        result.itemsProcessed.teams++;
-
-        // Upsert standing
-        await standingRepository.upsert({
-          teamId: team.id,
-          divisionId,
-          position: standing.position,
-          played: standing.played,
-          wins: standing.wins,
-          losses: standing.losses,
-          draws: standing.draws,
-          forfeitsFor: standing.forfeitsFor,
-          forfeitsAgainst: standing.forfeitsAgainst,
-          pointsFor: standing.pointsFor,
-          pointsAgainst: standing.pointsAgainst,
-          pointDifference: standing.pointDifference,
-          bonusPoints: standing.bonusPoints,
-          totalPoints: standing.totalPoints,
-        });
-        result.itemsProcessed.standings++;
-      }
+      await this.saveStandings(divisionId, standings, result);
       logger.info('Standings sync completed');
 
     } catch (err) {
@@ -355,6 +350,82 @@ class ScraperOrchestrator {
 
     // Update last scraped timestamp
     await divisionRepository.updateLastScraped(divisionId);
+
+    return phases;
+  }
+
+  private async saveStandings(
+    divisionId: number,
+    standings: import('@trytag/shared').ScrapedStandingRow[],
+    result: SyncResult
+  ): Promise<void> {
+    for (const standing of standings) {
+      logger.debug({ teamName: standing.teamName }, 'Processing standing');
+      const team = await teamRepository.upsert(standing.teamId, standing.teamName);
+      await teamRepository.linkToDivision(team.id, divisionId);
+      result.itemsProcessed.teams++;
+
+      await standingRepository.upsert({
+        teamId: team.id,
+        divisionId,
+        position: standing.position,
+        played: standing.played,
+        wins: standing.wins,
+        losses: standing.losses,
+        draws: standing.draws,
+        forfeitsFor: standing.forfeitsFor,
+        forfeitsAgainst: standing.forfeitsAgainst,
+        pointsFor: standing.pointsFor,
+        pointsAgainst: standing.pointsAgainst,
+        pointDifference: standing.pointDifference,
+        bonusPoints: standing.bonusPoints,
+        totalPoints: standing.totalPoints,
+      });
+      result.itemsProcessed.standings++;
+    }
+  }
+
+  /**
+   * Standings for a later phase (e.g. Cup and Plate). One request returns every
+   * table of the phase; each table becomes its own division, identified by the
+   * DivisionId in its team links. A table without a clear id is skipped, never guessed.
+   * Standings only: fixtures for these divisions are not fetched here.
+   */
+  private async syncPhase(
+    leagueDbId: number,
+    seasonDbId: number,
+    leagueId: number,
+    seasonId: number,
+    phase: StandingsPhase,
+    result: SyncResult
+  ): Promise<number[]> {
+    const html = await scraperClient.fetchWithParams(ENDPOINTS.STANDINGS, {
+      VenueId: '0',
+      LeagueId: leagueId,
+      SeasonId: seasonId,
+      PhaseId: phase.phaseId,
+    });
+    const { tables } = parseStandings(html);
+    const seen: number[] = [];
+    for (const table of tables) {
+      if (table.divisionId === null || seen.includes(table.divisionId)) {
+        logger.warn({ leagueId, seasonId, phase: phase.name, heading: table.heading }, 'Skipped phase table without a unique division id');
+        continue;
+      }
+      const division = await divisionRepository.upsert({
+        externalDivisionId: table.divisionId,
+        leagueId: leagueDbId,
+        seasonId: seasonDbId,
+        name: table.heading ?? `${phase.name} ${table.divisionId}`,
+        phaseId: phase.phaseId,
+        phaseName: phase.name,
+      });
+      result.itemsProcessed.divisions++;
+      await this.saveStandings(division.id, table.standings, result);
+      seen.push(table.divisionId);
+    }
+    logger.info({ leagueId, seasonId, phase: phase.name, divisions: seen.length }, 'Phase standings synced');
+    return seen;
   }
 
   async syncSingleDivision(externalLeagueId: number, externalSeasonId: number, externalDivisionId: number): Promise<void> {

@@ -114,7 +114,15 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
   );
 
   const divisionOptions = useMemo(() => {
-    return divisions?.map((d) => ({ value: String(d.id), label: d.name })) || [];
+    // When a league has later phases (e.g. Cup and Plate), prefix every option with its
+    // phase so the first-phase divisions stay reachable and clearly labelled.
+    const hasPhases = divisions?.some((d) => d.phaseName) ?? false;
+    return (
+      divisions?.map((d) => ({
+        value: String(d.id),
+        label: hasPhases ? `${d.phaseName ?? 'First phase'}: ${d.name}` : d.name,
+      })) || []
+    );
   }, [divisions]);
 
   const seasonOptions = useMemo(() => {

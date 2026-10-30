@@ -180,6 +180,12 @@ export async function initializeSchema(): Promise<void> {
   if (!names.has('last_seen_at')) {
     await db.execute('ALTER TABLE divisions ADD COLUMN last_seen_at DATETIME');
   }
+  if (!names.has('phase_id')) {
+    await db.execute('ALTER TABLE divisions ADD COLUMN phase_id INTEGER');
+  }
+  if (!names.has('phase_name')) {
+    await db.execute('ALTER TABLE divisions ADD COLUMN phase_name TEXT');
+  }
 
   logger.info('Database schema initialized');
 }

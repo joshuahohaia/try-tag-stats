@@ -4,9 +4,41 @@ import { ScrapedStandingRowSchema } from '@trytag/shared';
 import type { ScrapedStandingRow } from '@trytag/shared';
 import { logger } from '../../utils/logger.js';
 
+export interface ParsedStandingsTable {
+  /** Text of the h3 above the table, e.g. "Cup"; null when there is none. */
+  heading: string | null;
+  /** DivisionId read from the team links, only when every row agrees. */
+  divisionId: number | null;
+  standings: ScrapedStandingRow[];
+}
+
 interface ParsedStandings {
   divisionName: string;
   standings: ScrapedStandingRow[];
+  /** The same rows, kept separate per table (multi-table pages such as a phase page). */
+  tables: ParsedStandingsTable[];
+}
+
+export interface StandingsPhase {
+  phaseId: number;
+  name: string;
+}
+
+function extractDivisionId(href: string): number | null {
+  const match = href.match(/DivisionId=(\d+)/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/** Phases offered by the page's PhaseId dropdown. Empty when the page has none. */
+export function parsePhases(html: string): StandingsPhase[] {
+  const $ = cheerio.load(html);
+  const phases: StandingsPhase[] = [];
+  $('select[name="PhaseId"] option').each((_, el) => {
+    const phaseId = parseInt($(el).attr('value') ?? '', 10);
+    const name = $(el).text().trim();
+    if (!isNaN(phaseId) && name) phases.push({ phaseId, name });
+  });
+  return phases;
 }
 
 // Extract team ID from href
@@ -24,6 +56,7 @@ function parseNum(text: string): number {
 export function parseStandings(html: string): ParsedStandings {
   const $ = cheerio.load(html);
   const standings: ScrapedStandingRow[] = [];
+  const tables: ParsedStandingsTable[] = [];
 
   // Try to find division name from page title or heading
   let divisionName = $('h1, h2, .title, .heading').first().text().trim();
@@ -80,6 +113,8 @@ export function parseStandings(html: string): ParsedStandings {
     // Process data rows
     const $rows = $table.find('tr').not($headerRow);
     let position = 0;
+    const tableRows: ScrapedStandingRow[] = [];
+    const rowDivisionIds = new Set<number | null>();
 
     $rows.each((_, element) => {
       const $row = $(element);
@@ -135,13 +170,25 @@ export function parseStandings(html: string): ParsedStandings {
       const result = ScrapedStandingRowSchema.safeParse(row);
       if (result.success) {
         standings.push(result.data);
+        tableRows.push(result.data);
+        rowDivisionIds.add(extractDivisionId($teamLink.attr('href') || ''));
       } else {
         logger.warn({ row, errors: result.error.errors }, 'Invalid standing row');
       }
     });
+
+    if (tableRows.length > 0) {
+      const heading = $table.prevUntil('table').filter('h3').first().text().trim();
+      const ids = [...rowDivisionIds];
+      tables.push({
+        heading: heading || null,
+        divisionId: ids.length === 1 ? ids[0] : null,
+        standings: tableRows,
+      });
+    }
   });
 
   logger.info({ divisionName, standingsCount: standings.length }, 'Parsed standings');
 
-  return { divisionName, standings };
+  return { divisionName, standings, tables };
 }
