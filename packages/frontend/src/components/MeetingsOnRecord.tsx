@@ -4,7 +4,7 @@ import { formatDate } from '../utils/format';
 
 const RESULT_COLOR = { W: 'green', D: 'gray', L: 'red' } as const;
 
-function MeetingRows({ meetings, showLabels }: { meetings: HeadToHeadMeeting[]; showLabels?: boolean }) {
+function MeetingRows({ meetings }: { meetings: HeadToHeadMeeting[] }) {
   return (
     <Table>
       <Table.Tbody>
@@ -26,7 +26,7 @@ function MeetingRows({ meetings, showLabels }: { meetings: HeadToHeadMeeting[]; 
             <Table.Td>
               <Text size="xs" c="dimmed">
                 {m.seasonName} - {m.divisionName}
-                {showLabels && m.labels.length > 0 ? ` (${m.labels.join(', ')})` : ''}
+                {m.labels.length > 0 ? ` (label on Spawtz: ${m.labels.join(', ')})` : ''}
               </Text>
             </Table.Td>
           </Table.Tr>
@@ -63,7 +63,7 @@ export function MeetingsOnRecord({
   }
   if (isError || !data || !data.supported) return null;
 
-  const { record, counted, uncounted, seasonsCovered, complete, busy } = data;
+  const { record, meetings, labelledCount, seasonsCovered, complete, busy } = data;
 
   return (
     <Card withBorder>
@@ -74,7 +74,7 @@ export function MeetingsOnRecord({
 
       {record.played === 0 ? (
         <Text c="dimmed" ta="center" py="md">
-          No counted meetings between {teamName} and {opponentName} in the seasons checked
+          No recorded meetings between {teamName} and {opponentName} in the seasons checked
         </Text>
       ) : (
         <Stack gap="xs">
@@ -86,18 +86,17 @@ export function MeetingsOnRecord({
               Points {record.pointsFor} - {record.pointsAgainst}
             </Text>
           </Group>
-          <MeetingRows meetings={counted} />
+          <MeetingRows meetings={meetings} />
         </Stack>
       )}
 
-      {uncounted.length > 0 && (
-        <Stack gap="xs" mt="md">
-          <Text size="sm" c="dimmed">
-            Not counted: Spawtz printed a label (such as friendly or playoff) next to these games and does
-            not say which game it belongs to, so they are listed but left out of the record.
-          </Text>
-          <MeetingRows meetings={uncounted} showLabels />
-        </Stack>
+      {labelledCount > 0 && (
+        <Text size="sm" c="dimmed" mt="md">
+          {labelledCount} of these {labelledCount === 1 ? 'game has' : 'games have'} a label printed next to
+          {labelledCount === 1 ? ' it' : ' them'} on Spawtz (such as friendly or playoff). Spawtz does not say which
+          game a label belongs to and it can differ between the two teams' pages, so all games are included in the
+          record and the label is shown as a note, not as a classification.
+        </Text>
       )}
 
       <Text size="xs" c="dimmed" mt="md">
