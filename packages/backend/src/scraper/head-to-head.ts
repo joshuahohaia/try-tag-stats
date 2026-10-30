@@ -99,3 +99,29 @@ export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]
 
   return { record, counted, uncounted, seasonsCovered: covered };
 }
+
+function invertMeeting(m: HeadToHeadMeeting): HeadToHeadMeeting {
+  return {
+    ...m,
+    teamScore: m.opponentScore,
+    opponentScore: m.teamScore,
+    result: m.result === 'W' ? 'L' : m.result === 'L' ? 'W' : 'D',
+  };
+}
+
+/** The same meetings seen from the other team's side. */
+export function invertHeadToHead(r: HeadToHeadResult): HeadToHeadResult {
+  return {
+    ...r,
+    record: {
+      played: r.record.played,
+      won: r.record.lost,
+      drawn: r.record.drawn,
+      lost: r.record.won,
+      pointsFor: r.record.pointsAgainst,
+      pointsAgainst: r.record.pointsFor,
+    },
+    counted: r.counted.map(invertMeeting),
+    uncounted: r.uncounted.map(invertMeeting),
+  };
+}
