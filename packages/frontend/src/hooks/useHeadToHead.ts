@@ -28,6 +28,7 @@ export type HeadToHeadResponse =
       uncounted: HeadToHeadMeeting[];
       seasonsCovered: string[];
       complete: boolean;
+      busy: boolean;
       failedSeasons: string[];
     };
 
