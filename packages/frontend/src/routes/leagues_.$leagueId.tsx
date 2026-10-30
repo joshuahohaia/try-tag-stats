@@ -90,19 +90,33 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     }
   }, [seasons, divisions, selectedSeasonId, divisionsLoading, triedSeasons]);
 
+  // Latest phase (highest Spawtz PhaseId; the first phase has none). Its first division becomes the
+  // default only once it has played games, so a phase that is announced but not started is not shown first.
+  const latestPhaseDivision = useMemo(() => {
+    const phased = divisions?.filter((d) => d.phaseId != null) ?? [];
+    if (phased.length === 0) return undefined;
+    const latest = Math.max(...phased.map((d) => d.phaseId as number));
+    return phased.find((d) => d.phaseId === latest);
+  }, [divisions]);
+  const { data: latestPhaseStandings, isLoading: latestPhaseLoading } = useDivisionStandings(
+    latestPhaseDivision?.id ?? 0
+  );
+
   // Set default division
   useEffect(() => {
     if (divisions && divisions.length > 0) {
-      // Try to keep the same division selection if switching seasons, otherwise default to first
-      // For now just default to first if not set or invalid
+      // Keep the current selection when it is still valid, otherwise pick a default.
       const exists = divisions.some((d) => String(d.id) === selectedDivisionId);
       if (!selectedDivisionId || !exists) {
-        setSelectedDivisionId(String(divisions[0].id));
+        if (latestPhaseDivision && latestPhaseLoading) return; // wait for the phase check
+        const started = latestPhaseStandings?.some((s) => s.played > 0) ?? false;
+        const pick = latestPhaseDivision && started ? latestPhaseDivision : divisions[0];
+        setSelectedDivisionId(String(pick.id));
       }
     } else if (divisions && divisions.length === 0) {
       setSelectedDivisionId(null);
     }
-  }, [divisions, selectedDivisionId]);
+  }, [divisions, selectedDivisionId, latestPhaseDivision, latestPhaseLoading, latestPhaseStandings]);
 
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
     selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
