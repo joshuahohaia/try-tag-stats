@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config/env.js';
 import {
   leagueRepository,
   seasonRepository,
@@ -7,10 +8,18 @@ import {
 
 const router = Router();
 
+// Retired leagues are only hidden when HIDE_INACTIVE_LEAGUES=true or ?activeOnly=true
+function resolveActiveOnly(param: unknown): boolean {
+  if (param === 'true') return true;
+  if (param === 'false') return false;
+  return config.hideInactiveLeagues;
+}
+
 // GET /api/v1/leagues/summary - List all leagues with summary data
 router.get('/summary', async (req, res) => {
   const regionId = req.query.region ? parseInt(req.query.region as string, 10) : undefined;
-  const leagues = await leagueRepository.findAllWithSummary(regionId);
+  const includeInactive = !resolveActiveOnly(req.query.activeOnly);
+  const leagues = await leagueRepository.findAllWithSummary(regionId, includeInactive);
 
   res.json({
     success: true,
@@ -23,9 +32,10 @@ router.get('/summary', async (req, res) => {
 router.get('/', async (req, res) => {
   const regionId = req.query.region ? parseInt(req.query.region as string, 10) : undefined;
 
+  const includeInactive = !resolveActiveOnly(req.query.activeOnly);
   const leagues = regionId
-    ? await leagueRepository.findByRegion(regionId)
-    : await leagueRepository.findAll();
+    ? await leagueRepository.findByRegion(regionId, includeInactive)
+    : await leagueRepository.findAll(includeInactive);
 
   res.json({
     success: true,

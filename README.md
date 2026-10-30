@@ -72,7 +72,7 @@ curl http://localhost:3000/api/v1/admin/sync/status
 ```
 
 #### Scheduled Sync (GitHub Actions)
-A GitHub Actions workflow (`.github/workflows/sync-cron.yml`) runs every 6 hours to automatically sync data. This requires setting the `BACKEND_URL` secret in your GitHub repository settings pointing to your deployed backend.
+Scheduled syncing is not part of this repo yet: run the sync from a scheduler of your choice by POSTing `/api/v1/admin/sync/full` with the `x-api-key` header, and poll `/api/v1/admin/sync/status`. `GET /api/v1/sync-status` (public) shows when the last sync succeeded. Divisions missing from a clean sync are flagged `is_active = 0` (never deleted, and cleared when listed again). They stay visible unless `HIDE_INACTIVE_LEAGUES=true` or `?activeOnly=true` is used, because the Spawtz list has no total to prove a scrape is complete.
 
 #### Team Profiles
 Detailed team statistics and position history are fetched on-demand when a specific team profile is viewed.

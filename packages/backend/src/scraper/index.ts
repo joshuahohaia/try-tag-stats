@@ -1,6 +1,7 @@
 import { ENDPOINTS } from '@trytag/shared';
 import type { TeamPositionHistory, TeamSeasonStats, TeamPreviousSeason, ScrapedPlayerAward, ScrapedFixture } from '@trytag/shared';
 import { scraperClient } from './client.js';
+import { pickCurrentSeasonId, shouldMarkUnseenInactive } from './season-utils.js';
 import {
   parseLeagueList,
   parseStandings,
@@ -18,6 +19,7 @@ import {
   fixtureRepository,
   playerRepository,
   playerAwardRepository,
+  syncRunRepository,
 } from '../database/repositories/index.js';
 import { getDatabase } from '../database/connection.js';
 import { logger } from '../utils/logger.js';
@@ -50,7 +52,16 @@ class ScraperOrchestrator {
 
   async runFullSync(): Promise<SyncResult> {
     const startTime = Date.now();
+    // SQLite CURRENT_TIMESTAMP format (UTC, 'YYYY-MM-DD HH:MM:SS') so it compares with last_seen_at
+    const syncStartedAt = new Date(startTime).toISOString().replace('T', ' ').slice(0, 19);
     this.errors = [];
+
+    let jobId: number | null = null;
+    try {
+      jobId = await syncRunRepository.start();
+    } catch (err) {
+      logger.warn({ error: err }, 'Could not record sync start');
+    }
 
     const result: SyncResult = {
       success: true,
@@ -78,6 +89,9 @@ class ScraperOrchestrator {
 
       logger.info({ itemCount: items.length }, 'Parsed league list');
 
+      const activeBefore = await divisionRepository.countActive();
+      const newestKnownSeasonBefore = await seasonRepository.maxExternalSeasonId();
+
       // Step 2: Save regions
       for (const regionName of regions) {
         try {
@@ -94,7 +108,6 @@ class ScraperOrchestrator {
           await seasonRepository.upsert({
             externalSeasonId: seasonId,
             name: seasonName,
-            isCurrent: seasonName.toLowerCase().includes('winter 2025') || seasonName.toLowerCase().includes('spring 2026'),
           });
           result.itemsProcessed.seasons++;
         } catch (err) {
@@ -151,6 +164,28 @@ class ScraperOrchestrator {
         }
       }
 
+      // Newest season on the live list is the current one
+      const currentSeasonId = pickCurrentSeasonId(seasons.keys());
+      if (currentSeasonId !== null) {
+        await seasonRepository.setCurrentByExternalId(currentSeasonId);
+      }
+
+      // Hide (never delete) divisions missing from a complete, error-free sync
+      if (
+        shouldMarkUnseenInactive({
+          hadErrors: this.errors.length > 0,
+          seenDivisions: processedDivisions.size,
+          previouslyActive: activeBefore,
+          newestSeasonOnList: currentSeasonId,
+          newestSeasonKnown: newestKnownSeasonBefore,
+        })
+      ) {
+        const hidden = await divisionRepository.markUnseenInactive(syncStartedAt);
+        logger.info({ hidden }, 'Marked divisions missing from the league list as inactive');
+      } else {
+        logger.warn('Skipped inactive marking: sync had errors or an unexpectedly small league list');
+      }
+
       result.success = this.errors.length === 0;
       result.errors = this.errors;
 
@@ -162,6 +197,15 @@ class ScraperOrchestrator {
 
     result.duration = Date.now() - startTime;
     logger.info({ result }, 'Full sync completed');
+
+    if (jobId !== null) {
+      try {
+        const total = Object.values(result.itemsProcessed).reduce((a, b) => a + b, 0);
+        await syncRunRepository.finish(jobId, result.success, total, result.errors.slice(0, 3).join(' | ') || undefined);
+      } catch (err) {
+        logger.warn({ error: err }, 'Could not record sync result');
+      }
+    }
 
     return result;
   }

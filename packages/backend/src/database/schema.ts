@@ -171,5 +171,15 @@ export async function initializeSchema(): Promise<void> {
 
   await db.batch(statements);
 
+  // Additive migrations (safe to re-run; existing rows keep default values)
+  const columns = await db.execute('PRAGMA table_info(divisions)');
+  const names = new Set(columns.rows.map((r) => r.name as string));
+  if (!names.has('is_active')) {
+    await db.execute('ALTER TABLE divisions ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!names.has('last_seen_at')) {
+    await db.execute('ALTER TABLE divisions ADD COLUMN last_seen_at DATETIME');
+  }
+
   logger.info('Database schema initialized');
 }

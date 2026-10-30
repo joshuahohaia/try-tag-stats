@@ -14,6 +14,27 @@ function rowToDivision(row: Row): Division {
 }
 
 export const divisionRepository = {
+  async countActive(): Promise<number> {
+    const db = getDatabase();
+    const result = await db.execute('SELECT COUNT(*) AS n FROM divisions WHERE is_active = 1');
+    return Number(result.rows[0]?.n ?? 0);
+  },
+
+  /**
+   * Reversible: hides divisions that the latest complete sync did not see.
+   * Rows, standings, fixtures and history are kept; a later sync that sees
+   * the division again sets is_active back to 1.
+   */
+  async markUnseenInactive(syncStartedAtIso: string): Promise<number> {
+    const db = getDatabase();
+    const result = await db.execute({
+      sql: `UPDATE divisions SET is_active = 0
+            WHERE is_active = 1 AND (last_seen_at IS NULL OR last_seen_at < ?)`,
+      args: [syncStartedAtIso],
+    });
+    return result.rowsAffected;
+  },
+
   async findAll(): Promise<Division[]> {
     const db = getDatabase();
     const result = await db.execute('SELECT * FROM divisions ORDER BY name');
@@ -68,11 +89,13 @@ export const divisionRepository = {
     const db = getDatabase();
     const result = await db.execute({
       sql: `
-        INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, updated_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, is_active, last_seen_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT(external_division_id, league_id, season_id) DO UPDATE SET
           name = excluded.name,
           tier = excluded.tier,
+          is_active = 1,
+          last_seen_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `,
