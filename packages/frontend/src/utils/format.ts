@@ -55,3 +55,62 @@ export function formatDateTime(
   }
   return date || '';
 }
+
+// Fixtures are played at UK venues and the API stores fixture dates as UK
+// calendar dates, so day labels are computed in the venue timezone, not the
+// viewer's. This stays correct for viewers abroad and across UK DST changes
+// (Intl applies the Europe/London rules itself).
+const VENUE_TIME_ZONE = 'Europe/London';
+
+const venueDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: VENUE_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * Calendar date (YYYY-MM-DD) of a moment in the venue timezone.
+ * Never derived with toISOString(), which is UTC and can be a day off
+ * around midnight.
+ */
+export function venueCalendarDate(date: Date = new Date()): string {
+  // en-CA formats as YYYY-MM-DD
+  return venueDateFormatter.format(date);
+}
+
+/**
+ * Extract the calendar date (YYYY-MM-DD) from an API date value.
+ * The API returns fixture dates as plain calendar dates (e.g. "2026-10-30")
+ * in the venue's timezone; full ISO timestamps are tolerated by taking the
+ * date portion verbatim, without timezone conversion.
+ */
+export function fixtureCalendarDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
+/**
+ * Format a fixture date with friendly labels for near dates: "Today",
+ * "Tomorrow" or "Yesterday" when it matches the venue calendar
+ * (Europe/London), otherwise UK dd/MM/yyyy. Day arithmetic uses calendar
+ * components, so it is correct across midnight and DST changes.
+ */
+export function formatFixtureDate(
+  dateStr: string | null | undefined,
+  now: Date = new Date()
+): string {
+  const cal = fixtureCalendarDate(dateStr);
+  if (!cal) return formatDate(dateStr);
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (cal === venueCalendarDate(now)) return 'Today';
+  if (cal === venueCalendarDate(tomorrow)) return 'Tomorrow';
+  if (cal === venueCalendarDate(yesterday)) return 'Yesterday';
+  return formatDate(cal);
+}
