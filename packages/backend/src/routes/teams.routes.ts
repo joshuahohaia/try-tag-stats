@@ -15,6 +15,7 @@ import {
   seasonRepository,
 } from '../database/repositories/index.js';
 import { scraperOrchestrator } from '../scraper/index.js';
+import { getHeadToHead, PILOT_LEAGUE_EXTERNAL_IDS, type SeasonContext } from '../scraper/head-to-head.service.js';
 
 const router = Router();
 
@@ -224,6 +225,47 @@ router.get('/:id', async (req, res) => {
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch team profile' },
     });
+  }
+});
+
+// GET /api/v1/teams/:id/head-to-head/:opponentId - Meetings on record (pilot: Battersea Park Astro only)
+router.get('/:id/head-to-head/:opponentId', async (req, res) => {
+  try {
+    const team = await teamRepository.findById(parseInt(req.params.id, 10));
+    const opponent = await teamRepository.findById(parseInt(req.params.opponentId, 10));
+    if (!team || !opponent) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Team not found' } });
+      return;
+    }
+
+    const standings = await standingRepository.findByTeam(team.id);
+    const seasons: SeasonContext[] = [];
+    for (const standing of standings) {
+      const division = await divisionRepository.findById(standing.divisionId);
+      if (!division) continue;
+      const league = await leagueRepository.findById(division.leagueId);
+      const season = await seasonRepository.findById(division.seasonId);
+      if (!league || !season) continue;
+      seasons.push({
+        leagueId: league.externalLeagueId,
+        seasonId: season.externalSeasonId,
+        divisionId: division.externalDivisionId,
+        seasonName: season.name,
+        divisionName: division.name,
+      });
+    }
+
+    const inPilot = seasons.some((s) => PILOT_LEAGUE_EXTERNAL_IDS.includes(s.leagueId));
+    if (!inPilot) {
+      res.json({ success: true, data: { supported: false, pilotLeagueExternalIds: PILOT_LEAGUE_EXTERNAL_IDS } });
+      return;
+    }
+
+    const data = await getHeadToHead(team.externalTeamId, opponent.externalTeamId, seasons);
+    res.json({ success: true, data: { supported: true, ...data } });
+  } catch (err) {
+    logger.error({ err }, 'Head-to-head failed');
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load head-to-head' } });
   }
 });
 
