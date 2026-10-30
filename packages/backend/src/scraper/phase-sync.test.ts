@@ -61,4 +61,22 @@ describe('phase sync', () => {
       .syncPhase(league.id, season.id, 747, 100, { phaseId: 87, name: 'Phase 2' }, result);
     expect(await divisionRepository.findByLeagueAndSeason(league.id, season.id)).toHaveLength(3);
   });
+
+  it('does not overwrite a first-phase division when Spawtz reuses its DivisionId', async () => {
+    const league = await leagueRepository.upsert({ externalLeagueId: 748, name: 'Reused Id League' });
+    const season = await seasonRepository.upsert({ externalSeasonId: 100, name: 'Autumn 2026' });
+    // A first-phase division that already uses id 184, as the phase page will claim it for "Cup"
+    const first = await divisionRepository.upsert({ externalDivisionId: 184, leagueId: league.id, seasonId: season.id, name: 'Division 9' });
+
+    const result = { itemsProcessed: { divisions: 0, teams: 0, standings: 0 } } as never;
+    const ids = await (scraperOrchestrator as never as { syncPhase: (...a: unknown[]) => Promise<number[]> })
+      .syncPhase(league.id, season.id, 748, 100, { phaseId: 87, name: 'Phase 2' }, result);
+
+    expect(ids).toEqual([185]); // only Plate stored
+    const after = await divisionRepository.findByExternalId(184, league.id, season.id);
+    expect(after?.id).toBe(first.id);
+    expect(after?.name).toBe('Division 9');
+    expect(after?.phaseId).toBeNull();
+    expect(await standingRepository.findByDivision(first.id)).toHaveLength(0);
+  });
 });
