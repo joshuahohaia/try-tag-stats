@@ -11,7 +11,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails, Division } from '@trytag/shared';
 import { getFixtureInsights } from '../utils/fixtures';
-import { formatDate, formatTime } from '../utils/format';
+import { formatFixtureDate, fixtureCalendarDate, formatTime, venueCalendarDate } from '../utils/format';
 
 interface FixturesListProps {
   fixtures: FixtureWithTeams[];
@@ -89,9 +89,11 @@ export function FixturesList({
           </HoverCard>
         ));
 
+        const fixtureCalDate = fixtureCalendarDate(fixture.fixtureDate);
         const isPastScheduled =
           fixture.status === 'scheduled' &&
-          new Date(fixture.fixtureDate) < new Date(new Date().toDateString());
+          fixtureCalDate !== '' &&
+          fixtureCalDate < venueCalendarDate();
 
         const fixtureBadge =
           fixture.status === 'completed' && fixture.homeScore !== null ? (
@@ -185,8 +187,8 @@ export function FixturesList({
                   style={{ cursor: isClickable ? 'pointer' : undefined, flex: 1 }}
                 >
                   <Text size="sm" c="dimmed">
-                    {formatDate(fixture.fixtureDate)}
-                    {!compact && fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
+                    {formatFixtureDate(fixture.fixtureDate)}
+                    {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
                   </Text>
                   {!hideDivision && divisionName && (
                     <Text size="xs" c="dimmed" truncate>
