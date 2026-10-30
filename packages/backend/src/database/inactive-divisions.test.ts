@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+
+// Always use a throwaway local database, never a configured remote one.
+vi.hoisted(() => {
+  process.env.TURSO_DATABASE_URL = 'file:./data/test-inactive-divisions.db';
+  process.env.TURSO_AUTH_TOKEN = '';
+});
+
 import { getDatabase } from './connection.js';
+import { initializeSchema } from './schema.js';
 import { syncRunRepository } from './repositories/sync-run.repository.js';
 import {
   leagueRepository,
@@ -8,6 +16,10 @@ import {
 } from './repositories/index.js';
 
 describe('inactive divisions and current season', () => {
+  beforeAll(async () => {
+    await initializeSchema();
+  });
+
   it('hides unseen leagues reversibly and keeps history rows', async () => {
     const oldLeague = await leagueRepository.upsert({ externalLeagueId: 90001, name: 'Old League' });
     const newLeague = await leagueRepository.upsert({ externalLeagueId: 90002, name: 'New League' });
