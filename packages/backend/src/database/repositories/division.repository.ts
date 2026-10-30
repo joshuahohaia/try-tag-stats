@@ -10,6 +10,8 @@ function rowToDivision(row: Row): Division {
     seasonId: row.season_id as number,
     name: row.name as string,
     tier: row.tier as number | null,
+    phaseId: (row.phase_id as number | null) ?? null,
+    phaseName: (row.phase_name as string | null) ?? null,
   };
 }
 
@@ -64,7 +66,7 @@ export const divisionRepository = {
   async findByLeagueAndSeason(leagueId: number, seasonId: number): Promise<Division[]> {
     const db = getDatabase();
     const result = await db.execute({
-      sql: 'SELECT * FROM divisions WHERE league_id = ? AND season_id = ? ORDER BY tier, name',
+      sql: 'SELECT * FROM divisions WHERE league_id = ? AND season_id = ? ORDER BY COALESCE(phase_id, 0), tier, name',
       args: [leagueId, seasonId],
     });
     return result.rows.map(rowToDivision);
@@ -85,15 +87,19 @@ export const divisionRepository = {
     seasonId: number;
     name: string;
     tier?: number;
+    phaseId?: number | null;
+    phaseName?: string | null;
   }): Promise<Division> {
     const db = getDatabase();
     const result = await db.execute({
       sql: `
-        INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, is_active, last_seen_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO divisions (external_division_id, league_id, season_id, name, tier, phase_id, phase_name, is_active, last_seen_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT(external_division_id, league_id, season_id) DO UPDATE SET
           name = excluded.name,
           tier = excluded.tier,
+          phase_id = COALESCE(excluded.phase_id, phase_id),
+          phase_name = COALESCE(excluded.phase_name, phase_name),
           is_active = 1,
           last_seen_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
@@ -105,6 +111,8 @@ export const divisionRepository = {
         data.seasonId,
         data.name,
         data.tier ?? null,
+        data.phaseId ?? null,
+        data.phaseName ?? null,
       ],
     });
     return rowToDivision(result.rows[0]);
