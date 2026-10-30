@@ -4,6 +4,9 @@ import {
   ActionIcon, Group,
 } from '@mantine/core';
 import { TeamCardSkeleton } from '../components/skeletons';
+import { QueryError } from '../components/QueryError';
+import { SlowLoadingHint } from '../components/SlowLoadingHint';
+import { useSlowLoading } from '../hooks/useSlowLoading';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -13,7 +16,8 @@ import { Team } from '@trytag/shared';
 
 function TeamsPage() {
   const [search, setSearch] = useState('');
-  const { data: teams = [], isLoading } = useTeams();
+  const { data: teams = [], isLoading, isError, refetch } = useTeams();
+  const showSlowHint = useSlowLoading(isLoading);
   const { favorites, toggleFavorite, cleanupFavorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
 
@@ -72,8 +76,13 @@ function TeamsPage() {
 
 
             <Stack gap="sm">
-              {isLoading ? (
-                <TeamCardSkeleton count={10} />
+              {isError ? (
+                <QueryError onRetry={() => refetch()} />
+              ) : isLoading ? (
+                <Stack gap="md">
+                  <SlowLoadingHint show={showSlowHint} />
+                  <TeamCardSkeleton count={10} />
+                </Stack>
               ) : teams.length > 0 ? (
                 <>
                   {filteredTeams.length > 0 ? (

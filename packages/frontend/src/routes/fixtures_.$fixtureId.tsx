@@ -16,6 +16,7 @@ import {
 } from '@mantine/core';
 import { IconTrophy, IconCalendar, IconClock, IconMapPin } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
+import { QueryError } from '../components/QueryError';
 import { formatDate, formatTime } from '../utils/format';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
@@ -263,7 +264,7 @@ function HeadToHeadSection({
 function FixtureDetailPage() {
   const { fixtureId } = Route.useParams();
   const parsedId = parseInt(fixtureId, 10);
-  const { data: fixture, isLoading, error } = useFixtureDetail(parsedId);
+  const { data: fixture, isLoading, error, refetch } = useFixtureDetail(parsedId);
 
   if (isLoading) {
     return (
@@ -302,11 +303,15 @@ function FixtureDetailPage() {
   if (error || !fixture) {
     return (
       <Container size="xl" p="md">
-        <Card withBorder>
-          <Text c="dimmed" ta="center" py="xl">
-            Fixture not found
-          </Text>
-        </Card>
+        {error ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <Card withBorder>
+            <Text c="dimmed" ta="center" py="xl">
+              Fixture not found
+            </Text>
+          </Card>
+        )}
       </Container>
     );
   }

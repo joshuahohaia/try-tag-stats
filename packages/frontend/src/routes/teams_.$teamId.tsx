@@ -15,6 +15,7 @@ import {
   Table,
 } from '@mantine/core';
 import { FixtureCardSkeleton } from '../components/skeletons';
+import { QueryError } from '../components/QueryError';
 import { Skeleton } from '@mantine/core';
 import { PositionHistoryChart } from '../components/charts';
 import { FixturesList } from '../components';
@@ -151,7 +152,7 @@ function StatsTable({ seasonStats }: { seasonStats: TeamSeasonStats[] }) {
 
 function TeamDetailPage() {
   const { teamId } = Route.useParams();
-  const { data: teamProfile, isLoading } = useTeam(parseInt(teamId, 10));
+  const { data: teamProfile, isLoading, isError, refetch } = useTeam(parseInt(teamId, 10));
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
 
   const currentDivisionId = teamProfile?.standings?.[0]?.divisionId;
@@ -221,9 +222,15 @@ function TeamDetailPage() {
 
   if (!teamProfile) {
     return (
-      <Card withBorder>
-        <Text c="dimmed" ta="center" py="xl">Team not found</Text>
-      </Card>
+      <Container size="xl" p="md">
+        {isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <Card withBorder>
+            <Text c="dimmed" ta="center" py="xl">Team not found</Text>
+          </Card>
+        )}
+      </Container>
     );
   }
 
