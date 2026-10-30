@@ -16,6 +16,7 @@ import {
 } from '../database/repositories/index.js';
 import { scraperOrchestrator } from '../scraper/index.js';
 import { getHeadToHead, PILOT_LEAGUE_EXTERNAL_IDS, type SeasonContext } from '../scraper/head-to-head.service.js';
+import { invertHeadToHead } from '../scraper/head-to-head.js';
 
 const router = Router();
 
@@ -238,30 +239,43 @@ router.get('/:id/head-to-head/:opponentId', async (req, res) => {
       return;
     }
 
-    const standings = await standingRepository.findByTeam(team.id);
-    const seasons: SeasonContext[] = [];
-    for (const standing of standings) {
-      const division = await divisionRepository.findById(standing.divisionId);
-      if (!division) continue;
-      const league = await leagueRepository.findById(division.leagueId);
-      const season = await seasonRepository.findById(division.seasonId);
-      if (!league || !season) continue;
-      seasons.push({
-        leagueId: league.externalLeagueId,
-        seasonId: season.externalSeasonId,
-        divisionId: division.externalDivisionId,
-        seasonName: season.name,
-        divisionName: division.name,
-      });
-    }
+    const seasonsFor = async (teamId: number): Promise<SeasonContext[]> => {
+      const standings = await standingRepository.findByTeam(teamId);
+      const out: SeasonContext[] = [];
+      for (const standing of standings) {
+        const division = await divisionRepository.findById(standing.divisionId);
+        if (!division) continue;
+        const league = await leagueRepository.findById(division.leagueId);
+        const season = await seasonRepository.findById(division.seasonId);
+        if (!league || !season) continue;
+        out.push({
+          leagueId: league.externalLeagueId,
+          seasonId: season.externalSeasonId,
+          divisionId: division.externalDivisionId,
+          seasonName: season.name,
+          divisionName: division.name,
+        });
+      }
+      return out.filter((s) => PILOT_LEAGUE_EXTERNAL_IDS.includes(s.leagueId));
+    };
 
-    const inPilot = seasons.some((s) => PILOT_LEAGUE_EXTERNAL_IDS.includes(s.leagueId));
-    if (!inPilot) {
+    const [teamSeasons, opponentSeasons] = await Promise.all([seasonsFor(team.id), seasonsFor(opponent.id)]);
+    if (teamSeasons.length === 0 && opponentSeasons.length === 0) {
       res.json({ success: true, data: { supported: false, pilotLeagueExternalIds: PILOT_LEAGUE_EXTERNAL_IDS } });
       return;
     }
 
-    const data = await getHeadToHead(team.externalTeamId, opponent.externalTeamId, seasons);
+    // Always read the pages of the team with the lower Spawtz id (when it has Battersea
+    // seasons), so A v B and B v A share the same cached pages. Flip the view if needed.
+    const teamFirst =
+      teamSeasons.length > 0 &&
+      (opponentSeasons.length === 0 || team.externalTeamId <= opponent.externalTeamId);
+    const base = teamFirst ? team : opponent;
+    const other = teamFirst ? opponent : team;
+    const baseSeasons = teamFirst ? teamSeasons : opponentSeasons;
+
+    const result = await getHeadToHead(base.externalTeamId, other.externalTeamId, baseSeasons);
+    const data = teamFirst ? result : { ...invertHeadToHead(result), complete: result.complete, failedSeasons: result.failedSeasons, busy: result.busy, pilotLeagueExternalIds: result.pilotLeagueExternalIds };
     res.json({ success: true, data: { supported: true, ...data } });
   } catch (err) {
     logger.error({ err }, 'Head-to-head failed');
