@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildHeadToHead, type SeasonResults } from './head-to-head.js';
+import { buildHeadToHead, invertHeadToHead, type SeasonResults } from './head-to-head.js';
 import type { TeamResultRow } from './parsers/team-results.parser.js';
 
 function row(over: Partial<TeamResultRow>): TeamResultRow {
@@ -53,5 +53,14 @@ describe('buildHeadToHead', () => {
     ]);
     expect(r.record).toMatchObject({ played: 2, lost: 1, drawn: 1, pointsFor: 16, pointsAgainst: 20 });
     expect(r.seasonsCovered).toEqual(['S94 - Div', 'S95 - Div']);
+  });
+
+  it('inverts to the other team\'s point of view', () => {
+    const r = invertHeadToHead(buildHeadToHead(1, [season([
+      row({ teamScore: 7, opponentScore: 11 }),
+      row({ date: '2026-01-08', teamScore: 5, opponentScore: 5 }),
+    ])]));
+    expect(r.record).toMatchObject({ played: 2, won: 1, drawn: 1, lost: 0, pointsFor: 16, pointsAgainst: 12 });
+    expect(r.counted.find((m) => m.date === '2026-01-01')).toMatchObject({ teamScore: 11, opponentScore: 7, result: 'W' });
   });
 });
