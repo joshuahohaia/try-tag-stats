@@ -63,7 +63,7 @@ export function MeetingsOnRecord({
   }
   if (isError || !data || !data.supported) return null;
 
-  const { record, counted, uncounted, seasonsCovered, complete } = data;
+  const { record, counted, uncounted, seasonsCovered, complete, busy } = data;
 
   return (
     <Card withBorder>
@@ -93,8 +93,8 @@ export function MeetingsOnRecord({
       {uncounted.length > 0 && (
         <Stack gap="xs" mt="md">
           <Text size="sm" c="dimmed">
-            Not counted: Spawtz printed a label (friendly, playoff) next to these games and does not say
-            which game it belongs to.
+            Not counted: Spawtz printed a label (such as friendly or playoff) next to these games and does
+            not say which game it belongs to, so they are listed but left out of the record.
           </Text>
           <MeetingRows meetings={uncounted} showLabels />
         </Stack>
@@ -102,7 +102,10 @@ export function MeetingsOnRecord({
 
       <Text size="xs" c="dimmed" mt="md">
         Seasons checked: {seasonsCovered.length > 0 ? seasonsCovered.join('; ') : 'none'}.
-        {!complete && ' Some seasons could not be loaded, so this may be incomplete.'}
+        {!complete &&
+          (busy
+            ? ' Some seasons were not loaded because the site is rate-limiting reads of Spawtz; try again in a minute.'
+            : ' Some seasons could not be loaded or were over the per-request limit, so this may be incomplete.')}
       </Text>
     </Card>
   );
