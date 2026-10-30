@@ -4,9 +4,9 @@ import {
   Image,
   Group,
   Stack,
+  Text,
   Tooltip,
   UnstyledButton,
-  rem,
   Center,
   Box,
 } from '@mantine/core';
@@ -33,25 +33,23 @@ function NavbarLink({ icon: Icon, label, active, to }: NavbarLinkProps) {
       <UnstyledButton
         component={Link}
         to={to}
-        style={(theme) => ({
-          width: rem(50),
-          height: rem(50),
-          borderRadius: theme.radius.md,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: active ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
-          backgroundColor: active ? 'var(--mantine-color-brand-0)' : 'transparent',
-          '&:hover': {
-            backgroundColor: active ? 'var(--mantine-color-brand-0)' : 'var(--mantine-color-gray-0)',
-            color: active ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-black)',
-          },
-        })}
+        className={`nav-link${active ? ' nav-link--active' : ''}`}
+        aria-label={label}
+        aria-current={active ? 'page' : undefined}
       >
-        <Icon style={{ width: rem(22), height: rem(22) }} stroke={1.5} />
+        <Icon size={22} stroke={1.5} />
       </UnstyledButton>
     </Tooltip>
   );
+}
+
+/**
+ * A nav item stays highlighted for its nested routes too
+ * (e.g. Teams on /teams/123). Home only matches exactly.
+ */
+function isNavActive(itemTo: string, currentPath: string): boolean {
+  if (itemTo === '/') return currentPath === '/';
+  return currentPath === itemTo || currentPath.startsWith(`${itemTo}/`);
 }
 
 function RootLayout() {
@@ -97,7 +95,7 @@ function RootLayout() {
             <NavbarLink
               key={item.to}
               {...item}
-              active={currentPath === item.to}
+              active={isNavActive(item.to, currentPath)}
             />
           ))}
         </Stack>
@@ -116,23 +114,31 @@ function RootLayout() {
       {/* Mobile Bottom Navigation */}
       <AppShell.Footer p={0} hiddenFrom="sm" style={{ display: 'flex', alignItems: 'center' }}>
         <Group justify="space-around" w="100%" px="xs" gap={0}>
-          {navItems.map((item) => (
-            <UnstyledButton
-              key={item.to}
-              component={Link}
-              to={item.to}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '8px 0',
-                color: currentPath === item.to ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
-              }}
-            >
-              <item.icon size={24} stroke={1.5} />
-            </UnstyledButton>
-          ))}
+          {navItems.map((item) => {
+            const active = isNavActive(item.to, currentPath);
+            return (
+              <UnstyledButton
+                key={item.to}
+                component={Link}
+                to={item.to}
+                aria-current={active ? 'page' : undefined}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                  padding: '6px 0',
+                  color: active ? 'var(--mantine-color-brand-6)' : 'var(--mantine-color-dimmed)',
+                }}
+              >
+                <item.icon size={22} stroke={1.5} />
+                <Text fz={10} lh={1.2} fw={active ? 600 : 400} c="inherit">
+                  {item.label}
+                </Text>
+              </UnstyledButton>
+            );
+          })}
         </Group>
       </AppShell.Footer>
     </AppShell>
