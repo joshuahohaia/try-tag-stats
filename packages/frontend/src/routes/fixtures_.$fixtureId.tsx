@@ -17,6 +17,7 @@ import {
 import { IconTrophy, IconCalendar, IconClock, IconMapPin } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
+import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { formatDate, formatTime } from '../utils/format';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
@@ -406,6 +407,13 @@ function FixtureDetailPage() {
             homeTeamId={fixture.homeTeam.id}
             homeTeamName={fixture.homeTeam.name}
             awayTeamName={fixture.awayTeam.name}
+          />
+
+          <MeetingsOnRecord
+            teamId={fixture.homeTeam.id}
+            teamName={fixture.homeTeam.name}
+            opponentId={fixture.awayTeam.id}
+            opponentName={fixture.awayTeam.name}
           />
         </Stack>
       </Container>
