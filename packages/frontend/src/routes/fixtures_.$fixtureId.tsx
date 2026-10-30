@@ -190,9 +190,9 @@ function HeadToHeadSection({
   if (totalGames === 0) {
     return (
       <Card withBorder>
-        <Title order={4} mb="md">Head to Head</Title>
+        <Title order={4} mb="md">Head to Head (this season)</Title>
         <Text c="dimmed" ta="center" py="md">
-          No previous meetings between these teams
+          No meetings found in this season's data
         </Text>
       </Card>
     );
@@ -203,7 +203,7 @@ function HeadToHeadSection({
 
   return (
     <Card withBorder>
-      <Title order={4} mb="md">Head to Head</Title>
+      <Title order={4} mb="md">Head to Head (this season)</Title>
 
       <Group justify="space-between" mb="xs">
         <Text size="sm" fw={600} c="blue">{homeTeamName}: {homeWins} wins</Text>
