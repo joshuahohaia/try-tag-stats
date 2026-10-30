@@ -16,7 +16,7 @@ export const LIMITS = {
   successTtlMs: 6 * 60 * 60 * 1000,
   /** A failed page is not retried for this long. */
   failureTtlMs: 10 * 60 * 1000,
-  /** Most uncached Spawtz pages fetched per minute across all visitors. */
+  /** Most uncached Spawtz pages fetched per minute by this server process. Kept in memory, so it is per process, not shared across instances or restarts. */
   maxFetchesPerMinute: 30,
   /** Most cached pages kept in memory. */
   maxCacheEntries: 300,
