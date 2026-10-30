@@ -21,6 +21,10 @@ import {
 } from '../components';
 import { QueryError } from '../components/QueryError';
 import { useState, useEffect, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
+import type { StandingWithTeam } from '@trytag/shared';
+import { apiClient, extractData } from '../api/client';
+import { pickDefaultDivision, summarisePhases } from '../utils/defaultDivision';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import {
   useDivisionStandings,
@@ -90,17 +94,37 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
     }
   }, [seasons, divisions, selectedSeasonId, divisionsLoading, triedSeasons]);
 
-  // Latest phase (highest Spawtz PhaseId; the first phase has none). Its first division becomes the
-  // default only once it has played games, so a phase that is announced but not started is not shown first.
-  const latestPhaseDivision = useMemo(() => {
-    const phased = divisions?.filter((d) => d.phaseId != null) ?? [];
-    if (phased.length === 0) return undefined;
-    const latest = Math.max(...phased.map((d) => d.phaseId as number));
-    return phased.find((d) => d.phaseId === latest);
-  }, [divisions]);
-  const { data: latestPhaseStandings, isLoading: latestPhaseLoading } = useDivisionStandings(
-    latestPhaseDivision?.id ?? 0
+  // Later phases are identified by their opaque PhaseId, which is not used for ordering. The default
+  // moves off the first division only when exactly one later phase has started (see pickDefaultDivision).
+  const phaseDivisions = useMemo(
+    () => divisions?.filter((d) => d.phaseId != null) ?? [],
+    [divisions]
   );
+  const phaseStandings = useQueries({
+    queries: phaseDivisions.map((d) => ({
+      queryKey: ['divisions', d.id, 'standings'],
+      queryFn: async () => {
+        const response = await apiClient.get<{ success: boolean; data: StandingWithTeam[] }>(
+          `/divisions/${d.id}/standings`
+        );
+        return extractData(response);
+      },
+    })),
+  });
+  const phasesStarted = summarisePhases(
+    divisions ?? [],
+    new Map(
+      phaseDivisions.map((d, i) => [
+        d.id,
+        {
+          loading: phaseStandings[i].isLoading,
+          played: phaseStandings[i].data?.map((s) => s.played) ?? [],
+        },
+      ])
+    )
+  );
+
+  const phasesStartedKey = JSON.stringify(phasesStarted);
 
   // Set default division
   useEffect(() => {
@@ -108,15 +132,13 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
       // Keep the current selection when it is still valid, otherwise pick a default.
       const exists = divisions.some((d) => String(d.id) === selectedDivisionId);
       if (!selectedDivisionId || !exists) {
-        if (latestPhaseDivision && latestPhaseLoading) return; // wait for the phase check
-        const started = latestPhaseStandings?.some((s) => s.played > 0) ?? false;
-        const pick = latestPhaseDivision && started ? latestPhaseDivision : divisions[0];
-        setSelectedDivisionId(String(pick.id));
+        const pick = pickDefaultDivision(divisions, phasesStarted);
+        if (pick) setSelectedDivisionId(String(pick.id));
       }
     } else if (divisions && divisions.length === 0) {
       setSelectedDivisionId(null);
     }
-  }, [divisions, selectedDivisionId, latestPhaseDivision, latestPhaseLoading, latestPhaseStandings]);
+  }, [divisions, selectedDivisionId, phasesStartedKey]);
 
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(
     selectedDivisionId ? parseInt(selectedDivisionId, 10) : 0
