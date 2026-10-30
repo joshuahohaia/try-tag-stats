@@ -36,14 +36,15 @@ describe('buildHeadToHead', () => {
     expect(r.seasonsCovered).toHaveLength(1);
   });
 
-  it('lists labelled games separately and leaves them out of the record', () => {
+  it('counts labelled games in the record and reports how many have a label', () => {
     const r = buildHeadToHead(1, [season([
       row({ date: '2026-01-01' }),
       row({ date: '2026-01-08', labelBelow: 'Interdivisional Friendly', teamScore: 10, opponentScore: 0 }),
       row({ date: '2026-01-15', labelAbove: '3rd/4th Playoff', teamScore: 2, opponentScore: 2 }),
     ])]);
-    expect(r.record).toMatchObject({ played: 1, won: 1 });
-    expect(r.uncounted.map((m) => m.labels[0])).toEqual(['3rd/4th Playoff', 'Interdivisional Friendly']);
+    expect(r.record).toMatchObject({ played: 3, won: 2, drawn: 1, pointsFor: 17, pointsAgainst: 5 });
+    expect(r.labelledCount).toBe(2);
+    expect(r.meetings.map((m) => m.labels[0])).toEqual(['3rd/4th Playoff', 'Interdivisional Friendly', undefined]);
   });
 
   it('sums across seasons and reports coverage', () => {
@@ -61,6 +62,6 @@ describe('buildHeadToHead', () => {
       row({ date: '2026-01-08', teamScore: 5, opponentScore: 5 }),
     ])]));
     expect(r.record).toMatchObject({ played: 2, won: 1, drawn: 1, lost: 0, pointsFor: 16, pointsAgainst: 12 });
-    expect(r.counted.find((m) => m.date === '2026-01-01')).toMatchObject({ teamScore: 11, opponentScore: 7, result: 'W' });
+    expect(r.meetings.find((m) => m.date === '2026-01-01')).toMatchObject({ teamScore: 11, opponentScore: 7, result: 'W' });
   });
 });
