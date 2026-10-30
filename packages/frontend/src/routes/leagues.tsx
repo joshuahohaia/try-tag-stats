@@ -14,6 +14,9 @@ import {
   Container,
 } from '@mantine/core';
 import { LeagueCardSkeleton } from '../components/skeletons';
+import { QueryError } from '../components/QueryError';
+import { SlowLoadingHint } from '../components/SlowLoadingHint';
+import { useSlowLoading } from '../hooks/useSlowLoading';
 import { IconSearch, IconStarFilled, IconMapPin, IconCalendar, IconTrophy, IconUsers, IconLayoutGrid } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
@@ -51,9 +54,10 @@ function LeaguesPage() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 48em)');
 
-  const { data: leagues, isLoading: leaguesLoading } = useLeaguesSummary();
-  const { data: regions, isLoading: regionsLoading } = useRegions();
+  const { data: leagues, isLoading: leaguesLoading, isError: leaguesError, refetch: refetchLeagues } = useLeaguesSummary();
+  const { data: regions, isLoading: regionsLoading, isError: regionsError, refetch: refetchRegions } = useRegions();
   const { hasTeamInLeague } = useFavoriteTeams();
+  const showSlowHint = useSlowLoading(leaguesLoading || regionsLoading);
 
   // Create region lookup map
   const regionMap = useMemo(() => {
@@ -85,6 +89,7 @@ function LeaguesPage() {
               <Title order={1} mb="xs">Leagues</Title>
               {!isMobile && <Text c="dimmed">Browse all Try Tag Rugby leagues across the UK</Text>}
             </div>
+            <SlowLoadingHint show={showSlowHint} />
           </Stack>
         </Container>
         <Container size="xl" p="md" w="100%" flex={1}>
@@ -125,7 +130,14 @@ function LeaguesPage() {
 
       <ScrollArea flex={1} type="auto">
         <Container size="xl" p="md">
-          {filteredLeagues.length === 0 ? (
+          {leaguesError || regionsError ? (
+            <QueryError
+              onRetry={() => {
+                refetchLeagues();
+                refetchRegions();
+              }}
+            />
+          ) : filteredLeagues.length === 0 ? (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
                 No leagues found. Try adjusting your filters.
@@ -253,11 +265,13 @@ function LeaguesPage() {
         </Container>
       </ScrollArea>
 
-      <Container size="xl" w="100%" p="md" flex={0}>
-        <Text c="dimmed" size="sm">
-          Showing {filteredLeagues.length} of {leagues?.length || 0} leagues
-        </Text>
-      </Container>
+      {!leaguesError && !regionsError && (
+        <Container size="xl" w="100%" p="md" flex={0}>
+          <Text c="dimmed" size="sm">
+            Showing {filteredLeagues.length} of {leagues?.length || 0} leagues
+          </Text>
+        </Container>
+      )}
     </Stack>
   );
 }
