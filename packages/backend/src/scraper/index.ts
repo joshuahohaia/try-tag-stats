@@ -120,6 +120,7 @@ class ScraperOrchestrator {
       // Step 4: Save leagues and divisions, then sync division data
       const processedDivisions = new Set<string>();
       const processedPhaseLeagues = new Set<string>();
+      const pendingPhases: Array<{ leagueDbId: number; seasonDbId: number; leagueId: number; seasonId: number; leagueName: string; phases: StandingsPhase[] }> = [];
 
       for (const item of items) {
         try {
@@ -162,23 +163,32 @@ class ScraperOrchestrator {
           // Sync division data (standings and fixtures)
           const phases = await this.syncDivisionData(division.id, item.leagueId, item.seasonId, item.divisionId, result);
 
-          // Later phases (e.g. Cup and Plate) are not on the league list. Fetch each extra
-          // phase page once per league and season, only when the dropdown offers one.
+          // Later phases (e.g. Cup and Plate) are not on the league list. Remember which
+          // league and season offer extra phases; they are fetched after every first-phase
+          // division has been stored, so a reused DivisionId can never overwrite one.
           const phaseKey = `${item.leagueId}-${item.seasonId}`;
           if (!processedPhaseLeagues.has(phaseKey)) {
             processedPhaseLeagues.add(phaseKey);
-            for (const phase of phases.filter((p) => p.phaseId !== 0)) {
-              try {
-                const ids = await this.syncPhase(league.id, season.id, item.leagueId, item.seasonId, phase, result);
-                for (const id of ids) processedDivisions.add(`${item.leagueId}-${item.seasonId}-${id}`);
-              } catch (err) {
-                this.logError(`Failed to sync phase ${phase.name} for league ${item.leagueName}`, err);
-              }
+            const extra = phases.filter((p) => p.phaseId !== 0);
+            if (extra.length > 0) {
+              pendingPhases.push({ leagueDbId: league.id, seasonDbId: season.id, leagueId: item.leagueId, seasonId: item.seasonId, leagueName: item.leagueName, phases: extra });
             }
           }
 
         } catch (err) {
           this.logError(`Failed to process league item ${item.leagueName}`, err);
+        }
+      }
+
+      // Step 5: later phases, one page per extra phase per league and season
+      for (const job of pendingPhases) {
+        for (const phase of job.phases) {
+          try {
+            const ids = await this.syncPhase(job.leagueDbId, job.seasonDbId, job.leagueId, job.seasonId, phase, result);
+            for (const id of ids) processedDivisions.add(`${job.leagueId}-${job.seasonId}-${id}`);
+          } catch (err) {
+            this.logError(`Failed to sync phase ${phase.name} for league ${job.leagueName}`, err);
+          }
         }
       }
 
@@ -410,6 +420,16 @@ class ScraperOrchestrator {
     for (const table of tables) {
       if (table.divisionId === null || seen.includes(table.divisionId)) {
         logger.warn({ leagueId, seasonId, phase: phase.name, heading: table.heading }, 'Skipped phase table without a unique division id');
+        continue;
+      }
+      // Fail-safe: if Spawtz reused this DivisionId for a division we already store under
+      // another phase (or the first phase), leave that row alone instead of overwriting it.
+      const existing = await divisionRepository.findByExternalId(table.divisionId, leagueDbId, seasonDbId);
+      if (existing && (existing.phaseId ?? null) !== phase.phaseId) {
+        logger.warn(
+          { leagueId, seasonId, phase: phase.name, divisionId: table.divisionId, existingPhaseId: existing.phaseId ?? null },
+          'Skipped phase table: DivisionId already stored under a different phase'
+        );
         continue;
       }
       const division = await divisionRepository.upsert({
