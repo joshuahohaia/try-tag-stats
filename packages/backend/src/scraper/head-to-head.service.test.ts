@@ -30,7 +30,7 @@ describe('head-to-head service limits', () => {
     await getHeadToHead(1, 9739, [ctx(1)]);
     const other = await getHeadToHead(1, 8024, [ctx(1)]);
     expect(fetchWithParams).toHaveBeenCalledTimes(1);
-    expect(other.record.played).toBe(0 + other.counted.length);
+    expect(other.record.played).toBe(other.meetings.length);
   });
 
   it('does not retry a failed page straight away', async () => {
