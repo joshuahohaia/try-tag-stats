@@ -10,11 +10,11 @@ on:
           - check
           - sync
         default: check
-  # Daily schedule is off until BACKEND_URL and CRON_SECRET are set and a manual
-  # run has succeeded. To enable, uncomment. GitHub cron is UTC only: 06:17 UTC is
-  # 06:17 in London in winter and 07:17 in summer. Runs can start several minutes late.
-  # schedule:
-  #   - cron: '17 6 * * *'
+  # Daily sync. GitHub cron is UTC only: 06:17 UTC is 06:17 in London in winter and
+  # 07:17 in summer. Runs can start several minutes late. Scheduled runs always do a
+  # full sync (the mode input only exists for manual runs, which default to check).
+  schedule:
+    - cron: '17 6 * * *'
 
 concurrency:
   group: sync-data
