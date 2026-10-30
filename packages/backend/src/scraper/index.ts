@@ -275,29 +275,7 @@ class ScraperOrchestrator {
       logger.debug({ divisionId }, 'Fetching fixtures...');
       const fixturesHtml = await scraperClient.fetchWithParams(ENDPOINTS.FIXTURES, params);
       const { fixtures } = parseFixtures(fixturesHtml);
-
-      for (const fixture of fixtures) {
-        // Ensure teams exist
-        const homeTeam = await teamRepository.upsert(fixture.homeTeamId, fixture.homeTeamName);
-        const awayTeam = await teamRepository.upsert(fixture.awayTeamId, fixture.awayTeamName);
-
-        // Upsert fixture
-        await fixtureRepository.upsert({
-          externalFixtureId: fixture.fixtureId ?? null,
-          divisionId,
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          fixtureDate: fixture.date,
-          fixtureTime: fixture.time,
-          pitch: fixture.pitch,
-          roundNumber: fixture.round ?? null,
-          homeScore: fixture.homeScore,
-          awayScore: fixture.awayScore,
-          status: fixture.status,
-          isForfeit: false,
-        });
-        result.itemsProcessed.fixtures++;
-      }
+      await this.saveFixtures(divisionId, fixtures, result);
 
     } catch (err) {
       this.logError(`Failed to sync fixtures for division ${divisionId}`, err);
@@ -395,6 +373,31 @@ class ScraperOrchestrator {
     }
   }
 
+  /** Stores parsed fixtures (and the teams they mention) for one division. */
+  private async saveFixtures(divisionId: number, fixtures: ScrapedFixture[], result: SyncResult): Promise<void> {
+    for (const fixture of fixtures) {
+      // Ensure teams exist
+      const homeTeam = await teamRepository.upsert(fixture.homeTeamId, fixture.homeTeamName);
+      const awayTeam = await teamRepository.upsert(fixture.awayTeamId, fixture.awayTeamName);
+
+      await fixtureRepository.upsert({
+        externalFixtureId: fixture.fixtureId ?? null,
+        divisionId,
+        homeTeamId: homeTeam.id,
+        awayTeamId: awayTeam.id,
+        fixtureDate: fixture.date,
+        fixtureTime: fixture.time,
+        pitch: fixture.pitch,
+        roundNumber: fixture.round ?? null,
+        homeScore: fixture.homeScore,
+        awayScore: fixture.awayScore,
+        status: fixture.status,
+        isForfeit: false,
+      });
+      result.itemsProcessed.fixtures++;
+    }
+  }
+
   /**
    * Standings for a later phase (e.g. Cup and Plate). One request returns every
    * table of the phase; each table becomes its own division, identified by the
@@ -443,6 +446,22 @@ class ScraperOrchestrator {
       result.itemsProcessed.divisions++;
       await this.saveStandings(division.id, table.standings, result);
       seen.push(table.divisionId);
+
+      // The fixtures page only returns a phase's fixtures when PhaseId is sent together with the
+      // division. Without it Spawtz answers with the first phase, which has no upcoming rows.
+      try {
+        const fixturesHtml = await scraperClient.fetchWithParams(ENDPOINTS.FIXTURES, {
+          VenueId: '0',
+          LeagueId: leagueId,
+          SeasonId: seasonId,
+          DivisionId: table.divisionId,
+          PhaseId: phase.phaseId,
+        });
+        const { fixtures } = parseFixtures(fixturesHtml);
+        await this.saveFixtures(division.id, fixtures, result);
+      } catch (err) {
+        this.logError(`Failed to sync fixtures for phase division ${table.divisionId}`, err);
+      }
     }
     logger.info({ leagueId, seasonId, phase: phase.name, divisions: seen.length }, 'Phase standings synced');
     return seen;
