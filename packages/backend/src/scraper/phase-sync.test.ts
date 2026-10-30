@@ -19,7 +19,7 @@ vi.mock('./client.js', () => ({
 import { initializeSchema } from '../database/schema.js';
 import { leagueRepository, seasonRepository, divisionRepository, standingRepository } from '../database/repositories/index.js';
 import { scraperClient } from './client.js';
-import { fixtureRepository } from '../database/repositories/index.js';
+import { fixtureRepository, teamRepository } from '../database/repositories/index.js';
 import { scraperOrchestrator } from './index.js';
 
 describe('phase sync', () => {
@@ -31,6 +31,9 @@ describe('phase sync', () => {
     const league = await leagueRepository.upsert({ externalLeagueId: 747, name: 'Battersea Park Astro' });
     const season = await seasonRepository.upsert({ externalSeasonId: 100, name: 'Autumn 2026' });
     const first = await divisionRepository.upsert({ externalDivisionId: 8727, leagueId: league.id, seasonId: season.id, name: 'Division 1' });
+
+    // A team that already exists from the first phase (same Spawtz team id as a Cup fixture)
+    const existingTeam = await teamRepository.upsert(10442, 'Popping Tags');
 
     const result = { itemsProcessed: { divisions: 0, teams: 0, standings: 0, fixtures: 0 } } as never;
     const ids = await (scraperOrchestrator as never as {
@@ -70,6 +73,14 @@ describe('phase sync', () => {
     const cupFixtures = await fixtureRepository.findByDivision(cup.id);
     expect(cupFixtures.length).toBe(3);
     expect(cupFixtures.map((f) => f.fixtureDate)).toEqual(['2026-11-02', '2026-11-02', '2026-11-02']);
+
+    // Team identity is preserved: the Cup fixture reuses the existing team row, so anything keyed by
+    // that team (favourites, team pages) sees the phase fixture, attached to the Cup division.
+    const teamFixtures = await fixtureRepository.findByTeam(existingTeam.id);
+    // (The mocked fixtures page is the same for Cup and Plate, so the team has one fixture per division.)
+    expect(teamFixtures.map((f) => f.divisionId).sort()).toEqual([cup.id, plate.id].sort());
+    for (const f of teamFixtures) expect([f.homeTeam.id, f.awayTeam.id]).toContain(existingTeam.id);
+    expect(await teamRepository.upsert(10442, 'Popping Tags')).toMatchObject({ id: existingTeam.id });
 
     // Re-running updates in place (no duplicates) and keeps the phase label
     await (scraperOrchestrator as never as { syncPhase: (...a: unknown[]) => Promise<number[]> })
