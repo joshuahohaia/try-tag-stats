@@ -25,6 +25,7 @@ import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import { DataFreshness } from '../components/DataFreshness';
 import { useUpcomingFixtures } from '../hooks/useFixtures';
 import { useDivisions, useDivisionsStandings, useDivisionsStatistics, useDivisionStatistics } from '../hooks/useDivisions';
 import type { Team, StandingWithDivision, FixtureWithTeams } from '@trytag/shared';
@@ -596,6 +597,9 @@ function HomePage() {
             </Card>
           )}
 
+          <Group justify="center" pt="xs">
+            <DataFreshness />
+          </Group>
         </Stack>
       </Container>
     </ScrollArea >

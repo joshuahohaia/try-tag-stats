@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useFavoriteTeams } from '../hooks/useFavorites';
+import { DataFreshness } from '../components/DataFreshness';
 
 const GITHUB_REPO = 'https://github.com/joshuahohaia/try-tag-stats';
 const NEW_ISSUE_URL = `${GITHUB_REPO}/issues/new`;
@@ -172,6 +173,10 @@ function SettingsPage() {
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">Version</Text>
                 <Text size="sm">1.0.0</Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">Data updates</Text>
+                <DataFreshness />
               </Group>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">Source Code</Text>
