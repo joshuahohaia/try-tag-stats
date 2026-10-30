@@ -19,6 +19,7 @@ import {
   StandingsTable,
   FixturesList,
 } from '../components';
+import { QueryError } from '../components/QueryError';
 import { useState, useEffect, useMemo } from 'react';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import {
@@ -35,8 +36,8 @@ function LeagueDetailPage() {
 }
 
 function LeagueContent({ leagueId }: { leagueId: number }) {
-  const { data: league, isLoading: leagueLoading } = useLeague(leagueId);
-  const { data: seasons, isLoading: seasonsLoading } = useLeagueSeasons(leagueId);
+  const { data: league, isLoading: leagueLoading, isError: leagueError, refetch: refetchLeague } = useLeague(leagueId);
+  const { data: seasons, isLoading: seasonsLoading, isError: seasonsError, refetch: refetchSeasons } = useLeagueSeasons(leagueId);
 
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string | null>(null);
@@ -144,11 +145,22 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
 
   if (!league) {
     return (
-      <Card withBorder>
-        <Text c="dimmed" ta="center" py="xl">
-          League not found
-        </Text>
-      </Card>
+      <Container size="xl" p="md">
+        {leagueError || seasonsError ? (
+          <QueryError
+            onRetry={() => {
+              refetchLeague();
+              refetchSeasons();
+            }}
+          />
+        ) : (
+          <Card withBorder>
+            <Text c="dimmed" ta="center" py="xl">
+              League not found
+            </Text>
+          </Card>
+        )}
+      </Container>
     );
   }
 
