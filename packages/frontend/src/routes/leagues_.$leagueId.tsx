@@ -157,7 +157,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
       {/* Sticky Header */}
       <Box style={{ flexShrink: 0 }}>
         <Container size="xl" p="md">
-          <Group justify="space-between" align="flex-start" mb="md">
+          <Group justify="space-between" align="flex-start" mb="md" wrap="wrap">
             <div>
               <Title lineClamp={2} order={1} mb="xs">
                 {league.name}
@@ -181,7 +181,7 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
                 onChange={setSelectedDivisionId}
                 placeholder="Select Division"
                 disabled={!divisions || divisions.length === 0}
-                w={150}
+                w={{ base: 190, sm: 260 }}
               />
             </Group>
           </Group>
