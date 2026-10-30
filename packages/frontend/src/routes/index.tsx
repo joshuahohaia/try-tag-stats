@@ -18,6 +18,9 @@ import {
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
+import { QueryError } from '../components/QueryError';
+import { SlowLoadingHint } from '../components/SlowLoadingHint';
+import { useSlowLoading } from '../hooks/useSlowLoading';
 import { FixturesList } from '../components';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconHistory, IconFlame } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -292,12 +295,20 @@ function HomePage() {
   }, [teamQueries]);
 
   const isLoadingTeams = teamQueries.some(q => q.isLoading);
+  const isErrorTeams = teamQueries.some(q => q.isError);
 
   // If user has favorites, only fetch for those. Otherwise fetch global (top 5).
-  const { data: upcomingFixtures, isLoading: fixturesLoading } = useUpcomingFixtures(
+  const {
+    data: upcomingFixtures,
+    isLoading: fixturesLoading,
+    isError: fixturesError,
+    refetch: refetchUpcomingFixtures,
+  } = useUpcomingFixtures(
     hasFavorites ? favoriteIds : undefined,
     5
   );
+
+  const showSlowHint = useSlowLoading(fixturesLoading || isLoadingTeams);
 
   // Derive recent fixtures from team profiles (already fetched) instead of separate API call
   const recentFixtures = useMemo(() => {
@@ -376,6 +387,7 @@ function HomePage() {
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md">
         <Stack gap="md">
+          <SlowLoadingHint show={showSlowHint} />
           {!hasFavorites && (
             <Card withBorder bg="green.0">
               <Stack align="center">
@@ -503,7 +515,9 @@ function HomePage() {
                   View All
                 </Button>
               </Group>
-              {fixturesLoading || standingsLoading || statsLoading || divisionsLoading ? (
+              {fixturesError ? (
+                <QueryError onRetry={() => refetchUpcomingFixtures()} />
+              ) : fixturesLoading || standingsLoading || statsLoading || divisionsLoading ? (
                 <FixtureCardSkeleton count={5} compact />
               ) : upcomingFixtures && upcomingFixtures.length > 0 ? (
                 <FixturesList
@@ -534,7 +548,9 @@ function HomePage() {
                   View All
                 </Button>
               </Group>
-              {isLoadingTeams || standingsLoading || statsLoading || divisionsLoading ? (
+              {hasFavorites && isErrorTeams ? (
+                <QueryError onRetry={() => teamQueries.forEach((q) => q.refetch())} />
+              ) : isLoadingTeams || standingsLoading || statsLoading || divisionsLoading ? (
                 <FixtureCardSkeleton count={5} compact />
               ) : recentFixtures && recentFixtures.length > 0 ? (
                 <FixturesList
