@@ -15,16 +15,22 @@ function rowToLeague(row: Row): League {
 }
 
 export const leagueRepository = {
-  async findAll(): Promise<League[]> {
+  async findAll(includeInactive = false): Promise<League[]> {
     const db = getDatabase();
-    const result = await db.execute('SELECT * FROM leagues ORDER BY name');
+    const result = await db.execute(
+      includeInactive
+        ? 'SELECT * FROM leagues l ORDER BY l.name'
+        : `SELECT * FROM leagues l WHERE EXISTS (SELECT 1 FROM divisions da WHERE da.league_id = l.id AND da.is_active = 1) ORDER BY l.name`
+    );
     return result.rows.map(rowToLeague);
   },
 
-  async findByRegion(regionId: number): Promise<League[]> {
+  async findByRegion(regionId: number, includeInactive = false): Promise<League[]> {
     const db = getDatabase();
     const result = await db.execute({
-      sql: 'SELECT * FROM leagues WHERE region_id = ? ORDER BY name',
+      sql: includeInactive
+        ? 'SELECT * FROM leagues l WHERE l.region_id = ? ORDER BY l.name'
+        : `SELECT * FROM leagues l WHERE l.region_id = ? AND EXISTS (SELECT 1 FROM divisions da WHERE da.league_id = l.id AND da.is_active = 1) ORDER BY l.name`,
       args: [regionId],
     });
     return result.rows.map(rowToLeague);
@@ -85,10 +91,19 @@ export const leagueRepository = {
     return rowToLeague(result.rows[0]);
   },
 
-  async findAllWithSummary(regionId?: number): Promise<LeagueSummary[]> {
+  async findAllWithSummary(regionId?: number, includeInactive = false): Promise<LeagueSummary[]> {
     const db = getDatabase();
-    const regionFilter = regionId ? 'WHERE l.region_id = ?' : '';
-    const args = regionId ? [regionId] : [];
+    const conditions: string[] = [];
+    const args: number[] = [];
+    if (regionId) {
+      conditions.push('l.region_id = ?');
+      args.push(regionId);
+    }
+    if (!includeInactive) {
+      conditions.push('EXISTS (SELECT 1 FROM divisions da WHERE da.league_id = l.id AND da.is_active = 1)');
+    }
+    const activeSeason = includeInactive ? '' : 'AND d2.is_active = 1';
+    const regionFilter = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Use the most recent season (highest season_id) for each league instead of is_current flag
     const result = await db.execute({
@@ -100,14 +115,14 @@ export const leagueRepository = {
             FROM standings s
             JOIN divisions d ON s.division_id = d.id
             WHERE d.league_id = l.id AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ), 0) as team_count,
           COALESCE((
             SELECT COUNT(*)
             FROM divisions d
             WHERE d.league_id = l.id AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ), 0) as division_count,
           (
@@ -116,7 +131,7 @@ export const leagueRepository = {
             JOIN divisions d ON s.division_id = d.id
             JOIN teams t ON s.team_id = t.id
             WHERE d.league_id = l.id AND s.position = 1 AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ) as leader_team_name,
           COALESCE((
@@ -124,7 +139,7 @@ export const leagueRepository = {
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
             WHERE d.league_id = l.id AND f.home_score IS NOT NULL AND f.away_score IS NOT NULL AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ), 0) as fixtures_played,
           COALESCE((
@@ -132,7 +147,7 @@ export const leagueRepository = {
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
             WHERE d.league_id = l.id AND f.home_score IS NULL AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ), 0) as fixtures_remaining,
           (
@@ -140,7 +155,7 @@ export const leagueRepository = {
             FROM fixtures f
             JOIN divisions d ON f.division_id = d.id
             WHERE d.league_id = l.id AND f.home_score IS NULL AND f.fixture_date >= date('now') AND d.season_id = (
-              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id
+              SELECT MAX(d2.season_id) FROM divisions d2 WHERE d2.league_id = l.id ${activeSeason}
             )
           ) as next_fixture_date
         FROM leagues l

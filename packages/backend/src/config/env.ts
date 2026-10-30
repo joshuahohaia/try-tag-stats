@@ -7,6 +7,8 @@ export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   cronSecret: process.env.CRON_SECRET || '',
+  // Off by default: divisions missing from a sync are only recorded (is_active), not hidden
+  hideInactiveLeagues: process.env.HIDE_INACTIVE_LEAGUES === 'true',
   turso: {
     databaseUrl: process.env.TURSO_DATABASE_URL || 'file:./data/trytag.db',
     authToken: process.env.TURSO_AUTH_TOKEN || '',

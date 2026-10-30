@@ -1,3 +1,4 @@
+import { syncRunRepository } from './database/repositories/index.js';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -28,6 +29,18 @@ export function createApp(options: AppOptions = {}) {
         version: '1.0.0',
       },
     });
+  });
+
+  // Data freshness (public, read-only). Kept off /health so health checks never touch the DB.
+  app.get('/api/v1/sync-status', async (_req, res) => {
+    try {
+      res.json({ success: true, data: await syncRunRepository.status() });
+    } catch {
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to read sync status' },
+      });
+    }
   });
 
   // API info endpoint
