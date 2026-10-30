@@ -10,6 +10,9 @@ import {
   Button,
 } from '@mantine/core';
 import { FixtureCardSkeleton } from '../components/skeletons';
+import { QueryError } from '../components/QueryError';
+import { SlowLoadingHint } from '../components/SlowLoadingHint';
+import { useSlowLoading } from '../hooks/useSlowLoading';
 import { useState, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
@@ -48,6 +51,8 @@ function FixturesPage() {
   });
 
   const isLoadingTeams = teamQueries.some(q => q.isLoading);
+  const isErrorTeams = teamQueries.some(q => q.isError);
+  const showSlowHint = useSlowLoading(isLoadingTeams);
 
   // Derive both upcoming and recent fixtures from team profiles
   const { upcomingFixtures, recentFixtures } = useMemo(() => {
@@ -127,8 +132,13 @@ function FixturesPage() {
               <Text c="dimmed">You haven't added any favourite teams yet.</Text>
               <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
             </Stack>
+          ) : isErrorTeams ? (
+            <QueryError onRetry={() => teamQueries.forEach((q) => q.refetch())} />
           ) : isLoading || standingsLoading || statsLoading || divisionsLoading ? (
-            <FixtureCardSkeleton count={5} />
+            <Stack gap="md">
+              <SlowLoadingHint show={showSlowHint} />
+              <FixtureCardSkeleton count={5} />
+            </Stack>
           ) : fixtures && fixtures.length > 0 ? (
             <FixturesList
               key={view}
