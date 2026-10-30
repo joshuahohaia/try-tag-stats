@@ -24,8 +24,8 @@ export type HeadToHeadResponse =
         pointsFor: number;
         pointsAgainst: number;
       };
-      counted: HeadToHeadMeeting[];
-      uncounted: HeadToHeadMeeting[];
+      meetings: HeadToHeadMeeting[];
+      labelledCount: number;
       seasonsCovered: string[];
       complete: boolean;
       busy: boolean;
