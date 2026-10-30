@@ -1,31 +1,9 @@
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails } from '@trytag/shared';
+import { calculateAwardPositions } from './statistics';
 
 export interface FixtureInsight {
   type: 'top-clash' | 'star-player';
   text: string;
-}
-
-/**
- * Calculate dense rank positions for player statistics.
- * Players with the same award count share the same position.
- * e.g., [5, 5, 4, 3] -> positions [1, 1, 2, 3]
- */
-function getPlayerPositions(statistics: PlayerAwardWithDetails[]): Map<number, number> {
-  const positions = new Map<number, number>();
-  if (statistics.length === 0) return positions;
-
-  let currentPosition = 1;
-  let previousAwardCount = statistics[0].awardCount;
-
-  statistics.forEach((stat, index) => {
-    if (index > 0 && stat.awardCount < previousAwardCount) {
-      currentPosition++;
-      previousAwardCount = stat.awardCount;
-    }
-    positions.set(stat.player.id, currentPosition);
-  });
-
-  return positions;
 }
 
 export const getFixtureInsights = (
@@ -54,7 +32,7 @@ export const getFixtureInsights = (
 
   // Player of the Match watch - based on actual leaderboard positions
   if (statistics && statistics.length >= 2) {
-    const playerPositions = getPlayerPositions(statistics);
+    const playerPositions = calculateAwardPositions(statistics);
 
     // Find players in this fixture who are in top 2 positions
     const fixtureTopPlayers = statistics

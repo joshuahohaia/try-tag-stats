@@ -1,10 +1,15 @@
 import type { PlayerAwardWithDetails } from '@trytag/shared';
 
 /**
- * Calculates the rank for each player based on their award count.
+ * Calculates the dense rank for each player based on their award count.
  * Players with the same award count receive the same rank.
  *
- * @param statistics - Array of player award details.
+ * This is the single shared ranking implementation (also used for fixture
+ * insights). Unlike the removed duplicate in fixtures.ts, it does not rely
+ * on the input being pre-sorted: ranks are computed from the distinct award
+ * counts, so unordered input ranks identically.
+ *
+ * @param statistics - Array of player award details, in any order.
  * @returns A Map where keys are player IDs and values are their ranks.
  */
 export function calculateAwardPositions(
@@ -29,7 +34,7 @@ export function calculateAwardPositions(
   // Assign rank to each player
   statistics.forEach((stat) => {
     const rank = countToPosition.get(stat.awardCount);
-    if (rank) {
+    if (rank !== undefined) {
       positions.set(stat.player.id, rank);
     }
   });
