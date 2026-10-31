@@ -69,7 +69,7 @@ export function MeetingsOnRecord({
     <Card withBorder>
       <Title order={4}>Meetings on record</Title>
       <Text size="xs" c="dimmed" mb="md">
-        Battersea Park Astro seasons only (pilot). Matched by Spawtz team id, not by name.
+        Pilot: Battersea Park Astro and Clapham Junction (Sunday) seasons only. Matched by Spawtz team id, not by name.
       </Text>
 
       {record.played === 0 ? (
