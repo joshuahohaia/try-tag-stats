@@ -257,9 +257,9 @@ function TeamDetailPage() {
         <Stack gap="md">
           <Group justify="space-between" align="flex-start">
             <div>
-              <Group gap="sm" mb="xs" wrap="nowrap" align="center">
-                <TeamJersey name={teamProfile.name} teamId={teamProfile.id} size={56} />
-                <Title order={1}>{teamProfile.name}</Title>
+              <Group gap="sm" mb="xs" wrap="wrap" align="center">
+                <TeamJersey name={teamProfile.name} teamId={teamProfile.id} size={44} />
+                <Title order={1} style={{ flex: '1 1 240px', minWidth: 0, overflowWrap: 'anywhere' }}>{teamProfile.name}</Title>
               </Group>
               <Text c="dimmed">Team Profile</Text>
               <KitSection teamId={teamProfile.id} name={teamProfile.name} />
