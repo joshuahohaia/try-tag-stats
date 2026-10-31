@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FixtureWithTeams } from '@trytag/shared';
-import { lookupMatch, matchPath } from './matchLookup';
+import { isResolvedTeam, lookupMatch, matchPath } from './matchLookup';
 
 const fx = (over: Partial<FixtureWithTeams> & { id: number }): FixtureWithTeams =>
   ({
@@ -56,5 +56,12 @@ describe('matchPath', () => {
     expect(matchPath(f).params).toEqual({ teamId: '1', opponentId: '2', date: '2026-10-05' });
     expect(matchPath(f).search).toEqual({ time: '20:00' });
     expect(matchPath(fx({ id: -1, fixtureTime: null })).search).toEqual({});
+  });
+});
+
+describe('isResolvedTeam', () => {
+  it('treats a team whose id equals its external id as unresolved', () => {
+    expect(isResolvedTeam({ id: 22251, externalTeamId: 22251 })).toBe(false);
+    expect(isResolvedTeam({ id: 3457, externalTeamId: 8024 })).toBe(true);
   });
 });
