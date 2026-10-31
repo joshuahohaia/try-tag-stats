@@ -23,6 +23,10 @@ export interface TeamProfile extends Team {
   seasonStats?: TeamSeasonStats[];
   previousSeasons?: TeamPreviousSeason[];
   playerAwards?: PlayerAwardWithDetails[];
+  /** When the Spawtz team page behind Form, Position History and Statistics was last read (ISO). */
+  profileFetchedAt?: string;
+  /** True when Spawtz failed and those sections come from an older copy. */
+  profileStale?: boolean;
 }
 
 export function useTeams() {
