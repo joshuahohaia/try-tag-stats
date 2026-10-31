@@ -109,8 +109,8 @@ function findScoreMatch(
     .sort((a, b) => b.fixtureDate.localeCompare(a.fixtureDate));
   const pool = limit ? done.slice(0, limit) : done;
   // Only the Season column can be proven. Spawtz's "This Season" figures cover the first-phase results
-  // table, so link only when the matches we hold are exactly that phase's played games: same count,
-  // same record and same points for and against as the first-phase standing. Last 3 is never linked
+  // table, so link only when the matches we hold agree with that phase's standing: same count, same
+  // record and same points for and against. This is a consistency check, not proof of the same fixtures. Last 3 is never linked
   // (Spawtz counts phase 2 games there that we hold no results for).
   if (limit || !firstPhase || pool.length === 0 || pool.length !== firstPhase.played) return null;
   let scored = 0;
@@ -240,7 +240,7 @@ function StatsTable({
         </Table.Tbody>
       </Table>
       <Text size="xs" c="dimmed" mt="xs">
-        From the Spawtz team page. Season covers first-phase results only. Last 3 can include later-phase games whose scores are not shown here. A score is a link only when the matches held here are exactly that phase&apos;s played games.
+        From the Spawtz team page. Season covers first-phase results only. Last 3 can include later-phase games whose scores are not shown here. A Season score is a link only when the matches held here agree with the first-phase standing (same number played, same record, same points for and against). That is a consistency check, so the link is the matching game by score, not a verified record of the same fixture.
       </Text>
     </Card>
   );
