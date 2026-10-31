@@ -61,6 +61,10 @@ type TeamProfileResult = {
   playerAwards: ScrapedPlayerAward[];
   fixtureHistory: ScrapedFixture[];
   upcomingFixtures: ScrapedFixture[];
+  /** Epoch ms when Spawtz was last read for this data. */
+  fetchedAt?: number;
+  /** True when Spawtz failed and this is an older copy. */
+  stale?: boolean;
 };
 
 class ScraperOrchestrator {
@@ -513,37 +517,59 @@ class ScraperOrchestrator {
     this.errors.push(`${message}: ${errorMessage}`);
   }
 
-  private profileCache = new Map<string, { at: number; value: TeamProfileResult | null }>();
+  private profileCache = new Map<string, { at: number; ok: boolean }>();
+  private profileLastGood = new Map<string, TeamProfileResult & { fetchedAt: number }>();
   private profileInflight = new Map<string, Promise<TeamProfileResult | null>>();
 
-  /** Shared cache for live team page requests: fresh 20 min, served stale for up to 6 h if Spawtz fails. */
+  /**
+   * Shared cache for live team page requests: fresh for 20 min. fetchedAt is when Spawtz was last read.
+   * With allowStale, an older copy (up to 6 h) is returned when Spawtz fails, marked stale: true.
+   * Without it a failed fetch returns null, so callers never show old data as current.
+   */
   async fetchTeamProfile(
     externalTeamId: number,
-    context?: { leagueId?: number; seasonId?: number; divisionId?: number }
+    context?: { leagueId?: number; seasonId?: number; divisionId?: number },
+    options: { allowStale?: boolean } = {}
   ): Promise<TeamProfileResult | null> {
     const key = [externalTeamId, context?.leagueId ?? 0, context?.seasonId ?? 0, context?.divisionId ?? 0].join(':');
     const hit = this.profileCache.get(key);
     const age = hit ? Date.now() - hit.at : Infinity;
-    if (hit && hit.value && age < PROFILE_FRESH_MS) return hit.value;
-    if (hit && !hit.value && age < PROFILE_FAILURE_MS) return null;
+    const good = this.profileLastGood.get(key);
 
-    const running = this.profileInflight.get(key);
-    if (running) return running;
+    if (hit?.ok && good && age < PROFILE_FRESH_MS) return { ...good, stale: false };
+    if (hit && !hit.ok && age < PROFILE_FAILURE_MS) return this.staleCopy(key, options);
 
-    const p = this.fetchTeamProfileUncached(externalTeamId, context).then((value) => {
-      if (!value && hit?.value && age < PROFILE_STALE_MS) {
-        logger.warn({ externalTeamId, ageMs: age }, 'Spawtz fetch failed, serving cached team profile');
-        return hit.value;
-      }
-      this.profileCache.set(key, { at: Date.now(), value });
-      if (this.profileCache.size > PROFILE_CACHE_MAX) {
-        const oldest = this.profileCache.keys().next().value;
-        if (oldest !== undefined) this.profileCache.delete(oldest);
-      }
-      return value;
-    }).finally(() => this.profileInflight.delete(key));
-    this.profileInflight.set(key, p);
-    return p;
+    let p = this.profileInflight.get(key);
+    if (!p) {
+      p = this.fetchTeamProfileUncached(externalTeamId, context)
+        .then((value) => {
+          const at = Date.now();
+          this.profileCache.set(key, { at, ok: !!value });
+          if (!value) return null;
+          const stamped = { ...value, fetchedAt: at, stale: false };
+          this.profileLastGood.set(key, stamped);
+          return stamped;
+        })
+        .finally(() => {
+          this.profileInflight.delete(key);
+          while (this.profileLastGood.size > PROFILE_CACHE_MAX) {
+            const oldest = this.profileLastGood.keys().next().value;
+            if (oldest === undefined) break;
+            this.profileLastGood.delete(oldest);
+            this.profileCache.delete(oldest);
+          }
+        });
+      this.profileInflight.set(key, p);
+    }
+    return (await p) ?? this.staleCopy(key, options);
+  }
+
+  private staleCopy(key: string, options: { allowStale?: boolean }): TeamProfileResult | null {
+    if (!options.allowStale) return null;
+    const last = this.profileLastGood.get(key);
+    if (!last || Date.now() - last.fetchedAt >= PROFILE_STALE_MS) return null;
+    logger.warn({ key, ageMs: Date.now() - last.fetchedAt }, 'Spawtz fetch failed, serving older team profile marked stale');
+    return { ...last, stale: true };
   }
 
   private async fetchTeamProfileUncached(
