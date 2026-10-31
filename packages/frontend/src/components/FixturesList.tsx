@@ -139,8 +139,8 @@ export function FixturesList({
             style={isClickable ? { cursor: 'pointer' } : {}}
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
-              <Group gap="xs" wrap='nowrap' justify='space-between' align='flex-start'>
-                <Stack gap={2} style={{ minWidth: 0 }}>
+              <Group gap="xs" wrap="wrap" justify='space-between' align='flex-start'>
+                <Stack gap={2} style={{ flex: '1 1 200px', minWidth: 0 }}>
                   <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
                     <TeamJersey name={fixture.homeTeam.name} teamId={fixture.homeTeam.id} size={20} decorative />
                     <Text
