@@ -49,6 +49,20 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, '');
 }
 
+const PROFILE_FRESH_MS = 20 * 60 * 1000;
+const PROFILE_FAILURE_MS = 2 * 60 * 1000;
+const PROFILE_STALE_MS = 6 * 60 * 60 * 1000;
+const PROFILE_CACHE_MAX = 300;
+
+type TeamProfileResult = {
+  positionHistory: TeamPositionHistory[];
+  seasonStats: TeamSeasonStats[];
+  previousSeasons: TeamPreviousSeason[];
+  playerAwards: ScrapedPlayerAward[];
+  fixtureHistory: ScrapedFixture[];
+  upcomingFixtures: ScrapedFixture[];
+};
+
 class ScraperOrchestrator {
   private errors: string[] = [];
 
@@ -499,7 +513,40 @@ class ScraperOrchestrator {
     this.errors.push(`${message}: ${errorMessage}`);
   }
 
+  private profileCache = new Map<string, { at: number; value: TeamProfileResult | null }>();
+  private profileInflight = new Map<string, Promise<TeamProfileResult | null>>();
+
+  /** Shared cache for live team page requests: fresh 20 min, served stale for up to 6 h if Spawtz fails. */
   async fetchTeamProfile(
+    externalTeamId: number,
+    context?: { leagueId?: number; seasonId?: number; divisionId?: number }
+  ): Promise<TeamProfileResult | null> {
+    const key = [externalTeamId, context?.leagueId ?? 0, context?.seasonId ?? 0, context?.divisionId ?? 0].join(':');
+    const hit = this.profileCache.get(key);
+    const age = hit ? Date.now() - hit.at : Infinity;
+    if (hit && hit.value && age < PROFILE_FRESH_MS) return hit.value;
+    if (hit && !hit.value && age < PROFILE_FAILURE_MS) return null;
+
+    const running = this.profileInflight.get(key);
+    if (running) return running;
+
+    const p = this.fetchTeamProfileUncached(externalTeamId, context).then((value) => {
+      if (!value && hit?.value && age < PROFILE_STALE_MS) {
+        logger.warn({ externalTeamId, ageMs: age }, 'Spawtz fetch failed, serving cached team profile');
+        return hit.value;
+      }
+      this.profileCache.set(key, { at: Date.now(), value });
+      if (this.profileCache.size > PROFILE_CACHE_MAX) {
+        const oldest = this.profileCache.keys().next().value;
+        if (oldest !== undefined) this.profileCache.delete(oldest);
+      }
+      return value;
+    }).finally(() => this.profileInflight.delete(key));
+    this.profileInflight.set(key, p);
+    return p;
+  }
+
+  private async fetchTeamProfileUncached(
     externalTeamId: number,
     context?: {
       leagueId?: number;
