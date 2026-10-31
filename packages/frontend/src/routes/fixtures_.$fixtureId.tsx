@@ -70,7 +70,7 @@ function TeamCard({
   return (
     <Card withBorder h="100%" p={isMobile ? 'sm' : 'md'}>
       <Stack gap={isMobile ? 'xs' : 'md'}>
-        <Group justify="space-between" align="flex-start" wrap="nowrap">
+        <Group justify="space-between" align="flex-start">
           <div>
             <Link
               to="/teams/$teamId"
@@ -403,7 +403,12 @@ function FixtureDetailPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         variant="light"
-                        size="compact-xs"
+                        size="xs"
+                        maw="100%"
+                        h="auto"
+                        mih={30}
+                        py={6}
+                        styles={{ label: { whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.25, height: 'auto', overflow: 'visible' } }}
                         rightSection={<IconExternalLink size={12} />}
                       >
                         {t.name} on Try Tag Rugby
@@ -420,7 +425,7 @@ function FixtureDetailPage() {
                   rel="noopener noreferrer"
                   variant="light"
                   color="green"
-                  size="compact-md"
+                  size="sm"
                   leftSection={<IconBrandWhatsapp size={16} />}
                 >
                   Share to WhatsApp
