@@ -15,9 +15,10 @@ import {
   Divider,
   Button,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconBrandWhatsapp } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink, IconBrandWhatsapp } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
+import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { formatDate, formatTime } from '../utils/format';
 import { buildShareText, whatsappShareUrl } from '../utils/shareMatch';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
@@ -191,9 +192,9 @@ function HeadToHeadSection({
   if (totalGames === 0) {
     return (
       <Card withBorder>
-        <Title order={4} mb="md">Head to Head</Title>
+        <Title order={4} mb="md">Head to Head (this season)</Title>
         <Text c="dimmed" ta="center" py="md">
-          No previous meetings between these teams
+          No meetings found in this season's data
         </Text>
       </Card>
     );
@@ -204,7 +205,7 @@ function HeadToHeadSection({
 
   return (
     <Card withBorder>
-      <Title order={4} mb="md">Head to Head</Title>
+      <Title order={4} mb="md">Head to Head (this season)</Title>
 
       <Group justify="space-between" mb="xs">
         <Text size="sm" fw={600} c="blue">{homeTeamName}: {homeWins} wins</Text>
@@ -383,6 +384,26 @@ function FixtureDetailPage() {
                 </Link>
               </Group>
 
+              <Group gap="sm" justify="center">
+                {[fixture.homeTeam, fixture.awayTeam].map(
+                  (t) =>
+                    t.externalTeamId && (
+                      <Button
+                        key={t.id}
+                        component="a"
+                        href={`https://trytagrugby.spawtz.com/Leagues/TeamProfile?TeamId=${t.externalTeamId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        size="xs"
+                        rightSection={<IconExternalLink size={12} />}
+                      >
+                        {t.name} on Try Tag Rugby
+                      </Button>
+                    )
+                )}
+              </Group>
+
               {fixture.status !== 'completed' && (
                 <Button
                   component="a"
@@ -422,6 +443,13 @@ function FixtureDetailPage() {
             homeTeamId={fixture.homeTeam.id}
             homeTeamName={fixture.homeTeam.name}
             awayTeamName={fixture.awayTeam.name}
+          />
+
+          <MeetingsOnRecord
+            teamId={fixture.homeTeam.id}
+            teamName={fixture.homeTeam.name}
+            opponentId={fixture.awayTeam.id}
+            opponentName={fixture.awayTeam.name}
           />
         </Stack>
       </Container>
