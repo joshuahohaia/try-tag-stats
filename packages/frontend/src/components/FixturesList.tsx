@@ -6,11 +6,12 @@ import {
   Badge,
   HoverCard,
 } from '@mantine/core';
-import { IconTrophy, IconSparkles, IconExternalLink } from '@tabler/icons-react';
+import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails, Division } from '@trytag/shared';
 import { getFixtureInsights } from '../utils/fixtures';
+import { matchPath } from '../utils/matchLookup';
 import { formatFixtureDate, fixtureCalendarDate, formatTime, venueCalendarDate } from '../utils/format';
 
 interface FixturesListProps {
@@ -112,25 +113,11 @@ export function FixturesList({
         const canLinkToFixture = fixture.id > 0;
         const isScrapedFixture = fixture.id <= 0;
 
-        // For scraped fixtures, determine which team's external profile to link to (prefer favorited team)
-        const getExternalTeamId = () => {
-          if (favoriteTeamIds.includes(fixture.homeTeam.id)) {
-            return fixture.homeTeam.externalTeamId;
-          }
-          if (favoriteTeamIds.includes(fixture.awayTeam.id)) {
-            return fixture.awayTeam.externalTeamId;
-          }
-          return fixture.homeTeam.externalTeamId;
-        };
-
         const handleCardClick = () => {
           if (canLinkToFixture) {
             navigate({ to: '/fixtures/$fixtureId', params: { fixtureId: String(fixture.id) } });
           } else if (isScrapedFixture) {
-            const externalTeamId = getExternalTeamId();
-            if (externalTeamId) {
-              window.open(`https://trytagrugby.spawtz.com/Leagues/TeamProfile?TeamId=${externalTeamId}`, '_blank');
-            }
+            navigate(matchPath(fixture));
           }
         };
 
@@ -198,19 +185,9 @@ export function FixturesList({
                   {!compact && fixture.pitch && (
                     <Text size="xs" c="dimmed">{fixture.pitch}</Text>
                   )}
-                  {canLinkToFixture && (
-                    <Text size="xs" c="blue" mt={2}>
-                      View match details →
-                    </Text>
-                  )}
-                  {isScrapedFixture && (
-                    <Group gap={4} mt={2}>
-                      <Text size="xs" c="blue">
-                        View on TryTag Rugby
-                      </Text>
-                      <IconExternalLink size={12} color="var(--mantine-color-blue-6)" />
-                    </Group>
-                  )}
+                  <Text size="xs" c="blue" mt={2}>
+                    View match details →
+                  </Text>
                 </Stack>
               </Group>
             </Stack>
