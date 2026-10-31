@@ -148,7 +148,7 @@ function TeamCard({
         {profile.playerAwards && profile.playerAwards.length > 0 && (
           <div>
             <Divider my="xs" />
-            <Text size="sm" c="dimmed" mb={4}>Player of the Match Awards</Text>
+            <Text size="sm" c="dimmed" mb={4}>Player of the Match Awards (this season)</Text>
             <Stack gap={4}>
               {profile.playerAwards.slice(0, 3).map((award, idx) => (
                 <Group key={idx} justify="space-between">
