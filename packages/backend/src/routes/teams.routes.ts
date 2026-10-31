@@ -80,6 +80,8 @@ router.get('/:id', async (req, res) => {
     let positionHistory: TeamPositionHistory[] = [];
     let seasonStats: TeamSeasonStats[] = [];
     let previousSeasons: TeamPreviousSeason[] = [];
+    let profileFetchedAt: string | undefined;
+    let profileStale = false;
 
     // Only fetch if we have an external team ID
     if (team.externalTeamId) {
@@ -98,8 +100,10 @@ router.get('/:id', async (req, res) => {
             };
           }
         }
-        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context);
+        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context, { allowStale: true });
         if (profileData) {
+          profileFetchedAt = profileData.fetchedAt ? new Date(profileData.fetchedAt).toISOString() : undefined;
+          profileStale = profileData.stale === true;
           positionHistory = profileData.positionHistory;
           seasonStats = profileData.seasonStats;
           previousSeasons = profileData.previousSeasons;
@@ -218,6 +222,8 @@ router.get('/:id', async (req, res) => {
         positionHistory,
         seasonStats,
         previousSeasons,
+        profileFetchedAt,
+        profileStale,
       },
     });
   } catch (error) {
