@@ -160,7 +160,7 @@ export function FixturesList({
                     {fixture.awayTeam.name}
                   </Text>
                 </Stack>
-                <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined }}>
+                <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined, flexShrink: 0 }}>
                   <Stack align="flex-end" gap={4}>
                     {fixtureBadge}
                     {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
