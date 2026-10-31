@@ -421,22 +421,6 @@ function FixtureDetailPage() {
                     )
                 )}
               </Group>
-
-              {fixture.status !== 'completed' && (
-                <ActionIcon
-                  component="a"
-                  href={whatsappShareUrl(buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`))}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="subtle"
-                  color="gray"
-                  size={44}
-                  aria-label="Share to WhatsApp"
-                  title="Share to WhatsApp"
-                >
-                  <IconBrandWhatsapp size={18} />
-                </ActionIcon>
-              )}
             </Stack>
           </Card>
 
@@ -473,6 +457,23 @@ function FixtureDetailPage() {
             opponentId={fixture.awayTeam.id}
             opponentName={fixture.awayTeam.name}
           />
+          {fixture.status !== 'completed' && (
+            <Group justify="center">
+              <ActionIcon
+                component="a"
+                href={whatsappShareUrl(buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`))}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="subtle"
+                color="gray"
+                size={44}
+                aria-label="Share to WhatsApp"
+                title="Share to WhatsApp"
+              >
+                <IconBrandWhatsapp size={18} />
+              </ActionIcon>
+            </Group>
+          )}
         </Stack>
       </Container>
     </ScrollArea>
