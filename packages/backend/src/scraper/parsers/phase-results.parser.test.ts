@@ -50,3 +50,35 @@ describe('phase results from standings tooltips', () => {
     expect(parsePhaseResults('<html><body><p>Hi</p></body></html>')).toEqual([]);
   });
 });
+
+describe('parsePhaseResults with the division Results table', () => {
+  const divHtml = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'phase-division.fixture.html'), 'utf8');
+
+  it('attaches real scores to games and keeps home and away sides', () => {
+    const [table] = parsePhaseResults(divHtml);
+    const g = table.games.find((x) => x.date === '2026-10-12' && x.homeTeamName === 'At least we try-ed');
+    expect(g).toBeDefined();
+    expect(g!.homeScore).toBe(10);
+    expect(g!.awayScore).toBe(5);
+    expect(g!.outcome).toBe('H');
+    expect(table.verifiedTeamIds).toContain(8024);
+  });
+
+  it('scores every verified game of a team and totals equal the standings For/Against', () => {
+    const [table] = parsePhaseResults(divHtml);
+    const mine = table.games.filter((x) => x.homeTeamId === 8024 || x.awayTeamId === 8024);
+    expect(mine).toHaveLength(3);
+    expect(mine.every((x) => x.homeScore !== undefined)).toBe(true);
+    const pf = mine.reduce((a, x) => a + (x.homeTeamId === 8024 ? x.homeScore! : x.awayScore!), 0);
+    const pa = mine.reduce((a, x) => a + (x.homeTeamId === 8024 ? x.awayScore! : x.homeScore!), 0);
+    expect([pf, pa]).toEqual([39, 18]);
+  });
+
+  it('drops scores that disagree with the standings totals but keeps the result', () => {
+    const bad = divHtml.replace('>10 - 5<', '>10 - 6<');
+    const [table] = parsePhaseResults(bad);
+    const g = table.games.find((x) => x.date === '2026-10-12' && x.homeTeamName === 'At least we try-ed');
+    expect(g!.homeScore).toBeUndefined();
+    expect(g!.outcome).toBe('H');
+  });
+});

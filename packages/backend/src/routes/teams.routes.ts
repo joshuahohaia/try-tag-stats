@@ -213,8 +213,8 @@ router.get('/:id', async (req, res) => {
     }
 
     // Later-phase (e.g. Phase 2) games. The Spawtz team page only lists first-phase games, so add
-    // played games of the team's other phases from the phase standings page. They carry a result
-    // (W/D/L) but no score, because Spawtz does not publish one there.
+    // played games of the team's other phases from the division standings page. They carry the real
+    // score from its Results table; a game whose score cannot be verified keeps a result only.
     if (team.externalTeamId && standings.length > 0) {
       try {
         const currentSeasonId = standings[0].seasonId;
@@ -243,24 +243,31 @@ router.get('/:id', async (req, res) => {
             const oppId = opp?.id ?? oppExternal;
             // Outcome from this team's side: H = this team won.
             const outcome = g.outcome === 'D' ? 'D' : (g.outcome === 'H') === home ? 'H' : 'A';
+            // With a real score, keep the true home and away sides; result-only games keep this team first.
+            const hasScore = g.homeScore !== undefined && g.awayScore !== undefined;
+            const teamIsHome = hasScore ? home : true;
             if (recentFixtures.some((f) => f.fixtureDate === g.date && (f.awayTeamId === oppId || f.homeTeamId === oppId))) continue;
             extra.push({
               id: -1000 - extra.length,
               externalFixtureId: null,
               divisionId: division.id,
-              homeTeamId: team.id,
-              awayTeamId: oppId,
+              homeTeamId: teamIsHome ? team.id : oppId,
+              awayTeamId: teamIsHome ? oppId : team.id,
               fixtureDate: g.date,
               fixtureTime: g.time,
               pitch: null,
               roundNumber: null,
-              homeScore: null,
-              awayScore: null,
+              homeScore: hasScore ? g.homeScore! : null,
+              awayScore: hasScore ? g.awayScore! : null,
               status: 'completed' as const,
               isForfeit: false,
-              outcome: outcome as 'H' | 'A' | 'D',
-              homeTeam: { id: team.id, externalTeamId: team.externalTeamId, name: team.name },
-              awayTeam: { id: oppId, externalTeamId: oppExternal, name: opp?.name || oppName },
+              outcome: (hasScore && !home ? (outcome === 'H' ? 'A' : outcome === 'A' ? 'H' : 'D') : outcome) as 'H' | 'A' | 'D',
+              homeTeam: teamIsHome
+                ? { id: team.id, externalTeamId: team.externalTeamId, name: team.name }
+                : { id: oppId, externalTeamId: oppExternal, name: opp?.name || oppName },
+              awayTeam: teamIsHome
+                ? { id: oppId, externalTeamId: oppExternal, name: opp?.name || oppName }
+                : { id: team.id, externalTeamId: team.externalTeamId, name: team.name },
             });
           }
         }

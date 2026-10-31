@@ -4,8 +4,9 @@ import { parsePhaseResults, type PhaseGame, type PhaseTableResults } from './par
 import { logger } from '../utils/logger.js';
 
 /**
- * Played games of a later phase for one league and season. One Spawtz standings page covers every
- * table of the phase, so one fetch serves every team page of that league. Cached in memory.
+ * Played games of a later phase for one division. The Spawtz division standings page holds the
+ * points tooltips and a Results table with the real scores, so one fetch per division serves every
+ * team page of that division. Cached in memory.
  */
 const SUCCESS_TTL_MS = 10 * 60 * 1000;
 const FAILURE_TTL_MS = 2 * 60 * 1000;
@@ -28,8 +29,8 @@ export function clearPhaseResultsCache(): void {
   inflight.clear();
 }
 
-async function load(leagueId: number, seasonId: number, phaseId: number): Promise<PhaseTableResults[] | null> {
-  const key = `${leagueId}:${seasonId}:${phaseId}`;
+async function load(leagueId: number, seasonId: number, phaseId: number, divisionId: number): Promise<PhaseTableResults[] | null> {
+  const key = `${leagueId}:${seasonId}:${phaseId}:${divisionId}`;
   const hit = cache.get(key);
   if (hit && hit.ok && Date.now() - hit.at < SUCCESS_TTL_MS) return hit.value;
   const stale = () => {
@@ -46,6 +47,7 @@ async function load(leagueId: number, seasonId: number, phaseId: number): Promis
           VenueId: '0',
           LeagueId: leagueId,
           SeasonId: seasonId,
+          DivisionId: divisionId,
           PhaseId: phaseId,
         });
         const value = parsePhaseResults(html);
@@ -83,7 +85,7 @@ export async function getTeamPhaseResults(
   divisionId: number,
   externalTeamId: number
 ): Promise<TeamPhaseResult[]> {
-  const tables = await load(leagueId, seasonId, phaseId);
+  const tables = await load(leagueId, seasonId, phaseId, divisionId);
   if (!tables) return [];
   const table = tables.find((t) => t.divisionId === divisionId);
   if (!table) return [];

@@ -94,7 +94,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
               </Badge>
             </HoverCard.Target>
             <HoverCard.Dropdown>
-              <Text size="xs">{`${isMostRecent ? '(Latest) ' : ''}${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'}${noScore ? '' : ` ${teamScore}-${oppScore}`} vs ${opponent}${noScore ? ' (score not published)' : ''}`}</Text>
+              <Text size="xs">{`${isMostRecent ? '(Latest) ' : ''}${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'}${noScore ? '' : ` ${teamScore}-${oppScore}`} vs ${opponent}${noScore ? ' (score not available)' : ''}`}</Text>
             </HoverCard.Dropdown>
           </HoverCard>
         );
@@ -181,7 +181,7 @@ function TeamDetailPage() {
       st.seasonId === currentStanding.seasonId
   );
   const hasLaterPhaseResults = (teamProfile?.recentFixtures ?? []).some(
-    (f) => f.status === 'completed' && !!f.outcome && f.homeScore === null
+    (f) => f.status === 'completed' && f.id <= 0 && !!f.outcome
   );
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(currentDivisionId ?? 0);
   const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(currentDivisionId ?? 0);
@@ -378,10 +378,9 @@ function TeamDetailPage() {
                   </Text>
                   {hasLaterPhaseResults ? (
                     <Text size="xs" c="dimmed">
-                      {teamProfile.standings[0].phaseName} games come from the Spawtz standings page, which lists wins and
-                      draws but not scores, so they show a result only. Position History and Statistics below come from
-                      the Spawtz team page and cover first-phase games only; the current {teamProfile.standings[0].phaseName}{' '}
-                      position is shown above.
+                      {teamProfile.standings[0].phaseName} games come from the Spawtz division standings page. Position History
+                      and Statistics below come from the Spawtz team page and cover first-phase games only; the current{' '}
+                      {teamProfile.standings[0].phaseName} position is shown above.
                     </Text>
                   ) : (
                   <Text size="xs" c="dimmed">
