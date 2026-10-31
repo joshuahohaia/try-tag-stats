@@ -96,6 +96,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
           {standingsLoading ? (
             <StandingsTableSkeleton rows={5} compact />
           ) : (
+            <Table.ScrollContainer minWidth={380}>
             <Table highlightOnHover withTableBorder>
               <Table.Thead>
                 <Table.Tr>
@@ -124,7 +125,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                           params={{ teamId: String(row.teamId) }}
                           style={{ color: 'inherit', textDecoration: 'none' }}
                         >
-                          <Group gap={4} wrap="nowrap" align="flex-start">
+                          <Group gap={4} wrap="nowrap" align="flex-start" style={{ minWidth: 140 }}>
                             <TeamJersey name={row.team.name} teamId={row.teamId} size={16} decorative />
                             <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
                               {row.team.name}
@@ -146,6 +147,7 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                 })}
               </Table.Tbody>
             </Table>
+            </Table.ScrollContainer>
           )}
         </Stack>
       )}
