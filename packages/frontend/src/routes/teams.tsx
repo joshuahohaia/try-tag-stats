@@ -89,13 +89,13 @@ function TeamsPage() {
                   {filteredTeams.length > 0 ? (
                     filteredTeams.map((team) => (
                       <Card withBorder key={team.id}>
-                        <Group justify="space-between">
+                        <Group justify="space-between" wrap="nowrap">
                           <Link
                             to="/teams/$teamId"
                             params={{ teamId: String(team.id) }}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                           >
-                            <Group gap="sm" wrap="nowrap">
+                            <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
                               <TeamJersey name={team.name} teamId={team.id} size={32} />
                               <Text fw={500}>{team.name}</Text>
                             </Group>
