@@ -13,7 +13,19 @@ const DEFAULT_OPTIONS: Required<FetchOptions> = {
   timeout: config.scraper.timeout,
 };
 
+export class SourceBlockedError extends Error {
+  constructor(public status: number, public retryAfterMs: number) {
+    super(`Spawtz answered HTTP ${status}; paused requests for ${Math.ceil(retryAfterMs / 1000)}s`);
+    this.name = 'SourceBlockedError';
+  }
+}
+
+const BLOCK_PAUSE_MS = 10 * 60 * 1000;
+const BLOCK_PAUSE_MAX_MS = 60 * 60 * 1000;
+
 class ScraperClient {
+  private blockedUntil = 0;
+  private blockedStatus = 0;
   private axios: AxiosInstance;
   private limiter: Bottleneck;
 
@@ -41,6 +53,9 @@ class ScraperClient {
     const opts = { ...DEFAULT_OPTIONS, ...options };
 
     return this.limiter.schedule(async () => {
+      if (Date.now() < this.blockedUntil) {
+        throw new SourceBlockedError(this.blockedStatus, this.blockedUntil - Date.now());
+      }
       let lastError: Error | null = null;
 
       for (let attempt = 1; attempt <= opts.maxRetries; attempt++) {
@@ -58,6 +73,19 @@ class ScraperClient {
 
           if (axios.isAxiosError(error)) {
             const axiosError = error as AxiosError;
+
+            // 403 or 429: stop at once, log the status and pause all requests for a while
+            const status = axiosError.response?.status;
+            if (status === 403 || status === 429) {
+              const header = Number(axiosError.response?.headers?.['retry-after']);
+              const pause = Number.isFinite(header) && header > 0
+                ? Math.min(header * 1000, BLOCK_PAUSE_MAX_MS)
+                : BLOCK_PAUSE_MS;
+              this.blockedUntil = Date.now() + pause;
+              this.blockedStatus = status;
+              logger.error({ url, status, pauseMs: pause }, 'Spawtz refused the request, pausing all requests');
+              throw new SourceBlockedError(status, pause);
+            }
 
             // Don't retry on 4xx errors (except 429)
             if (axiosError.response?.status && axiosError.response.status >= 400 && axiosError.response.status < 500 && axiosError.response.status !== 429) {
