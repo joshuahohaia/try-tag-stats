@@ -51,3 +51,12 @@ export function matchPath(f: Pick<FixtureWithTeams, 'homeTeam' | 'awayTeam' | 'f
     search: f.fixtureTime ? { time: f.fixtureTime } : {},
   };
 }
+
+/**
+ * The API falls back to the external (Try Tag Rugby) team id when it has no stored team for the
+ * opponent, and then reports that same number as both ids. A number that is only an external id
+ * must never be used as an internal team route, so such a team is treated as unresolved.
+ */
+export function isResolvedTeam(t: { id: number; externalTeamId?: number | null }): boolean {
+  return t.externalTeamId == null || t.id !== t.externalTeamId;
+}
