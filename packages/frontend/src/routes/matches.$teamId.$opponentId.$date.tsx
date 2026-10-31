@@ -3,6 +3,7 @@ import { Title, Text, Card, Stack, Group, Badge, Container, ScrollArea, Button, 
 import { IconExternalLink } from '@tabler/icons-react';
 import { useTeam } from '../hooks/useTeams';
 import { QueryError } from '../components/QueryError';
+import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { formatDate, formatTime } from '../utils/format';
 import { isResolvedTeam, lookupMatch, matchPath } from '../utils/matchLookup';
 import type { FixtureWithTeams } from '@trytag/shared';
@@ -107,6 +108,14 @@ function MatchPage() {
         <Stack gap="md">
           <Title order={2}>Match details</Title>
           {result.kind === 'one' && <MatchSummary fixture={result.fixture} />}
+          {result.kind === 'one' && isResolvedTeam(result.fixture.awayTeam) && (
+            <MeetingsOnRecord
+              teamId={result.fixture.homeTeam.id}
+              teamName={result.fixture.homeTeam.name}
+              opponentId={result.fixture.awayTeam.id}
+              opponentName={result.fixture.awayTeam.name}
+            />
+          )}
           {result.kind === 'many' && (
             <Card withBorder>
               <Stack gap="sm">
@@ -132,9 +141,6 @@ function MatchPage() {
               </Text>
             </Card>
           )}
-          <Text size="xs" c="dimmed">
-            Player of the match is not available in this fixture data.
-          </Text>
         </Stack>
       </Container>
     </ScrollArea>
