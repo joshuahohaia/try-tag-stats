@@ -24,7 +24,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useTeam } from '../hooks/useTeams';
 import { useDivisionStandings, useDivisionStatistics, useDivisions } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import type { TeamSeasonStats, FixtureWithTeams, Standing } from '@trytag/shared';
+import type { TeamSeasonStats, FixtureWithTeams } from '@trytag/shared';
 
 // Form component showing last 5 results as W/L/D badges
 function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId: number }) {
@@ -89,99 +89,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
   );
 }
 
-// Spawtz gives biggest win/loss as a score string only ("13 - 7"). Find the one recent match
-// with exactly that score and result, and only when the held matches reproduce Spawtz's averages.
-// Otherwise leave the score as plain text.
-function findScoreMatch(
-  fixtures: FixtureWithTeams[],
-  teamId: number,
-  score: string | null | undefined,
-  kind: 'win' | 'loss',
-  firstPhase: Standing | undefined,
-  limit?: number,
-): FixtureWithTeams | null {
-  const m = score?.match(/^(\d+)\s*-\s*(\d+)$/);
-  if (!m) return null;
-  const mine = Number(m[1]);
-  const theirs = Number(m[2]);
-  const done = fixtures
-    .filter(f => f.status === 'completed' && f.homeScore !== null && f.awayScore !== null)
-    .sort((a, b) => b.fixtureDate.localeCompare(a.fixtureDate));
-  const pool = limit ? done.slice(0, limit) : done;
-  // Only the Season column can be proven. Spawtz's "This Season" figures cover the first-phase results
-  // table, so link only when the matches we hold agree with that phase's standing: same count, same
-  // record and same points for and against. This is a consistency check, not proof of the same fixtures. Last 3 is never linked
-  // (Spawtz counts phase 2 games there that we hold no results for).
-  if (limit || !firstPhase || pool.length === 0 || pool.length !== firstPhase.played) return null;
-  let scored = 0;
-  let conceded = 0;
-  let w = 0;
-  let l = 0;
-  let d = 0;
-  for (const f of pool) {
-    const isHome = f.homeTeam?.id === teamId;
-    const a = (isHome ? f.homeScore : f.awayScore) ?? 0;
-    const b = (isHome ? f.awayScore : f.homeScore) ?? 0;
-    scored += a;
-    conceded += b;
-    if (a > b) w++;
-    else if (a < b) l++;
-    else d++;
-  }
-  if (scored !== firstPhase.pointsFor || conceded !== firstPhase.pointsAgainst) return null;
-  if (w !== firstPhase.wins || l !== firstPhase.losses || d !== firstPhase.draws) return null;
-  const hits = pool.filter(f => {
-    const isHome = f.homeTeam?.id === teamId;
-    const isAway = f.awayTeam?.id === teamId;
-    if (!isHome && !isAway) return false;
-    const a = isHome ? f.homeScore : f.awayScore;
-    const b = isHome ? f.awayScore : f.homeScore;
-    return a === mine && b === theirs && (kind === 'win' ? mine > theirs : mine < theirs);
-  });
-  return hits.length === 1 ? hits[0] : null;
-}
-
-function ScoreCell({
-  score,
-  match,
-  teamId,
-  color,
-}: {
-  score: string | null | undefined;
-  match: FixtureWithTeams | null;
-  teamId: number;
-  color: string;
-}) {
-  const text = score ?? '-';
-  if (!match) return <Table.Td ta="center" c={color}>{text}</Table.Td>;
-  const opponent = match.homeTeam?.id === teamId ? match.awayTeam : match.homeTeam;
-  if (!opponent || opponent.id === opponent.externalTeamId) return <Table.Td ta="center" c={color}>{text}</Table.Td>;
-  return (
-    <Table.Td ta="center" c={color}>
-      <Link
-        to="/matches/$teamId/$opponentId/$date"
-        params={{ teamId: String(teamId), opponentId: String(opponent.id), date: match.fixtureDate }}
-        search={match.fixtureTime ? { time: match.fixtureTime } : {}}
-        style={{ color: 'inherit', textDecoration: 'underline' }}
-        title={`Open the match vs ${opponent.name}`}
-      >
-        {text}
-      </Link>
-    </Table.Td>
-  );
-}
-
-function StatsTable({
-  seasonStats,
-  fixtures,
-  teamId,
-  firstPhase,
-}: {
-  seasonStats: TeamSeasonStats[];
-  fixtures: FixtureWithTeams[];
-  teamId: number;
-  firstPhase: Standing | undefined;
-}) {
+function StatsTable({ seasonStats }: { seasonStats: TeamSeasonStats[] }) {
   if (!seasonStats || seasonStats.length === 0) return null;
 
   const getLast3 = () => seasonStats.find(s => s.period === 'last3');
@@ -227,21 +135,18 @@ function StatsTable({
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="green">Biggest Win</Table.Td>
-            <ScoreCell score={last3?.biggestWin} match={findScoreMatch(fixtures, teamId, last3?.biggestWin, 'win', firstPhase, 3)} teamId={teamId} color="green" />
-            <ScoreCell score={season?.biggestWin} match={findScoreMatch(fixtures, teamId, season?.biggestWin, 'win', firstPhase)} teamId={teamId} color="green" />
+            <Table.Td ta="center" c="green">{last3?.biggestWin ?? '-'}</Table.Td>
+            <Table.Td ta="center" c="green">{season?.biggestWin ?? '-'}</Table.Td>
             <Table.Td ta="center" c="green">{allTime?.biggestWin ?? '-'}</Table.Td>
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="red">Biggest Loss</Table.Td>
-            <ScoreCell score={last3?.biggestLoss} match={findScoreMatch(fixtures, teamId, last3?.biggestLoss, 'loss', firstPhase, 3)} teamId={teamId} color="red" />
-            <ScoreCell score={season?.biggestLoss} match={findScoreMatch(fixtures, teamId, season?.biggestLoss, 'loss', firstPhase)} teamId={teamId} color="red" />
+            <Table.Td ta="center" c="red">{last3?.biggestLoss ?? '-'}</Table.Td>
+            <Table.Td ta="center" c="red">{season?.biggestLoss ?? '-'}</Table.Td>
             <Table.Td ta="center" c="red">{allTime?.biggestLoss ?? '-'}</Table.Td>
           </Table.Tr>
         </Table.Tbody>
       </Table>
-      <Text size="xs" c="dimmed" mt="xs">
-        From the Spawtz team page. Season covers first-phase results only. Last 3 can include later-phase games whose scores are not shown here. A Season score is a link only when the matches held here agree with the first-phase standing (same number played, same record, same points for and against). That is a consistency check, so the link is the matching game by score, not a verified record of the same fixture.
-      </Text>
     </Card>
   );
 }
@@ -455,14 +360,7 @@ function TeamDetailPage() {
 
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             {teamProfile.seasonStats && teamProfile.seasonStats.length > 0 && (
-              <StatsTable
-                seasonStats={teamProfile.seasonStats}
-                fixtures={teamProfile.recentFixtures ?? []}
-                teamId={teamProfile.id}
-                firstPhase={teamProfile.standings?.find(
-                  st => st.seasonId === teamProfile.standings?.[0]?.seasonId && st.leagueId === teamProfile.standings?.[0]?.leagueId && !st.phaseId,
-                )}
-              />
+              <StatsTable seasonStats={teamProfile.seasonStats} />
             )}
 
             {teamProfile.positionHistory && teamProfile.positionHistory.length > 0 && (
