@@ -17,6 +17,7 @@ import {
   HoverCard,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { displayPlayerName } from '../utils/format';
 import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
@@ -237,7 +238,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
                     </Badge>
 
                     <Stack gap={0} style={{ overflow: 'hidden', flex: 1 }}>
-                      <Text fw={600} size="sm" truncate>{stat.player.name}</Text>
+                      <Text fw={600} size="sm" truncate>{displayPlayerName(stat.player.name)}</Text>
                       <Link
                         to="/teams/$teamId"
                         params={{ teamId: String(stat.team.id) }}
