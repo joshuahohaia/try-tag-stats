@@ -16,6 +16,7 @@ import {
   Progress,
   Divider,
   Button,
+  ActionIcon,
 } from '@mantine/core';
 import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink, IconBrandWhatsapp } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
@@ -422,18 +423,19 @@ function FixtureDetailPage() {
               </Group>
 
               {fixture.status !== 'completed' && (
-                <Button
+                <ActionIcon
                   component="a"
                   href={whatsappShareUrl(buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`))}
                   target="_blank"
                   rel="noopener noreferrer"
-                  variant="light"
-                  color="green"
+                  variant="subtle"
+                  color="gray"
                   size="sm"
-                  leftSection={<IconBrandWhatsapp size={16} />}
+                  aria-label="Share to WhatsApp"
+                  title="Share to WhatsApp"
                 >
-                  Share to WhatsApp
-                </Button>
+                  <IconBrandWhatsapp size={16} />
+                </ActionIcon>
               )}
             </Stack>
           </Card>
