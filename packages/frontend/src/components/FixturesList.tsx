@@ -10,6 +10,7 @@ import { IconTrophy, IconSparkles } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails, Division } from '@trytag/shared';
+import { TeamJersey } from './TeamJersey';
 import { getFixtureInsights } from '../utils/fixtures';
 import { matchPath } from '../utils/matchLookup';
 import { formatFixtureDate, fixtureCalendarDate, formatTime, venueCalendarDate } from '../utils/format';
@@ -139,26 +140,32 @@ export function FixturesList({
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
               <Group gap="xs" wrap='nowrap' justify='space-between' align='flex-start'>
-                <Stack gap={2}>
-                  <Text
-                    fw={500}
-                    size="sm"
-                    style={{ cursor: 'pointer' }}
-                    c="blue"
-                    onClick={(e) => handleTeamClick(e, fixture.homeTeam.id)}
-                  >
-                    {fixture.homeTeam.name}
-                  </Text>
+                <Stack gap={2} style={{ minWidth: 0 }}>
+                  <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <TeamJersey name={fixture.homeTeam.name} teamId={fixture.homeTeam.id} size={20} decorative />
+                    <Text
+                      fw={500}
+                      size="sm"
+                      style={{ cursor: 'pointer' }}
+                      c="blue"
+                      onClick={(e) => handleTeamClick(e, fixture.homeTeam.id)}
+                    >
+                      {fixture.homeTeam.name}
+                    </Text>
+                  </Group>
                   <Text c="dimmed" size="xs">vs</Text>
-                  <Text
-                    fw={500}
-                    size="sm"
-                    style={{ cursor: 'pointer' }}
-                    c="blue"
-                    onClick={(e) => handleTeamClick(e, fixture.awayTeam.id)}
-                  >
-                    {fixture.awayTeam.name}
-                  </Text>
+                  <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <TeamJersey name={fixture.awayTeam.name} teamId={fixture.awayTeam.id} size={20} decorative />
+                    <Text
+                      fw={500}
+                      size="sm"
+                      style={{ cursor: 'pointer' }}
+                      c="blue"
+                      onClick={(e) => handleTeamClick(e, fixture.awayTeam.id)}
+                    >
+                      {fixture.awayTeam.name}
+                    </Text>
+                  </Group>
                 </Stack>
                 <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined, flexShrink: 0 }}>
                   <Stack align="flex-end" gap={4}>
