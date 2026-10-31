@@ -32,14 +32,29 @@ describe('team profile cache', () => {
     expect(fetchWithParams).toHaveBeenCalledTimes(1);
   });
 
-  it('serves the older copy when a later fetch fails', async () => {
+  it('marks an older copy stale, and only returns it when the caller allows it', async () => {
     vi.useFakeTimers();
     fetchWithParams.mockResolvedValueOnce('<html></html>').mockRejectedValue(new Error('down'));
     const { scraperOrchestrator } = await import('./index.js');
-    const first = await scraperOrchestrator.fetchTeamProfile(7);
+    const first = await scraperOrchestrator.fetchTeamProfile(7, undefined, { allowStale: true });
+    expect(first?.stale).toBe(false);
+    const readAt = first?.fetchedAt;
     vi.advanceTimersByTime(30 * 60 * 1000);
-    expect(await scraperOrchestrator.fetchTeamProfile(7)).toBe(first);
-    expect(fetchWithParams).toHaveBeenCalledTimes(2);
+    const strict = await scraperOrchestrator.fetchTeamProfile(7);
+    expect(strict).toBeNull();
+    vi.advanceTimersByTime(3 * 60 * 1000);
+    const stale = await scraperOrchestrator.fetchTeamProfile(7, undefined, { allowStale: true });
+    expect(stale?.stale).toBe(true);
+    expect(stale?.fetchedAt).toBe(readAt);
+  });
+
+  it('does not serve a copy older than 6 hours', async () => {
+    vi.useFakeTimers();
+    fetchWithParams.mockResolvedValueOnce('<html></html>').mockRejectedValue(new Error('down'));
+    const { scraperOrchestrator } = await import('./index.js');
+    await scraperOrchestrator.fetchTeamProfile(8, undefined, { allowStale: true });
+    vi.advanceTimersByTime(6 * 60 * 60 * 1000 + 1000);
+    expect(await scraperOrchestrator.fetchTeamProfile(8, undefined, { allowStale: true })).toBeNull();
   });
 });
 
@@ -56,5 +71,23 @@ describe('scraper client block handling', () => {
     await expect(scraperClient.fetch('/a')).rejects.toBeInstanceOf(SourceBlockedError);
     await expect(scraperClient.fetch('/b')).rejects.toBeInstanceOf(SourceBlockedError);
     expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('honours Retry-After and fails queued requests without sending them', async () => {
+    vi.resetModules();
+    vi.useRealTimers();
+    vi.doUnmock('./client.js');
+    const axios = (await import('axios')).default;
+    const get = vi.fn().mockRejectedValue(Object.assign(new Error('403'), { isAxiosError: true, response: { status: 403, headers: { 'retry-after': '120' } } }));
+    vi.spyOn(axios, 'create').mockReturnValue({ get } as never);
+    vi.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+    const { scraperClient, SourceBlockedError } = await import('./client.js');
+    const results = await Promise.allSettled([scraperClient.fetch('/a'), scraperClient.fetch('/b'), scraperClient.fetch('/c'), scraperClient.fetch('/d')]);
+    expect(results.every((r) => r.status === 'rejected' && r.reason instanceof SourceBlockedError)).toBe(true);
+    const first = (results[0] as PromiseRejectedResult).reason as InstanceType<typeof SourceBlockedError>;
+    expect(first.status).toBe(403);
+    expect(first.retryAfterMs).toBe(120000);
+    // two may have been in flight together (max concurrency 2); the queued ones send nothing
+    expect(get.mock.calls.length).toBeLessThanOrEqual(2);
   });
 });
