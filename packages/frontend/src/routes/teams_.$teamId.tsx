@@ -90,12 +90,14 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
 }
 
 // Spawtz gives biggest win/loss as a score string only ("13 - 7"). Find the one recent match
-// with exactly that score and result; if none or several match, leave the score as plain text.
+// with exactly that score and result, and only when the held matches reproduce Spawtz's averages.
+// Otherwise leave the score as plain text.
 function findScoreMatch(
   fixtures: FixtureWithTeams[],
   teamId: number,
   score: string | null | undefined,
   kind: 'win' | 'loss',
+  stat: TeamSeasonStats | undefined,
   limit?: number,
 ): FixtureWithTeams | null {
   const m = score?.match(/^(\d+)\s*-\s*(\d+)$/);
@@ -106,6 +108,18 @@ function findScoreMatch(
     .filter(f => f.status === 'completed' && f.homeScore !== null && f.awayScore !== null)
     .sort((a, b) => b.fixtureDate.localeCompare(a.fixtureDate));
   const pool = limit ? done.slice(0, limit) : done;
+  // Only link when the matches we hold reproduce Spawtz's own averages for this period, which
+  // shows they cover the same games. Otherwise the biggest result may be a match we do not hold.
+  if (!stat || pool.length === 0) return null;
+  let scored = 0;
+  let conceded = 0;
+  for (const f of pool) {
+    const isHome = f.homeTeam?.id === teamId;
+    scored += (isHome ? f.homeScore : f.awayScore) ?? 0;
+    conceded += (isHome ? f.awayScore : f.homeScore) ?? 0;
+  }
+  const same = (a: number, b: number) => Math.abs(a - b) < 0.011;
+  if (!same(scored / pool.length, stat.avgScored) || !same(conceded / pool.length, stat.avgConceded)) return null;
   const hits = pool.filter(f => {
     const isHome = f.homeTeam?.id === teamId;
     const isAway = f.awayTeam?.id === teamId;
@@ -201,14 +215,14 @@ function StatsTable({
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="green">Biggest Win</Table.Td>
-            <ScoreCell score={last3?.biggestWin} match={findScoreMatch(fixtures, teamId, last3?.biggestWin, 'win', 3)} teamId={teamId} color="green" />
-            <ScoreCell score={season?.biggestWin} match={findScoreMatch(fixtures, teamId, season?.biggestWin, 'win')} teamId={teamId} color="green" />
+            <ScoreCell score={last3?.biggestWin} match={findScoreMatch(fixtures, teamId, last3?.biggestWin, 'win', last3, 3)} teamId={teamId} color="green" />
+            <ScoreCell score={season?.biggestWin} match={findScoreMatch(fixtures, teamId, season?.biggestWin, 'win', season)} teamId={teamId} color="green" />
             <Table.Td ta="center" c="green">{allTime?.biggestWin ?? '-'}</Table.Td>
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="red">Biggest Loss</Table.Td>
-            <ScoreCell score={last3?.biggestLoss} match={findScoreMatch(fixtures, teamId, last3?.biggestLoss, 'loss', 3)} teamId={teamId} color="red" />
-            <ScoreCell score={season?.biggestLoss} match={findScoreMatch(fixtures, teamId, season?.biggestLoss, 'loss')} teamId={teamId} color="red" />
+            <ScoreCell score={last3?.biggestLoss} match={findScoreMatch(fixtures, teamId, last3?.biggestLoss, 'loss', last3, 3)} teamId={teamId} color="red" />
+            <ScoreCell score={season?.biggestLoss} match={findScoreMatch(fixtures, teamId, season?.biggestLoss, 'loss', season)} teamId={teamId} color="red" />
             <Table.Td ta="center" c="red">{allTime?.biggestLoss ?? '-'}</Table.Td>
           </Table.Tr>
         </Table.Tbody>
