@@ -155,6 +155,16 @@ export async function initializeSchema(): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
 
+    // Shared team kit colours. Not touched by the sync. One row per team; version is
+    // bumped on every change so concurrent edits can be detected.
+    `CREATE TABLE IF NOT EXISTS team_kits (
+      team_id INTEGER PRIMARY KEY REFERENCES teams(id),
+      primary_colour TEXT NOT NULL,
+      secondary_colour TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )`,
+
     // INDEXES
     `CREATE INDEX IF NOT EXISTS idx_leagues_region ON leagues(region_id)`,
     `CREATE INDEX IF NOT EXISTS idx_divisions_league ON divisions(league_id)`,
