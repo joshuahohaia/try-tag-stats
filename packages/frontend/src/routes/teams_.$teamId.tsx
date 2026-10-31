@@ -89,7 +89,73 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
   );
 }
 
-function StatsTable({ seasonStats }: { seasonStats: TeamSeasonStats[] }) {
+// Spawtz gives biggest win/loss as a score string only ("13 - 7"). Find the one recent match
+// with exactly that score and result; if none or several match, leave the score as plain text.
+function findScoreMatch(
+  fixtures: FixtureWithTeams[],
+  teamId: number,
+  score: string | null | undefined,
+  kind: 'win' | 'loss',
+  limit?: number,
+): FixtureWithTeams | null {
+  const m = score?.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (!m) return null;
+  const mine = Number(m[1]);
+  const theirs = Number(m[2]);
+  const done = fixtures
+    .filter(f => f.status === 'completed' && f.homeScore !== null && f.awayScore !== null)
+    .sort((a, b) => b.fixtureDate.localeCompare(a.fixtureDate));
+  const pool = limit ? done.slice(0, limit) : done;
+  const hits = pool.filter(f => {
+    const isHome = f.homeTeam?.id === teamId;
+    const isAway = f.awayTeam?.id === teamId;
+    if (!isHome && !isAway) return false;
+    const a = isHome ? f.homeScore : f.awayScore;
+    const b = isHome ? f.awayScore : f.homeScore;
+    return a === mine && b === theirs && (kind === 'win' ? mine > theirs : mine < theirs);
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+
+function ScoreCell({
+  score,
+  match,
+  teamId,
+  color,
+}: {
+  score: string | null | undefined;
+  match: FixtureWithTeams | null;
+  teamId: number;
+  color: string;
+}) {
+  const text = score ?? '-';
+  if (!match) return <Table.Td ta="center" c={color}>{text}</Table.Td>;
+  const opponent = match.homeTeam?.id === teamId ? match.awayTeam : match.homeTeam;
+  if (!opponent || opponent.id === opponent.externalTeamId) return <Table.Td ta="center" c={color}>{text}</Table.Td>;
+  return (
+    <Table.Td ta="center" c={color}>
+      <Link
+        to="/matches/$teamId/$opponentId/$date"
+        params={{ teamId: String(teamId), opponentId: String(opponent.id), date: match.fixtureDate }}
+        search={match.fixtureTime ? { time: match.fixtureTime } : {}}
+        style={{ color: 'inherit', textDecoration: 'underline' }}
+        title={`Open the match vs ${opponent.name}`}
+      >
+        {text}
+      </Link>
+    </Table.Td>
+  );
+}
+
+function StatsTable({
+  seasonStats,
+  fixtures,
+  teamId,
+}: {
+  seasonStats: TeamSeasonStats[];
+  fixtures: FixtureWithTeams[];
+  teamId: number;
+}) {
   if (!seasonStats || seasonStats.length === 0) return null;
 
   const getLast3 = () => seasonStats.find(s => s.period === 'last3');
@@ -135,14 +201,14 @@ function StatsTable({ seasonStats }: { seasonStats: TeamSeasonStats[] }) {
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="green">Biggest Win</Table.Td>
-            <Table.Td ta="center" c="green">{last3?.biggestWin ?? '-'}</Table.Td>
-            <Table.Td ta="center" c="green">{season?.biggestWin ?? '-'}</Table.Td>
+            <ScoreCell score={last3?.biggestWin} match={findScoreMatch(fixtures, teamId, last3?.biggestWin, 'win', 3)} teamId={teamId} color="green" />
+            <ScoreCell score={season?.biggestWin} match={findScoreMatch(fixtures, teamId, season?.biggestWin, 'win')} teamId={teamId} color="green" />
             <Table.Td ta="center" c="green">{allTime?.biggestWin ?? '-'}</Table.Td>
           </Table.Tr>
           <Table.Tr>
             <Table.Td fw={500} c="red">Biggest Loss</Table.Td>
-            <Table.Td ta="center" c="red">{last3?.biggestLoss ?? '-'}</Table.Td>
-            <Table.Td ta="center" c="red">{season?.biggestLoss ?? '-'}</Table.Td>
+            <ScoreCell score={last3?.biggestLoss} match={findScoreMatch(fixtures, teamId, last3?.biggestLoss, 'loss', 3)} teamId={teamId} color="red" />
+            <ScoreCell score={season?.biggestLoss} match={findScoreMatch(fixtures, teamId, season?.biggestLoss, 'loss')} teamId={teamId} color="red" />
             <Table.Td ta="center" c="red">{allTime?.biggestLoss ?? '-'}</Table.Td>
           </Table.Tr>
         </Table.Tbody>
@@ -360,7 +426,11 @@ function TeamDetailPage() {
 
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             {teamProfile.seasonStats && teamProfile.seasonStats.length > 0 && (
-              <StatsTable seasonStats={teamProfile.seasonStats} />
+              <StatsTable
+                seasonStats={teamProfile.seasonStats}
+                fixtures={teamProfile.recentFixtures ?? []}
+                teamId={teamProfile.id}
+              />
             )}
 
             {teamProfile.positionHistory && teamProfile.positionHistory.length > 0 && (
