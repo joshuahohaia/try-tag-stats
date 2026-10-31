@@ -21,7 +21,7 @@ import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink, Icon
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
 import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
-import { formatDate, formatTime } from '../utils/format';
+import { displayPlayerName, formatDate, formatTime } from '../utils/format';
 import { buildShareText, whatsappShareUrl } from '../utils/shareMatch';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
@@ -152,7 +152,7 @@ function TeamCard({
             <Stack gap={4}>
               {profile.playerAwards.slice(0, 3).map((award, idx) => (
                 <Group key={idx} justify="space-between">
-                  <Text size="sm">{award.player?.name || 'Unknown'}</Text>
+                  <Text size="sm">{displayPlayerName(award.player?.name)}</Text>
                   <Group gap={4}>
                     <IconTrophy size={14} color="gold" />
                     <Text size="sm" fw={600}>{award.awardCount}</Text>
