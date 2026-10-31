@@ -6,6 +6,7 @@ import {
   Button,
 } from '@mantine/core';
 import { IconStar, IconStarFilled } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
 import { Link } from '@tanstack/react-router';
 import type { StandingWithTeam } from '@trytag/shared';
 import { useFavoriteTeams } from '../hooks/useFavorites';
@@ -19,6 +20,7 @@ interface StandingsTableProps {
 
 export function StandingsTable({ standings, leagueId, isLoading }: StandingsTableProps) {
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   if (isLoading) {
     return <StandingsTableSkeleton rows={8} />;
@@ -31,7 +33,7 @@ export function StandingsTable({ standings, leagueId, isLoading }: StandingsTabl
   return (
     <Card withBorder p={0}>
       <ScrollArea type="auto">
-        <Table highlightOnHover>
+        <Table highlightOnHover horizontalSpacing={isMobile ? 4 : undefined} fz={isMobile ? 'xs' : undefined}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Pos</Table.Th>
