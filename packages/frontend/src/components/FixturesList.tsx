@@ -3,6 +3,7 @@ import {
   Text,
   Stack,
   Group,
+  Flex,
   Badge,
   HoverCard,
 } from '@mantine/core';
@@ -97,6 +98,8 @@ export function FixturesList({
           fixtureCalDate !== '' &&
           fixtureCalDate < venueCalendarDate();
 
+        const hasScore = fixture.status === 'completed' && fixture.homeScore !== null;
+
         const fixtureBadge =
           fixture.status === 'completed' && fixture.homeScore !== null ? (
             <Badge size="lg" variant="filled" color={resultColor}>
@@ -139,8 +142,17 @@ export function FixturesList({
             style={isClickable ? { cursor: 'pointer' } : {}}
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
-              <Group gap="xs" wrap="wrap" justify='space-between' align='flex-start'>
-                <Stack gap={2} style={{ flex: '1 1 200px', minWidth: 0 }}>
+              {/* Scores always sit top right. Status badges (with insight icons) sit under the names on
+                  phones and top right from the xs breakpoint, so the layout never depends on name or
+                  badge width. */}
+              <Flex
+                gap="xs"
+                wrap="nowrap"
+                justify="space-between"
+                align="flex-start"
+                direction={hasScore ? 'row' : { base: 'column', xs: 'row' }}
+              >
+                <Stack gap={2} flex={hasScore ? '1 1 0' : { base: '0 0 auto', xs: '1 1 0' }} style={{ minWidth: 0 }}>
                   <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
                     <TeamJersey name={fixture.homeTeam.name} teamId={fixture.homeTeam.id} size={20} decorative />
                     <Text
@@ -177,7 +189,7 @@ export function FixturesList({
                     )}
                   </Group>
                 </div>
-              </Group>
+              </Flex>
               <Group justify="space-between" align="flex-start" wrap="nowrap">
                 <Stack
                   gap={0}
