@@ -1,10 +1,15 @@
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Small in-memory fixed-window limiter, per client IP. State lives in this process only
+ * Small in-memory fixed-window limiter (per client IP unless keyOf says otherwise). State lives in this process only
  * (resets on restart), which is enough to slow casual abuse on a single instance.
  */
-export function createRateLimiter(max: number, windowMs: number, now: () => number = Date.now) {
+export function createRateLimiter(
+  max: number,
+  windowMs: number,
+  now: () => number = Date.now,
+  keyOf: (req: Request) => string = (req) => req.ip || 'unknown'
+) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -12,7 +17,7 @@ export function createRateLimiter(max: number, windowMs: number, now: () => numb
     if (hits.size > 5000) {
       for (const [k, v] of hits) if (v.resetAt <= t) hits.delete(k);
     }
-    const key = req.ip || 'unknown';
+    const key = keyOf(req);
     let entry = hits.get(key);
     if (!entry || entry.resetAt <= t) {
       entry = { count: 0, resetAt: t + windowMs };
