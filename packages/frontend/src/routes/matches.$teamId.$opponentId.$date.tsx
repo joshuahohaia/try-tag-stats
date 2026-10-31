@@ -4,7 +4,7 @@ import { IconExternalLink } from '@tabler/icons-react';
 import { useTeam } from '../hooks/useTeams';
 import { QueryError } from '../components/QueryError';
 import { formatDate, formatTime } from '../utils/format';
-import { lookupMatch, matchPath } from '../utils/matchLookup';
+import { isResolvedTeam, lookupMatch, matchPath } from '../utils/matchLookup';
 import type { FixtureWithTeams } from '@trytag/shared';
 
 function spawtzTeamPage(externalTeamId: number | null | undefined) {
@@ -26,9 +26,13 @@ function MatchSummary({ fixture }: { fixture: FixtureWithTeams }) {
               <Title order={3} c="blue">{fixture.homeTeam.name}</Title>
             </Link>
             <Text c="dimmed" size="sm">vs</Text>
-            <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
-              <Title order={3} c="blue">{fixture.awayTeam.name}</Title>
-            </Link>
+            {isResolvedTeam(fixture.awayTeam) ? (
+              <Link to="/teams/$teamId" params={{ teamId: String(fixture.awayTeam.id) }} style={{ textDecoration: 'none' }}>
+                <Title order={3} c="blue">{fixture.awayTeam.name}</Title>
+              </Link>
+            ) : (
+              <Title order={3}>{fixture.awayTeam.name}</Title>
+            )}
           </Stack>
           {played ? (
             <Badge size="xl" variant="filled" color={color}>{fixture.homeScore} - {fixture.awayScore}</Badge>
@@ -62,7 +66,7 @@ function MatchSummary({ fixture }: { fixture: FixtureWithTeams }) {
           </Button>
         )}
         <Text size="xs" c="dimmed">
-          This opens {fixture.homeTeam.name}'s Try Tag Rugby team page. Try Tag Rugby has no page for a single match.
+          Opens the Try Tag Rugby team page for {fixture.homeTeam.name}.
         </Text>
       </Stack>
     </Card>
@@ -124,12 +128,12 @@ function MatchPage() {
           {result.kind === 'none' && (
             <Card withBorder>
               <Text c="dimmed" ta="center" py="xl">
-                This match is no longer listed on the team page, so its details can't be shown.
+                No matching fixture found on this team page.
               </Text>
             </Card>
           )}
           <Text size="xs" c="dimmed">
-            Player of the match for a single game is not published by Try Tag Rugby, so it isn't shown here.
+            Player of the match is not available in this fixture data.
           </Text>
         </Stack>
       </Container>
