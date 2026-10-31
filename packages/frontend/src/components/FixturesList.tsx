@@ -168,10 +168,14 @@ export function FixturesList({
                   </Group>
                 </Stack>
                 <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined, flexShrink: 0 }}>
-                  <Stack align="flex-end" gap={4}>
+                  <Group gap="xs" wrap="nowrap" align="center">
                     {fixtureBadge}
-                    {insightIcons.length > 0 && <Group gap="xs">{insightIcons}</Group>}
-                  </Stack>
+                    {insightIcons.length > 0 && (
+                      <Group gap={6} wrap="nowrap" align="center">
+                        {insightIcons}
+                      </Group>
+                    )}
+                  </Group>
                 </div>
               </Group>
               <Group justify="space-between" align="flex-start" wrap="nowrap">
