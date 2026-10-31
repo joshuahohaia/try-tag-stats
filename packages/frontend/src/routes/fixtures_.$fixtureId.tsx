@@ -15,11 +15,12 @@ import {
   Divider,
   Button,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink, IconBrandWhatsapp } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
 import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { formatDate, formatTime } from '../utils/format';
+import { buildShareText, whatsappShareUrl } from '../utils/shareMatch';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
 function FormBadges({ form }: { form: string }) {
@@ -402,6 +403,20 @@ function FixtureDetailPage() {
                     )
                 )}
               </Group>
+
+              {fixture.status !== 'completed' && (
+                <Button
+                  component="a"
+                  href={whatsappShareUrl(buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="light"
+                  color="green"
+                  leftSection={<IconBrandWhatsapp size={16} />}
+                >
+                  Share to WhatsApp
+                </Button>
+              )}
             </Stack>
           </Card>
 
