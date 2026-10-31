@@ -9,6 +9,13 @@ vi.mock('./client.js', () => ({ scraperClient: { fetchWithParams: (...a: unknown
 
 const ctx = (seasonId: number) => ({ leagueId: 747, seasonId, divisionId: seasonId * 10, seasonName: `S${seasonId}`, divisionName: 'Div' });
 
+describe('head-to-head pilot scope', () => {
+  it('covers Battersea Park Astro (747) and Clapham Junction Sunday (655) only', async () => {
+    const { PILOT_LEAGUE_EXTERNAL_IDS } = await import('./head-to-head.service.js');
+    expect([...PILOT_LEAGUE_EXTERNAL_IDS].sort((a, b) => a - b)).toEqual([655, 747]);
+  });
+});
+
 describe('head-to-head service limits', () => {
   beforeEach(() => {
     vi.resetModules();
