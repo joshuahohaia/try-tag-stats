@@ -7,6 +7,7 @@ import {
 } from '../database/repositories/index.js';
 import { scraperOrchestrator } from '../scraper/index.js';
 import { logger } from '../utils/logger.js';
+import { seasonAwardsForDivision } from '../utils/season-awards.js';
 import type {
   FixtureWithTeams,
   FixtureDetail,
@@ -217,7 +218,11 @@ router.get('/:id', async (req, res) => {
         .reverse()
         .join('');
 
-      const playerAwards = await playerAwardRepository.findByTeam(teamId);
+      const playerAwards = seasonAwardsForDivision(
+        await playerAwardRepository.findByTeam(teamId),
+        standings,
+        divisionId,
+      );
 
       // Try to get season stats from scraper
       let seasonStats: TeamSeasonStats[] = [];

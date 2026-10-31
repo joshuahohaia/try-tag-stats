@@ -114,3 +114,12 @@ export function formatFixtureDate(
   if (cal === venueCalendarDate(yesterday)) return 'Yesterday';
   return formatDate(cal);
 }
+
+/**
+ * Player names from Spawtz sometimes include an email address after the given name. Drop any part
+ * that looks like an email, keep the rest as given, and never invent a name.
+ */
+export function displayPlayerName(name: string | null | undefined): string {
+  const parts = (name ?? '').split(/\s+/).filter((p) => p && !p.includes('@'));
+  return parts.join(' ') || 'Unnamed player';
+}
