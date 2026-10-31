@@ -10,6 +10,7 @@ import { Link } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { PlayerAwardWithDetails } from '@trytag/shared';
 import { calculateAwardPositions } from '../utils/statistics';
+import { displayPlayerName } from '../utils/format';
 import { StatsTableSkeleton } from './skeletons';
 
 interface AwardsTableProps {
@@ -60,7 +61,7 @@ export function AwardsTable({ statistics, isLoading }: AwardsTableProps) {
           {sortedStatistics.map((stat) => (
             <Table.Tr key={stat.id}>
               <Table.Td>{awardPositions.get(stat.player.id)}</Table.Td>
-              <Table.Td fw={500}>{stat.player.name}</Table.Td>
+              <Table.Td fw={500}>{displayPlayerName(stat.player.name)}</Table.Td>
               <Table.Td>
                 <Link
                   to="/teams/$teamId"
