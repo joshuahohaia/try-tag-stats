@@ -430,11 +430,11 @@ function FixtureDetailPage() {
                   rel="noopener noreferrer"
                   variant="subtle"
                   color="gray"
-                  size="sm"
+                  size={44}
                   aria-label="Share to WhatsApp"
                   title="Share to WhatsApp"
                 >
-                  <IconBrandWhatsapp size={16} />
+                  <IconBrandWhatsapp size={18} />
                 </ActionIcon>
               )}
             </Stack>
