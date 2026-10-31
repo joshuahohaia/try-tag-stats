@@ -13,8 +13,9 @@ import {
   Skeleton,
   Progress,
   Divider,
+  Button,
 } from '@mantine/core';
-import { IconTrophy, IconCalendar, IconClock, IconMapPin } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
 import { formatDate, formatTime } from '../utils/format';
@@ -379,6 +380,26 @@ function FixtureDetailPage() {
                     {fixture.awayTeam.name}
                   </Title>
                 </Link>
+              </Group>
+
+              <Group gap="sm" justify="center">
+                {[fixture.homeTeam, fixture.awayTeam].map(
+                  (t) =>
+                    t.externalTeamId && (
+                      <Button
+                        key={t.id}
+                        component="a"
+                        href={`https://trytagrugby.spawtz.com/Leagues/TeamProfile?TeamId=${t.externalTeamId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        size="xs"
+                        rightSection={<IconExternalLink size={12} />}
+                      >
+                        {t.name} on Try Tag Rugby
+                      </Button>
+                    )
+                )}
               </Group>
             </Stack>
           </Card>
