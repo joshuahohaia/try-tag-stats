@@ -81,7 +81,7 @@ export function StandingsTable({ standings, leagueId, isLoading }: StandingsTabl
                     params={{ teamId: String(standing.team.id) }}
                     style={{ color: 'inherit', textDecoration: 'none' }}
                   >
-                    <Group gap={6} wrap="nowrap" component="span">
+                    <Group gap={6} wrap="nowrap" component="span" style={{ minWidth: 170 }}>
                       <TeamJersey name={standing.team.name} teamId={standing.team.id} size={24} />
                       <Text span fw={500} c="blue">
                         {standing.team.name}
