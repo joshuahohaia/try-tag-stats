@@ -4,6 +4,7 @@ import {
   Table,
   Text,
   Button,
+  Group,
 } from '@mantine/core';
 import { IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useMediaQuery } from '@mantine/hooks';
@@ -11,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import type { StandingWithTeam } from '@trytag/shared';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { StandingsTableSkeleton } from './skeletons';
+import { TeamJersey } from './TeamJersey';
 
 interface StandingsTableProps {
   standings: StandingWithTeam[];
@@ -79,9 +81,12 @@ export function StandingsTable({ standings, leagueId, isLoading }: StandingsTabl
                     params={{ teamId: String(standing.team.id) }}
                     style={{ color: 'inherit', textDecoration: 'none' }}
                   >
-                    <Text span fw={500} c="blue">
-                      {standing.team.name}
-                    </Text>
+                    <Group gap={6} wrap="nowrap" component="span">
+                      <TeamJersey name={standing.team.name} teamId={standing.team.id} size={24} />
+                      <Text span fw={500} c="blue">
+                        {standing.team.name}
+                      </Text>
+                    </Group>
                   </Link>
                 </Table.Td>
 
