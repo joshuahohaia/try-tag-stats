@@ -1,3 +1,4 @@
+import { orderTeamStandings } from './standing-order.js';
 import { getDatabase } from '../connection.js';
 import type { Standing, StandingWithTeam, Team } from '@trytag/shared';
 import type { Row } from '@libsql/client';
@@ -7,7 +8,12 @@ export interface StandingWithDivision extends Standing {
   leagueId: number;
   leagueName: string;
   seasonName: string;
+  seasonId: number;
+  phaseId: number | null;
+  phaseName: string | null;
 }
+
+type StandingRow = StandingWithDivision & { phaseStarted: boolean };
 
 function rowToStanding(row: Row): Standing {
   return {
@@ -42,13 +48,17 @@ function rowToStandingWithTeam(row: Row): StandingWithTeam {
   };
 }
 
-function rowToStandingWithDivision(row: Row): StandingWithDivision {
+function rowToStandingWithDivision(row: Row): StandingRow {
   return {
     ...rowToStanding(row),
     divisionName: row.division_name as string,
     leagueId: row.league_id as number,
     leagueName: row.league_name as string,
     seasonName: row.season_name as string,
+    seasonId: row.season_id as number,
+    phaseId: (row.phase_id as number | null) ?? null,
+    phaseName: (row.phase_name as string | null) ?? null,
+    phaseStarted: Number(row.phase_started ?? 0) === 1,
   };
 }
 
@@ -145,17 +155,28 @@ export const standingRepository = {
                d.name as division_name,
                l.id as league_id,
                l.name as league_name,
-               se.name as season_name
+               se.name as season_name,
+               se.id as season_id,
+               d.phase_id as phase_id,
+               d.phase_name as phase_name,
+               EXISTS (
+                 SELECT 1 FROM standings s2
+                 INNER JOIN divisions d2 ON s2.division_id = d2.id
+                 WHERE d2.league_id = d.league_id
+                   AND d2.season_id = d.season_id
+                   AND d2.phase_id IS d.phase_id
+                   AND s2.played > 0
+               ) as phase_started
         FROM standings s
         INNER JOIN divisions d ON s.division_id = d.id
         INNER JOIN leagues l ON d.league_id = l.id
         INNER JOIN seasons se ON d.season_id = se.id
         WHERE s.team_id = ?
-        ORDER BY se.id DESC
+        ORDER BY se.id DESC, s.division_id ASC
       `,
       args: [teamId],
     });
-    return result.rows.map(rowToStandingWithDivision);
+    return orderTeamStandings(result.rows.map(rowToStandingWithDivision));
   },
 
   async findByTeamAndDivision(teamId: number, divisionId: number): Promise<Standing | null> {

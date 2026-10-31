@@ -155,7 +155,16 @@ function TeamDetailPage() {
   const { data: teamProfile, isLoading, isError, refetch } = useTeam(parseInt(teamId, 10));
   const { isFavorite, toggleFavorite } = useFavoriteTeams();
 
-  const currentDivisionId = teamProfile?.standings?.[0]?.divisionId;
+  const currentStanding = teamProfile?.standings?.[0];
+  const currentDivisionId = currentStanding?.divisionId;
+  // Other standings in the same league and season (the other phases the team played in).
+  const otherPhases = (teamProfile?.standings ?? []).filter(
+    (st) =>
+      currentStanding &&
+      st.divisionId !== currentStanding.divisionId &&
+      st.leagueId === currentStanding.leagueId &&
+      st.seasonId === currentStanding.seasonId
+  );
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(currentDivisionId ?? 0);
   const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(currentDivisionId ?? 0);
   const { data: divisions, isLoading: divisionsLoading } = useDivisions(currentDivisionId ? [currentDivisionId] : []);
@@ -260,20 +269,28 @@ function TeamDetailPage() {
               <Group justify="space-between" mb="md">
                 <Group gap="md">
                   <Title order={3}>Current Standing</Title>
-                  {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 && (
-                    <Group gap="xs">
-                      <Text size="sm" c="dimmed">Form:</Text>
-                      <FormBadges fixtures={teamProfile.recentFixtures} teamId={teamProfile.id} />
-                    </Group>
-                  )}
+                  {!teamProfile.standings[0].phaseName &&
+                    teamProfile.recentFixtures &&
+                    teamProfile.recentFixtures.length > 0 && (
+                      <Group gap="xs">
+                        <Text size="sm" c="dimmed">Form:</Text>
+                        <FormBadges fixtures={teamProfile.recentFixtures} teamId={teamProfile.id} />
+                      </Group>
+                    )}
                 </Group>
                 <Link
                   to="/leagues/$leagueId"
                   params={{ leagueId: String(teamProfile.standings[0].leagueId) }}
                   style={{ textDecoration: 'none' }}
                 >
-                  <Badge variant="light" size="lg" style={{ cursor: 'pointer' }}>
+                  <Badge
+                    variant="light"
+                    size="lg"
+                    style={{ cursor: 'pointer' }}
+                    styles={{ label: { whiteSpace: 'normal' }, root: { height: 'auto', padding: '4px 10px' } }}
+                  >
                     {teamProfile.standings[0].leagueName} - {teamProfile.standings[0].divisionName}
+                    {teamProfile.standings[0].phaseName ? ` (${teamProfile.standings[0].phaseName})` : ''}
                   </Badge>
                 </Link>
               </Group>
@@ -303,6 +320,33 @@ function TeamDetailPage() {
                   <Text size="xl" fw={700}>{teamProfile.standings[0].totalPoints}</Text>
                 </div>
               </SimpleGrid>
+              {otherPhases.length > 0 && (
+                <Stack gap={2} mt="md">
+                  <Text size="sm" c="dimmed">Earlier in {teamProfile.standings[0].seasonName}</Text>
+                  {otherPhases.map((st) => (
+                    <Text size="sm" key={st.divisionId}>
+                      {st.phaseName ?? 'First phase'} - {st.divisionName}: position {st.position}, played {st.played},{' '}
+                      {st.wins}W {st.draws}D {st.losses}L, {st.totalPoints} pts
+                    </Text>
+                  ))}
+                </Stack>
+              )}
+              {teamProfile.standings[0].phaseName && (
+                <Stack gap="xs" mt="md">
+                  {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 && (
+                    <Group gap="xs">
+                      <Text size="sm" c="dimmed">Form from Spawtz team page:</Text>
+                      <FormBadges fixtures={teamProfile.recentFixtures} teamId={teamProfile.id} />
+                    </Group>
+                  )}
+                  <Text size="xs" c="dimmed">
+                    Form, Position History and Statistics below come from the Spawtz team page, and Player of the
+                    Match awards from Spawtz division statistics, which Spawtz does not give for later phases. Spawtz
+                    does not say which phase they cover, so they may not include {teamProfile.standings[0].phaseName}{' '}
+                    games.
+                  </Text>
+                </Stack>
+              )}
             </Card>
           )}
 

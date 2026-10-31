@@ -120,6 +120,12 @@ export interface StandingWithDivision extends Standing {
   leagueId: number;
   leagueName: string;
   seasonName: string;
+  /** Internal season id. */
+  seasonId?: number;
+  /** Spawtz PhaseId of a later phase; null/undefined for the first phase. Opaque, never used for ordering. */
+  phaseId?: number | null;
+  /** Phase label such as "Phase 2"; null/undefined for the first phase. */
+  phaseName?: string | null;
 }
 
 export interface StandingWithTeam extends Standing {
