@@ -43,6 +43,8 @@ interface ActiveDivision {
   leagueName: string;
   seasonName: string;
   leagueId: number;
+  /** Set when the favourite is in a later phase: stats are shown for the first phase division instead. */
+  laterPhaseName?: string;
 }
 
 
@@ -196,7 +198,15 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
             <Link to="/leagues/$leagueId" params={{ leagueId: String(currentDivision.leagueId || 0) }} style={{ textDecoration: 'none', color: 'inherit' }}>
               <Text size="sm" fw={700} c="blue">{currentDivision.leagueName}</Text>
             </Link>
-            <Text c="dimmed" size="xs">{currentDivision.name}</Text>
+            <Text c="dimmed" size="xs">
+              {currentDivision.name}
+              {currentDivision.laterPhaseName ? ' (first phase)' : ''}
+            </Text>
+            {currentDivision.laterPhaseName && (
+              <Text c="dimmed" size="xs">
+                First-phase totals only. No Player of the Match table is stored for {currentDivision.laterPhaseName}.
+              </Text>
+            )}
           </div>
 
           {isLoading ? (
@@ -273,6 +283,35 @@ function HomePage() {
   });
 
   // Extract unique active divisions from loaded profiles
+  // Player of the Match totals for a favourite in a later phase: Spawtz statistics are read per
+  // division, and the later-phase division has no table stored, so use the same league and season's
+  // first-phase division and say so.
+  const statsDivisions = useMemo(() => {
+    const out = new Map<number, ActiveDivision>();
+    teamQueries.forEach((query) => {
+      const standings = query.data?.standings ?? [];
+      const current = standings[0];
+      if (!current) return;
+      const first = current.phaseId
+        ? standings.find(
+            (st) => !st.phaseId && st.leagueId === current.leagueId && st.seasonId === current.seasonId,
+          )
+        : undefined;
+      const base = first ?? current;
+      if (!out.has(base.divisionId)) {
+        out.set(base.divisionId, {
+          id: base.divisionId,
+          name: base.divisionName,
+          leagueName: base.leagueName,
+          seasonName: base.seasonName,
+          leagueId: base.leagueId,
+          laterPhaseName: first ? (current.phaseName ?? 'a later phase') : undefined,
+        });
+      }
+    });
+    return Array.from(out.values());
+  }, [teamQueries]);
+
   const activeDivisions = useMemo(() => {
     const divisions = new Map<number, ActiveDivision>();
 
@@ -280,15 +319,14 @@ function HomePage() {
       if (query.data && query.data.standings.length > 0) {
         // Assume first standing is current/active
         const standing = query.data.standings[0];
-        if (!divisions.has(standing.divisionId)) {
-          divisions.set(standing.divisionId, {
-            id: standing.divisionId,
-            name: standing.divisionName,
-            leagueName: standing.leagueName,
-            seasonName: standing.seasonName,
-            leagueId: standing.leagueId,
-          });
-        }
+        divisions.set(standing.divisionId, {
+          id: standing.divisionId,
+          name: standing.divisionName,
+          leagueName: standing.leagueName,
+          seasonName: standing.seasonName,
+          leagueId: standing.leagueId,
+          laterPhaseName: standing.phaseName ?? undefined,
+        });
       }
     });
     return Array.from(divisions.values());
@@ -492,6 +530,11 @@ function HomePage() {
                       </Group>
                     ))}
                   </Stack>
+                  {statsDivisions.some((d) => d.laterPhaseName) && (
+                    <Text size="xs" c="dimmed" mt="sm">
+                      Form comes from the Spawtz team page, which lists first-phase results. It does not include later-phase games.
+                    </Text>
+                  )}
                 </Card>
               )}
 
@@ -574,7 +617,7 @@ function HomePage() {
           </SimpleGrid>
 
           {hasFavorites && activeDivisions.length > 0 ? (
-            <PlayerStatsWidget divisions={activeDivisions} />
+            <PlayerStatsWidget divisions={statsDivisions} />
           ) : (
             <Card withBorder>
               <Title fz={15} order={3} mb="md">
