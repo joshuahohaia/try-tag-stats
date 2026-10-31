@@ -4,9 +4,15 @@ import { createRateLimiter } from '../middleware/rate-limit.js';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
-export function createKitsRouter(limit = { max: 20, windowMs: 10 * 60 * 1000 }) {
+export function createKitsRouter(limit = { max: 20, windowMs: 10 * 60 * 1000, perTeam: 30, global: 200 }) {
   const router = Router();
-  const writeLimiter = createRateLimiter(limit.max, limit.windowMs);
+  // Three layers. The per-IP one depends on req.ip being the real client, which depends on the
+  // proxy setup in front of the app. The per-team and global caps do not depend on any header,
+  // so a spoofed X-Forwarded-For cannot lift them.
+  const perIp = createRateLimiter(limit.max, limit.windowMs);
+  const perTeam = createRateLimiter(limit.perTeam, limit.windowMs, Date.now, (req) => `team:${req.params.teamId}`);
+  const overall = createRateLimiter(limit.global, limit.windowMs, Date.now, () => 'all');
+  const writeLimiter = [perIp, perTeam, overall];
 
   const bad = (res: import('express').Response, message: string) =>
     res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message } });
@@ -25,7 +31,7 @@ export function createKitsRouter(limit = { max: 20, windowMs: 10 * 60 * 1000 }) 
     });
 
   // PUT /api/v1/kits/:teamId  { primary, secondary, expectedVersion: number | null }
-  router.put('/:teamId', writeLimiter, async (req, res) => {
+  router.put('/:teamId', ...writeLimiter, async (req, res) => {
     const teamId = Number(req.params.teamId);
     if (!Number.isInteger(teamId) || teamId <= 0) return bad(res, 'Invalid team id');
     const { primary, secondary, expectedVersion } = req.body ?? {};
@@ -44,7 +50,7 @@ export function createKitsRouter(limit = { max: 20, windowMs: 10 * 60 * 1000 }) 
   });
 
   // DELETE /api/v1/kits/:teamId  { expectedVersion: number } - back to generated colours
-  router.delete('/:teamId', writeLimiter, async (req, res) => {
+  router.delete('/:teamId', ...writeLimiter, async (req, res) => {
     const teamId = Number(req.params.teamId);
     if (!Number.isInteger(teamId) || teamId <= 0) return bad(res, 'Invalid team id');
     const { expectedVersion } = req.body ?? {};
