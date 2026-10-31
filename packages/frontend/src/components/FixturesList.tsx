@@ -99,11 +99,27 @@ export function FixturesList({
           fixtureCalDate < venueCalendarDate();
 
         const hasScore = fixture.status === 'completed' && fixture.homeScore !== null;
+        // A result without a score (later-phase games Spawtz lists only as win/draw points).
+        const resultOnly = fixture.status === 'completed' && fixture.homeScore === null && !!fixture.outcome;
+        const resultOnlyLabel = !resultOnly
+          ? null
+          : fixture.outcome === 'D'
+            ? 'Draw'
+            : favoriteTeamIds.includes(fixture.awayTeam.id) && !favoriteTeamIds.includes(fixture.homeTeam.id)
+              ? fixture.outcome === 'A' ? 'Won' : 'Lost'
+              : favoriteTeamIds.includes(fixture.homeTeam.id) && !favoriteTeamIds.includes(fixture.awayTeam.id)
+                ? fixture.outcome === 'H' ? 'Won' : 'Lost'
+                : fixture.outcome === 'H' ? `${fixture.homeTeam.name} won` : `${fixture.awayTeam.name} won`;
+        const resultOnlyColor = resultOnlyLabel === 'Won' ? 'green' : resultOnlyLabel === 'Lost' ? 'red' : 'gray';
 
         const fixtureBadge =
           fixture.status === 'completed' && fixture.homeScore !== null ? (
             <Badge size="lg" variant="filled" color={resultColor}>
               {fixture.homeScore} - {fixture.awayScore}
+            </Badge>
+          ) : resultOnly ? (
+            <Badge size="lg" variant="filled" color={resultOnlyColor} title="Spawtz does not publish the score for this game">
+              {resultOnlyLabel}
             </Badge>
           ) : isPastScheduled ? (
             <Badge variant="light" color="orange">
@@ -115,7 +131,7 @@ export function FixturesList({
 
         // Link to fixture detail for DB fixtures, or external link for scraped data
         const canLinkToFixture = fixture.id > 0;
-        const isScrapedFixture = fixture.id <= 0;
+        const isScrapedFixture = fixture.id <= 0 && !resultOnly;
 
         const handleCardClick = () => {
           if (canLinkToFixture) {
@@ -150,9 +166,9 @@ export function FixturesList({
                 wrap="nowrap"
                 justify="space-between"
                 align="flex-start"
-                direction={hasScore ? 'row' : { base: 'column', xs: 'row' }}
+                direction={hasScore || resultOnly ? 'row' : { base: 'column', xs: 'row' }}
               >
-                <Stack gap={2} flex={hasScore ? '1 1 0' : { base: '0 0 auto', xs: '1 1 0' }} style={{ minWidth: 0 }}>
+                <Stack gap={2} flex={hasScore || resultOnly ? '1 1 0' : { base: '0 0 auto', xs: '1 1 0' }} style={{ minWidth: 0 }}>
                   <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
                     <TeamJersey name={fixture.homeTeam.name} teamId={fixture.homeTeam.id} size={20} decorative />
                     <Text
@@ -200,6 +216,9 @@ export function FixturesList({
                     {formatFixtureDate(fixture.fixtureDate)}
                     {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
                   </Text>
+                  {resultOnly && (
+                    <Text size="xs" c="dimmed">Score not published by Spawtz</Text>
+                  )}
                   {!hideDivision && divisionName && (
                     <Text size="xs" c="dimmed" truncate>
                       {divisionName}
@@ -208,9 +227,11 @@ export function FixturesList({
                   {!compact && fixture.pitch && (
                     <Text size="xs" c="dimmed">{fixture.pitch}</Text>
                   )}
-                  <Text size="xs" c="blue" mt={2}>
-                    View match details →
-                  </Text>
+                  {!resultOnly && (
+                    <Text size="xs" c="blue" mt={2}>
+                      View match details →
+                    </Text>
+                  )}
                 </Stack>
               </Group>
             </Stack>
