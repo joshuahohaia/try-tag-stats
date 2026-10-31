@@ -14,6 +14,9 @@ interface AppOptions {
 export function createApp(options: AppOptions = {}) {
   const app = express();
 
+  // One proxy hop (Render) in front, so req.ip is the client for rate limiting
+  app.set('trust proxy', 1);
+
   // Middleware
   app.use(cors());
   app.use(express.json());
