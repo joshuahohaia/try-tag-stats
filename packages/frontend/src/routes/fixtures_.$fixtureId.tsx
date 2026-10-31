@@ -17,6 +17,7 @@ import {
 import { IconTrophy, IconCalendar, IconClock, IconMapPin } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
+import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { formatDate, formatTime } from '../utils/format';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
@@ -189,9 +190,9 @@ function HeadToHeadSection({
   if (totalGames === 0) {
     return (
       <Card withBorder>
-        <Title order={4} mb="md">Head to Head</Title>
+        <Title order={4} mb="md">Head to Head (this season)</Title>
         <Text c="dimmed" ta="center" py="md">
-          No previous meetings between these teams
+          No meetings found in this season's data
         </Text>
       </Card>
     );
@@ -202,7 +203,7 @@ function HeadToHeadSection({
 
   return (
     <Card withBorder>
-      <Title order={4} mb="md">Head to Head</Title>
+      <Title order={4} mb="md">Head to Head (this season)</Title>
 
       <Group justify="space-between" mb="xs">
         <Text size="sm" fw={600} c="blue">{homeTeamName}: {homeWins} wins</Text>
@@ -406,6 +407,13 @@ function FixtureDetailPage() {
             homeTeamId={fixture.homeTeam.id}
             homeTeamName={fixture.homeTeam.name}
             awayTeamName={fixture.awayTeam.name}
+          />
+
+          <MeetingsOnRecord
+            teamId={fixture.homeTeam.id}
+            teamName={fixture.homeTeam.name}
+            opponentId={fixture.awayTeam.id}
+            opponentName={fixture.awayTeam.name}
           />
         </Stack>
       </Container>

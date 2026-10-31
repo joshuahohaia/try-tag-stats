@@ -1,0 +1,132 @@
+import type { TeamResultRow } from './parsers/team-results.parser.js';
+
+export interface SeasonResults {
+  seasonId: number;
+  divisionId: number;
+  seasonName: string;
+  divisionName: string;
+  rows: TeamResultRow[];
+}
+
+export interface HeadToHeadMeeting {
+  date: string;
+  time: string | null;
+  seasonName: string;
+  divisionName: string;
+  teamScore: number;
+  opponentScore: number;
+  result: 'W' | 'D' | 'L';
+  /** Labels Spawtz printed directly above or below this game, if any. */
+  labels: string[];
+}
+
+export interface HeadToHeadRecord {
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+}
+
+export interface HeadToHeadResult {
+  /** Every recorded game between the two teams, labelled or not. */
+  record: HeadToHeadRecord;
+  /** All recorded games, newest first. Each carries any labels printed next to it. */
+  meetings: HeadToHeadMeeting[];
+  /**
+   * How many of those games have a label printed next to them on the Spawtz page.
+   * Spawtz does not say which neighbouring game a label belongs to, and the labels
+   * differ between the two teams' pages, so this is a count of uncertainty, not of
+   * friendlies or playoffs.
+   */
+  labelledCount: number;
+  seasonsCovered: string[];
+}
+
+function outcome(a: number, b: number): 'W' | 'D' | 'L' {
+  return a > b ? 'W' : a < b ? 'L' : 'D';
+}
+
+/**
+ * Head-to-head for one team against one opponent, matched by Spawtz TeamId only.
+ * Seasons are de-duplicated by seasonId + divisionId so the same page fetched twice
+ * is not counted twice. Games inside one season are never merged: two games on the
+ * same day against the same opponent at different times are two games.
+ */
+export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]): HeadToHeadResult {
+  const seen = new Set<string>();
+  const meetings: HeadToHeadMeeting[] = [];
+  const covered: string[] = [];
+
+  for (const season of seasons) {
+    const key = `${season.seasonId}:${season.divisionId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    covered.push(`${season.seasonName} - ${season.divisionName}`);
+
+    for (const row of season.rows) {
+      if (row.opponentTeamId !== opponentTeamId) continue;
+      const labels = [row.labelAbove, row.labelBelow].filter((l): l is string => !!l);
+      const meeting: HeadToHeadMeeting = {
+        date: row.date,
+        time: row.time,
+        seasonName: season.seasonName,
+        divisionName: season.divisionName,
+        teamScore: row.teamScore,
+        opponentScore: row.opponentScore,
+        result: outcome(row.teamScore, row.opponentScore),
+        labels,
+      };
+      meetings.push(meeting);
+    }
+  }
+
+  const byDateDesc = (a: HeadToHeadMeeting, b: HeadToHeadMeeting) =>
+    `${b.date} ${b.time ?? ''}`.localeCompare(`${a.date} ${a.time ?? ''}`);
+  meetings.sort(byDateDesc);
+
+  const record = meetings.reduce<HeadToHeadRecord>(
+    (acc, m) => ({
+      played: acc.played + 1,
+      won: acc.won + (m.result === 'W' ? 1 : 0),
+      drawn: acc.drawn + (m.result === 'D' ? 1 : 0),
+      lost: acc.lost + (m.result === 'L' ? 1 : 0),
+      pointsFor: acc.pointsFor + m.teamScore,
+      pointsAgainst: acc.pointsAgainst + m.opponentScore,
+    }),
+    { played: 0, won: 0, drawn: 0, lost: 0, pointsFor: 0, pointsAgainst: 0 }
+  );
+
+  return {
+    record,
+    meetings,
+    labelledCount: meetings.filter((m) => m.labels.length > 0).length,
+    seasonsCovered: covered,
+  };
+}
+
+function invertMeeting(m: HeadToHeadMeeting): HeadToHeadMeeting {
+  return {
+    ...m,
+    teamScore: m.opponentScore,
+    opponentScore: m.teamScore,
+    result: m.result === 'W' ? 'L' : m.result === 'L' ? 'W' : 'D',
+  };
+}
+
+/** The same meetings seen from the other team's side. */
+export function invertHeadToHead(r: HeadToHeadResult): HeadToHeadResult {
+  return {
+    ...r,
+    record: {
+      played: r.record.played,
+      won: r.record.lost,
+      drawn: r.record.drawn,
+      lost: r.record.won,
+      pointsFor: r.record.pointsAgainst,
+      pointsAgainst: r.record.pointsFor,
+    },
+    meetings: r.meetings.map(invertMeeting),
+  };
+}
