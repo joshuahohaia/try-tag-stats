@@ -17,6 +17,7 @@ import {
 import { scraperOrchestrator } from '../scraper/index.js';
 import { getHeadToHead, PILOT_LEAGUE_EXTERNAL_IDS, type SeasonContext } from '../scraper/head-to-head.service.js';
 import { invertHeadToHead } from '../scraper/head-to-head.js';
+import { getTeamPhaseResults } from '../scraper/phase-results.service.js';
 
 const router = Router();
 
@@ -208,6 +209,73 @@ router.get('/:id', async (req, res) => {
       } catch (scraperError) {
         // Log but don't fail the request if scraper fails
         logger.error({ error: scraperError }, 'Failed to fetch team profile from scraper');
+      }
+    }
+
+    // Later-phase (e.g. Phase 2) games. The Spawtz team page only lists first-phase games, so add
+    // played games of the team's other phases from the phase standings page. They carry a result
+    // (W/D/L) but no score, because Spawtz does not publish one there.
+    if (team.externalTeamId && standings.length > 0) {
+      try {
+        const currentSeasonId = standings[0].seasonId;
+        const seen = new Set<number>();
+        const extra = [];
+        for (const st of standings) {
+          if (st.seasonId !== currentSeasonId || seen.has(st.divisionId)) continue;
+          seen.add(st.divisionId);
+          const division = await divisionRepository.findById(st.divisionId);
+          if (!division || division.phaseId == null) continue;
+          const league = await leagueRepository.findById(division.leagueId);
+          const season = await seasonRepository.findById(division.seasonId);
+          if (!league || !season) continue;
+          const games = await getTeamPhaseResults(
+            league.externalLeagueId,
+            season.externalSeasonId,
+            division.phaseId,
+            division.externalDivisionId,
+            team.externalTeamId
+          );
+          for (const g of games) {
+            const home = g.homeTeamId === team.externalTeamId;
+            const oppExternal = home ? g.awayTeamId : g.homeTeamId;
+            const oppName = home ? g.awayTeamName : g.homeTeamName;
+            const opp = await teamRepository.findByExternalId(oppExternal);
+            const oppId = opp?.id ?? oppExternal;
+            // Outcome from this team's side: H = this team won.
+            const outcome = g.outcome === 'D' ? 'D' : (g.outcome === 'H') === home ? 'H' : 'A';
+            if (recentFixtures.some((f) => f.fixtureDate === g.date && (f.awayTeamId === oppId || f.homeTeamId === oppId))) continue;
+            extra.push({
+              id: -1000 - extra.length,
+              externalFixtureId: null,
+              divisionId: division.id,
+              homeTeamId: team.id,
+              awayTeamId: oppId,
+              fixtureDate: g.date,
+              fixtureTime: g.time,
+              pitch: null,
+              roundNumber: null,
+              homeScore: null,
+              awayScore: null,
+              status: 'completed' as const,
+              isForfeit: false,
+              outcome: outcome as 'H' | 'A' | 'D',
+              homeTeam: { id: team.id, externalTeamId: team.externalTeamId, name: team.name },
+              awayTeam: { id: oppId, externalTeamId: oppExternal, name: opp?.name || oppName },
+            });
+          }
+        }
+        if (extra.length > 0) {
+          recentFixtures = [...recentFixtures, ...extra].sort((a, b) => {
+            const d = new Date(b.fixtureDate).getTime() - new Date(a.fixtureDate).getTime();
+            if (d !== 0) return d;
+            if (!a.fixtureTime && !b.fixtureTime) return 0;
+            if (!a.fixtureTime) return 1;
+            if (!b.fixtureTime) return -1;
+            return b.fixtureTime.localeCompare(a.fixtureTime);
+          });
+        }
+      } catch (phaseError) {
+        logger.error({ error: phaseError }, 'Failed to add later-phase results to team profile');
       }
     }
 

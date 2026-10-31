@@ -36,7 +36,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
 
   // Get last 5 completed fixtures, most recent first, then reverse for display (oldest left, newest right)
   const completedFixtures = fixtures
-    .filter(f => f.status === 'completed' && f.homeScore !== null && f.awayScore !== null)
+    .filter(f => f.status === 'completed' && ((f.homeScore !== null && f.awayScore !== null) || !!f.outcome))
     .slice(0, 5)
     .reverse(); // Reverse so oldest is on left, newest on right
 
@@ -53,7 +53,17 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
         let result: 'W' | 'L' | 'D' = 'D';
         let color = 'gray';
 
-        if (teamScore !== null && oppScore !== null) {
+        // Later-phase games have a result but no published score. The outcome is from this team's side.
+        const noScore = teamScore === null || oppScore === null;
+        if (noScore && fixture.outcome) {
+          if (fixture.outcome === 'H') {
+            result = 'W';
+            color = 'green';
+          } else if (fixture.outcome === 'A') {
+            result = 'L';
+            color = 'red';
+          }
+        } else if (teamScore !== null && oppScore !== null) {
           if (teamScore > oppScore) {
             result = 'W';
             color = 'green';
@@ -84,7 +94,7 @@ function FormBadges({ fixtures, teamId }: { fixtures: FixtureWithTeams[]; teamId
               </Badge>
             </HoverCard.Target>
             <HoverCard.Dropdown>
-              <Text size="xs">{`${isMostRecent ? '(Latest) ' : ''}${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'} ${teamScore}-${oppScore} vs ${opponent}`}</Text>
+              <Text size="xs">{`${isMostRecent ? '(Latest) ' : ''}${result === 'W' ? 'Won' : result === 'L' ? 'Lost' : 'Drew'}${noScore ? '' : ` ${teamScore}-${oppScore}`} vs ${opponent}${noScore ? ' (score not published)' : ''}`}</Text>
             </HoverCard.Dropdown>
           </HoverCard>
         );
@@ -169,6 +179,9 @@ function TeamDetailPage() {
       st.divisionId !== currentStanding.divisionId &&
       st.leagueId === currentStanding.leagueId &&
       st.seasonId === currentStanding.seasonId
+  );
+  const hasLaterPhaseResults = (teamProfile?.recentFixtures ?? []).some(
+    (f) => f.status === 'completed' && !!f.outcome && f.homeScore === null
   );
   const { data: standings, isLoading: standingsLoading } = useDivisionStandings(currentDivisionId ?? 0);
   const { data: statistics, isLoading: statsLoading } = useDivisionStatistics(currentDivisionId ?? 0);
@@ -352,15 +365,25 @@ function TeamDetailPage() {
                 <Stack gap="xs" mt="md">
                   {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 && (
                     <Group gap="xs">
-                      <Text size="sm" c="dimmed">Form (first-phase results):</Text>
+                      <Text size="sm" c="dimmed">
+                        {hasLaterPhaseResults ? 'Form (all phases):' : 'Form (first-phase results):'}
+                      </Text>
                       <FormBadges fixtures={teamProfile.recentFixtures} teamId={teamProfile.id} />
                     </Group>
                   )}
                   <Text size="sm">
                     {teamProfile.standings[0].phaseName}: played {teamProfile.standings[0].played},{' '}
                     {teamProfile.standings[0].wins}W {teamProfile.standings[0].draws}D {teamProfile.standings[0].losses}L,{' '}
-                    {teamProfile.standings[0].pointsFor}-{teamProfile.standings[0].pointsAgainst} (match results not itemised)
+                    {teamProfile.standings[0].pointsFor}-{teamProfile.standings[0].pointsAgainst}{hasLaterPhaseResults ? '' : ' (match results not itemised)'}
                   </Text>
+                  {hasLaterPhaseResults ? (
+                    <Text size="xs" c="dimmed">
+                      {teamProfile.standings[0].phaseName} games come from the Spawtz standings page, which lists wins and
+                      draws but not scores, so they show a result only. Position History and Statistics below come from
+                      the Spawtz team page and cover first-phase games only; the current {teamProfile.standings[0].phaseName}{' '}
+                      position is shown above.
+                    </Text>
+                  ) : (
                   <Text size="xs" c="dimmed">
                     The form above comes from the Spawtz team page, whose results table lists first-phase games. It
                     does not include {teamProfile.standings[0].phaseName} games, so the latest results are missing from
@@ -368,6 +391,7 @@ function TeamDetailPage() {
                     {teamProfile.standings[0].phaseName} games whose scores are not shown here. Player of the Match
                     awards come from Spawtz division statistics.
                   </Text>
+                  )}
                 </Stack>
               )}
             </Card>

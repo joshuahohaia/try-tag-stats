@@ -100,6 +100,7 @@ export const FixtureSchema = z.object({
   awayScore: z.number().nullable(),
   status: FixtureStatusSchema,
   isForfeit: z.boolean(),
+  outcome: z.enum(['H', 'A', 'D']).nullish(),
 });
 
 export const FixtureWithTeamsSchema = FixtureSchema.extend({

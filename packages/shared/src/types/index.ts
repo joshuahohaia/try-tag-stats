@@ -153,6 +153,11 @@ export interface Fixture {
   awayScore: number | null;
   status: FixtureStatus;
   isForfeit: boolean;
+  /**
+   * Result without a score, for later-phase games Spawtz publishes only as win/draw points.
+   * H = home team won, A = away team won, D = draw. Absent for ordinary fixtures.
+   */
+  outcome?: 'H' | 'A' | 'D' | null;
 }
 
 export interface FixtureWithTeams extends Fixture {
