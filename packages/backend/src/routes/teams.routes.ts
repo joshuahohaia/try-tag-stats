@@ -100,7 +100,7 @@ router.get('/:id', async (req, res) => {
             };
           }
         }
-        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context, { allowStale: true });
+        const profileData = await scraperOrchestrator.fetchTeamProfile(team.externalTeamId, context);
         if (profileData) {
           profileFetchedAt = profileData.fetchedAt ? new Date(profileData.fetchedAt).toISOString() : undefined;
           profileStale = profileData.stale === true;
