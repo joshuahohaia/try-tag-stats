@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatFixtureDate,
+  displayPlayerName,
   fixtureCalendarDate,
   venueCalendarDate,
   formatTime,
@@ -98,5 +99,16 @@ describe('formatTime (unchanged behaviour)', () => {
     expect(formatTime('09:30')).toBe('9:30am');
     expect(formatTime('00:15')).toBe('12:15am');
     expect(formatTime('12:00')).toBe('12:00pm');
+  });
+});
+
+describe('displayPlayerName', () => {
+  it('drops email parts and keeps the given name', () => {
+    expect(displayPlayerName('Bob robert.example@mail.test')).toBe('Bob');
+    expect(displayPlayerName('Alec  Smail')).toBe('Alec Smail');
+  });
+  it('does not invent a name when only an email is given', () => {
+    expect(displayPlayerName('someone@mail.test')).toBe('Unnamed player');
+    expect(displayPlayerName(undefined)).toBe('Unnamed player');
   });
 });
