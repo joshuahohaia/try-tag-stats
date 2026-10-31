@@ -20,6 +20,7 @@ import { Skeleton } from '@mantine/core';
 import { PositionHistoryChart } from '../components/charts';
 import { FixturesList } from '../components';
 import { IconStar, IconStarFilled, IconTrophy, IconAward } from '@tabler/icons-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useTeam } from '../hooks/useTeams';
 import { useDivisionStandings, useDivisionStatistics, useDivisions } from '../hooks/useDivisions';
 import { useFavoriteTeams } from '../hooks/useFavorites';
@@ -253,6 +254,13 @@ function TeamDetailPage() {
             <div>
               <Title order={1} mb="xs">{teamProfile.name}</Title>
               <Text c="dimmed">Team Profile</Text>
+              {teamProfile.profileStale && teamProfile.profileFetchedAt && (
+                <Text size="xs" c="orange.8" mt={4}>
+                  Spawtz is not responding. Form, Position History and Statistics are from an older copy read{' '}
+                  {formatDistanceToNow(new Date(teamProfile.profileFetchedAt), { addSuffix: true })} (
+                  {new Date(teamProfile.profileFetchedAt).toLocaleString()}).
+                </Text>
+              )}
             </div>
             <Button
               variant={isFav ? 'filled' : 'outline'}
