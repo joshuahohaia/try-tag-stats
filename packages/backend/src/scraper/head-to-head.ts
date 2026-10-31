@@ -51,13 +51,19 @@ function outcome(a: number, b: number): 'W' | 'D' | 'L' {
 /**
  * Head-to-head for one team against one opponent, matched by Spawtz TeamId only.
  * Seasons are de-duplicated by seasonId + divisionId so the same page fetched twice
- * is not counted twice. Games inside one season are never merged: two games on the
+ * is not counted twice. Games inside one page are never merged: two games on the
  * same day against the same opponent at different times are two games.
+ *
+ * The same Spawtz season can be supplied under more than one divisionId (for example a
+ * later phase of the season with its own division). If a game from an earlier page of that
+ * season is identical in date, time, opponent and both scores, it is the same game and is
+ * counted once.
  */
 export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]): HeadToHeadResult {
   const seen = new Set<string>();
   const meetings: HeadToHeadMeeting[] = [];
   const covered: string[] = [];
+  const seenGames = new Map<number, Set<string>>();
 
   for (const season of seasons) {
     const key = `${season.seasonId}:${season.divisionId}`;
@@ -65,8 +71,15 @@ export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]
     seen.add(key);
     covered.push(`${season.seasonName} - ${season.divisionName}`);
 
+    const earlier = seenGames.get(season.seasonId) ?? new Set<string>();
+    const thisPage = new Set<string>();
+    seenGames.set(season.seasonId, new Set([...earlier]));
+
     for (const row of season.rows) {
       if (row.opponentTeamId !== opponentTeamId) continue;
+      const gameKey = [row.date, row.time, row.opponentTeamId, row.teamScore, row.opponentScore].join('|');
+      if (earlier.has(gameKey)) continue;
+      thisPage.add(gameKey);
       const labels = [row.labelAbove, row.labelBelow].filter((l): l is string => !!l);
       const meeting: HeadToHeadMeeting = {
         date: row.date,
@@ -80,6 +93,7 @@ export function buildHeadToHead(opponentTeamId: number, seasons: SeasonResults[]
       };
       meetings.push(meeting);
     }
+    thisPage.forEach((k) => seenGames.get(season.seasonId)!.add(k));
   }
 
   const byDateDesc = (a: HeadToHeadMeeting, b: HeadToHeadMeeting) =>

@@ -36,6 +36,20 @@ describe('buildHeadToHead', () => {
     expect(r.seasonsCovered).toHaveLength(1);
   });
 
+  it('counts a game once when the same season is supplied under another division id', () => {
+    const r = buildHeadToHead(1, [
+      season([row({ date: '2026-10-18', time: '14:00', teamScore: 13, opponentScore: 11 })], 100, 8788),
+      season([row({ date: '2026-10-18', time: '14:00', teamScore: 13, opponentScore: 11 })], 100, 9999),
+    ]);
+    expect(r.record).toMatchObject({ played: 1, won: 1, pointsFor: 13, pointsAgainst: 11 });
+  });
+
+  it('keeps two identical-looking games inside one page, and the same game in a different season', () => {
+    const twice = row({ time: '20:00', teamScore: 5, opponentScore: 3 });
+    const r = buildHeadToHead(1, [season([twice, twice], 100, 1), season([twice], 101, 2)]);
+    expect(r.record.played).toBe(3);
+  });
+
   it('counts labelled games in the record and reports how many have a label', () => {
     const r = buildHeadToHead(1, [season([
       row({ date: '2026-01-01' }),
