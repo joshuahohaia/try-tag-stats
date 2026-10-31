@@ -8,3 +8,4 @@ export { fixtureRepository } from './fixture.repository.js';
 export { playerRepository } from './player.repository.js';
 export { playerAwardRepository } from './player-award.repository.js';
 export { syncRunRepository } from './sync-run.repository.js';
+export { teamKitRepository } from './team-kit.repository.js';
