@@ -20,6 +20,7 @@ import {
 import { IconTrophy, IconCalendar, IconClock, IconMapPin, IconExternalLink, IconBrandWhatsapp } from '@tabler/icons-react';
 import { useFixtureDetail } from '../hooks/useFixtures';
 import { QueryError } from '../components/QueryError';
+import { useHeadToHead } from '../hooks/useHeadToHead';
 import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { displayPlayerName, formatDate, formatTime } from '../utils/format';
 import { buildShareText, whatsappShareUrl } from '../utils/shareMatch';
@@ -272,6 +273,9 @@ function FixtureDetailPage() {
   const parsedId = parseInt(fixtureId, 10);
   const isMobile = useMediaQuery('(max-width: 48em)');
   const { data: fixture, isLoading, error, refetch } = useFixtureDetail(parsedId);
+  // Meetings on record covers past seasons in the pilot leagues; elsewhere this season's head to head is the only record
+  const meetings = useHeadToHead(fixture?.homeTeam.id, fixture?.awayTeam.id);
+  const showSeasonHeadToHead = !meetings.isLoading && !(meetings.data && meetings.data.supported);
 
   if (isLoading) {
     return (
@@ -449,15 +453,17 @@ function FixtureDetailPage() {
             />
           </SimpleGrid>
 
-          <HeadToHeadSection
-            homeWins={fixture.headToHead.homeWins}
-            awayWins={fixture.headToHead.awayWins}
-            draws={fixture.headToHead.draws}
-            recentMeetings={fixture.headToHead.recentMeetings}
-            homeTeamId={fixture.homeTeam.id}
-            homeTeamName={fixture.homeTeam.name}
-            awayTeamName={fixture.awayTeam.name}
-          />
+          {showSeasonHeadToHead && (
+            <HeadToHeadSection
+              homeWins={fixture.headToHead.homeWins}
+              awayWins={fixture.headToHead.awayWins}
+              draws={fixture.headToHead.draws}
+              recentMeetings={fixture.headToHead.recentMeetings}
+              homeTeamId={fixture.homeTeam.id}
+              homeTeamName={fixture.homeTeam.name}
+              awayTeamName={fixture.awayTeam.name}
+            />
+          )}
 
           <MeetingsOnRecord
             teamId={fixture.homeTeam.id}

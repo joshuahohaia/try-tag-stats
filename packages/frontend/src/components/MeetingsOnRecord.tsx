@@ -100,7 +100,7 @@ export function MeetingsOnRecord({
       )}
 
       <Text size="xs" c="dimmed" mt="md">
-        Seasons checked: {seasonsCovered.length > 0 ? seasonsCovered.join('; ') : 'none'}.
+        Seasons checked: {seasonsCovered.length > 0 ? [...new Set(seasonsCovered)].join('; ') : 'none'}.
         {!complete &&
           (busy
             ? ' Some seasons were not loaded because the site is rate-limiting reads of Spawtz; try again in a minute.'
