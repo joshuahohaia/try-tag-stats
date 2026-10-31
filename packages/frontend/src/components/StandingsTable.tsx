@@ -82,7 +82,7 @@ export function StandingsTable({ standings, leagueId, isLoading }: StandingsTabl
                     style={{ color: 'inherit', textDecoration: 'none' }}
                   >
                     <Group gap={6} wrap="nowrap" component="span" style={{ minWidth: 170 }}>
-                      <TeamJersey name={standing.team.name} teamId={standing.team.id} size={24} />
+                      <TeamJersey name={standing.team.name} teamId={standing.team.id} size={24} decorative />
                       <Text span fw={500} c="blue">
                         {standing.team.name}
                       </Text>
