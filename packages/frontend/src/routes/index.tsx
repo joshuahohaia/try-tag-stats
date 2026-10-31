@@ -20,6 +20,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { displayPlayerName } from '../utils/format';
 import { FixtureCardSkeleton, StandingsTableSkeleton, StatsTableSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
+import { TeamJersey } from '../components/TeamJersey';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
 import { FixturesList } from '../components';
@@ -123,9 +124,12 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
                           params={{ teamId: String(row.teamId) }}
                           style={{ color: 'inherit', textDecoration: 'none' }}
                         >
-                          <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
-                            {row.team.name}
-                          </Text>
+                          <Group gap={4} wrap="nowrap" align="flex-start">
+                            <TeamJersey name={row.team.name} teamId={row.teamId} size={16} decorative />
+                            <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
+                              {row.team.name}
+                            </Text>
+                          </Group>
                         </Link>
                       </Table.Td>
 
