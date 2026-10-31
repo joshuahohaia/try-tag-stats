@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { useTeams } from '../hooks/useTeams';
 import { Team } from '@trytag/shared';
+import { TeamJersey } from '../components/TeamJersey';
 
 function TeamsPage() {
   const [search, setSearch] = useState('');
@@ -94,7 +95,10 @@ function TeamsPage() {
                             params={{ teamId: String(team.id) }}
                             style={{ textDecoration: 'none', color: 'inherit' }}
                           >
-                            <Text fw={500}>{team.name}</Text>
+                            <Group gap="sm" wrap="nowrap">
+                              <TeamJersey name={team.name} teamId={team.id} size={32} />
+                              <Text fw={500}>{team.name}</Text>
+                            </Group>
                           </Link>
                           <ActionIcon
                             variant="transparent"
