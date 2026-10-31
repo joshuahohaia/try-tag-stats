@@ -15,6 +15,7 @@ import {
   Table,
 } from '@mantine/core';
 import { currentSeasonAwards } from '../utils/awards';
+import { displayPlayerName } from '../utils/format';
 import { FixtureCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { Skeleton } from '@mantine/core';
@@ -386,7 +387,7 @@ function TeamDetailPage() {
               <Stack gap="sm">
                 {seasonAwards.map((award) => (
                   <Group key={award.playerId} justify="space-between">
-                    <Text fw={500}>{award.name}</Text>
+                    <Text fw={500}>{displayPlayerName(award.name)}</Text>
                     <Group gap={4}>
                       <IconTrophy size={16} color="gold" />
                       <Text fw={700}>{award.awardCount}</Text>
