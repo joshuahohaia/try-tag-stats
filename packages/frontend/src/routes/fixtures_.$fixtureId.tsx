@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useMediaQuery } from '@mantine/hooks';
 import {
+  Box,
   Title,
   Text,
   Card,
@@ -61,12 +63,13 @@ function TeamCard({
   profile: TeamComparisonData;
   side: 'home' | 'away';
 }) {
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const standing = profile.standing;
   const seasonStats = profile.seasonStats?.find(s => s.period === 'season');
 
   return (
-    <Card withBorder h="100%">
-      <Stack gap="md">
+    <Card withBorder h="100%" p={isMobile ? 'sm' : 'md'}>
+      <Stack gap={isMobile ? 'xs' : 'md'}>
         <Group justify="space-between" align="flex-start">
           <div>
             <Link
@@ -74,12 +77,12 @@ function TeamCard({
               params={{ teamId: String(teamId) }}
               style={{ textDecoration: 'none' }}
             >
-              <Title order={3} c="blue">
+              <Title order={3} c="blue" fz={{ base: 'h4', sm: 'h3' }}>
                 {teamName}
               </Title>
             </Link>
             {standing && (
-              <Badge variant="light" size="lg" mt="xs">
+              <Badge variant="light" size="md" mt={4}>
                 {standing.position === 1 ? (
                   <Group gap={4}>
                     <IconTrophy size={14} />
@@ -267,6 +270,7 @@ function HeadToHeadSection({
 function FixtureDetailPage() {
   const { fixtureId } = Route.useParams();
   const parsedId = parseInt(fixtureId, 10);
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const { data: fixture, isLoading, error, refetch } = useFixtureDetail(parsedId);
 
   if (isLoading) {
@@ -332,7 +336,7 @@ function FixtureDetailPage() {
       Awaiting Results
     </Badge>
   ) : (
-    <Badge variant="light" size="lg">
+    <Badge variant="light" size="md">
       {fixture.status}
     </Badge>
   );
@@ -341,9 +345,9 @@ function FixtureDetailPage() {
     <ScrollArea h="100%" type="auto">
       <Container size="xl" p="md">
         <Stack gap="md">
-          <Card withBorder>
-            <Stack gap="md" align="center">
-              <Group gap="md">
+          <Card withBorder p={isMobile ? 'sm' : 'md'}>
+            <Stack gap={isMobile ? 'xs' : 'md'} align="center">
+              <Group gap="md" justify="center">
                 <Group gap={4}>
                   <IconCalendar size={16} />
                   <Text size="sm">{formatDate(fixture.fixtureDate)}</Text>
@@ -362,29 +366,33 @@ function FixtureDetailPage() {
                 )}
               </Group>
 
-              <Group justify="center" align="center" gap="xl">
-                <Link
+              <Group justify="center" align="center" gap={isMobile ? 4 : 'xl'}>
+                <Box w={{ base: '100%', sm: 'auto' }}>
+                  <Link
                   to="/teams/$teamId"
                   params={{ teamId: String(fixture.homeTeam.id) }}
                   style={{ textDecoration: 'none' }}
                 >
-                  <Title order={2} c="blue" ta="right">
+                  <Title order={2} c="blue" ta={{ base: 'center', sm: 'right' }} fz={{ base: 'h3', sm: 'h2' }}>
                     {fixture.homeTeam.name}
                   </Title>
-                </Link>
+                  </Link>
+                </Box>
                 {statusBadge}
-                <Link
+                <Box w={{ base: '100%', sm: 'auto' }}>
+                  <Link
                   to="/teams/$teamId"
                   params={{ teamId: String(fixture.awayTeam.id) }}
                   style={{ textDecoration: 'none' }}
                 >
-                  <Title order={2} c="blue" ta="left">
+                  <Title order={2} c="blue" ta={{ base: 'center', sm: 'left' }} fz={{ base: 'h3', sm: 'h2' }}>
                     {fixture.awayTeam.name}
                   </Title>
-                </Link>
+                  </Link>
+                </Box>
               </Group>
 
-              <Group gap="sm" justify="center">
+              <Group gap={6} justify="center">
                 {[fixture.homeTeam, fixture.awayTeam].map(
                   (t) =>
                     t.externalTeamId && (
@@ -396,6 +404,11 @@ function FixtureDetailPage() {
                         rel="noopener noreferrer"
                         variant="light"
                         size="xs"
+                        maw="100%"
+                        h="auto"
+                        mih={30}
+                        py={6}
+                        styles={{ label: { whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.25, height: 'auto', overflow: 'visible' } }}
                         rightSection={<IconExternalLink size={12} />}
                       >
                         {t.name} on Try Tag Rugby
@@ -412,6 +425,7 @@ function FixtureDetailPage() {
                   rel="noopener noreferrer"
                   variant="light"
                   color="green"
+                  size="sm"
                   leftSection={<IconBrandWhatsapp size={16} />}
                 >
                   Share to WhatsApp
@@ -420,7 +434,7 @@ function FixtureDetailPage() {
             </Stack>
           </Card>
 
-          <SimpleGrid cols={{ base: 1, md: 2 }}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={isMobile ? 'sm' : 'md'}>
             <TeamCard
               teamId={fixture.homeTeam.id}
               teamName={fixture.homeTeam.name}
