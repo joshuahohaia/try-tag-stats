@@ -101,6 +101,8 @@ export function FixturesList({
         const hasScore = fixture.status === 'completed' && fixture.homeScore !== null;
         // A result without a score (later-phase games Spawtz lists only as win/draw points).
         const resultOnly = fixture.status === 'completed' && fixture.homeScore === null && !!fixture.outcome;
+        // Later-phase games (scored or not) are built from the standings page and have no match page.
+        const laterPhase = fixture.status === 'completed' && fixture.id <= 0 && !!fixture.outcome;
         const resultOnlyLabel = !resultOnly
           ? null
           : fixture.outcome === 'D'
@@ -118,7 +120,7 @@ export function FixturesList({
               {fixture.homeScore} - {fixture.awayScore}
             </Badge>
           ) : resultOnly ? (
-            <Badge size="lg" variant="filled" color={resultOnlyColor} title="Spawtz does not publish the score for this game">
+            <Badge size="lg" variant="filled" color={resultOnlyColor} title="The score could not be read from Spawtz for this game">
               {resultOnlyLabel}
             </Badge>
           ) : isPastScheduled ? (
@@ -131,7 +133,7 @@ export function FixturesList({
 
         // Link to fixture detail for DB fixtures, or external link for scraped data
         const canLinkToFixture = fixture.id > 0;
-        const isScrapedFixture = fixture.id <= 0 && !resultOnly;
+        const isScrapedFixture = fixture.id <= 0 && !laterPhase;
 
         const handleCardClick = () => {
           if (canLinkToFixture) {
@@ -217,7 +219,7 @@ export function FixturesList({
                     {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
                   </Text>
                   {resultOnly && (
-                    <Text size="xs" c="dimmed">Score not published by Spawtz</Text>
+                    <Text size="xs" c="dimmed">Score not available</Text>
                   )}
                   {!hideDivision && divisionName && (
                     <Text size="xs" c="dimmed" truncate>
@@ -227,7 +229,7 @@ export function FixturesList({
                   {!compact && fixture.pitch && (
                     <Text size="xs" c="dimmed">{fixture.pitch}</Text>
                   )}
-                  {!resultOnly && (
+                  {!laterPhase && (
                     <Text size="xs" c="blue" mt={2}>
                       View match details →
                     </Text>

@@ -21,6 +21,9 @@ export interface PhaseGame {
   awayTeamName: string;
   /** H = first-named team won, A = second-named team won, D = draw. */
   outcome: 'H' | 'A' | 'D';
+  /** Real scores from the division page's Results section, when that page lists this game. */
+  homeScore?: number;
+  awayScore?: number;
 }
 
 export interface PhaseTableResults {
@@ -48,7 +51,7 @@ export function parsePhaseResults(html: string): PhaseTableResults[] {
     const rows = $table.find('tr').filter((__, tr) => $(tr).find('td.STTeamCell').length > 0);
     if (rows.length === 0) return;
 
-    const teams = new Map<number, { name: string; w: number; l: number; d: number }>();
+    const teams = new Map<number, { name: string; w: number; l: number; d: number; pf: number; pa: number }>();
     const nameToId = new Map<string, number>();
     const duplicateNames = new Set<string>();
     let divisionId: number | null = null;
@@ -70,7 +73,9 @@ export function parsePhaseResults(html: string): PhaseTableResults[] {
       const w = parseInt(played.next().text().trim(), 10);
       const l = parseInt(played.next().next().text().trim(), 10);
       const d = parseInt(played.next().next().next().text().trim(), 10);
-      teams.set(teamId, { name, w, l, d });
+      const pf = parseInt($tr.find('td.for').first().text().trim(), 10);
+      const pa = parseInt($tr.find('td.for').first().next().text().trim(), 10);
+      teams.set(teamId, { name, w, l, d, pf, pa });
       if (nameToId.has(name)) duplicateNames.add(name);
       nameToId.set(name, teamId);
 
@@ -142,6 +147,30 @@ export function parsePhaseResults(html: string): PhaseTableResults[] {
       }
     }
 
+    // Attach real scores from the Results section of the same page. A score is only used when it
+    // agrees with the points-tooltip result of that game, and a team's scores are only trusted when
+    // every one of its games has a score and the totals equal the standings For/Against columns.
+    const scored = parseResultsSection($);
+    for (const g of games.values()) {
+      const r = scored.find((x) => x.date === g.date && x.homeTeamId === g.homeTeamId && x.awayTeamId === g.awayTeamId);
+      if (!r) continue;
+      const o: 'H' | 'A' | 'D' = r.homeScore > r.awayScore ? 'H' : r.homeScore < r.awayScore ? 'A' : 'D';
+      if (o !== g.outcome) { ambiguous.add(g.homeTeamId); ambiguous.add(g.awayTeamId); continue; }
+      g.homeScore = r.homeScore;
+      g.awayScore = r.awayScore;
+    }
+    for (const [id, t] of teams) {
+      const mine = [...games.values()].filter((g) => g.homeTeamId === id || g.awayTeamId === id);
+      const withScore = mine.filter((g) => g.homeScore !== undefined);
+      if (withScore.length === 0) continue;
+      const pf = withScore.reduce((a, g) => a + (g.homeTeamId === id ? g.homeScore! : g.awayScore!), 0);
+      const pa = withScore.reduce((a, g) => a + (g.homeTeamId === id ? g.awayScore! : g.homeScore!), 0);
+      if (withScore.length !== mine.length || pf !== t.pf || pa !== t.pa) {
+        // Not provably complete: drop scores for this team's games (result-only stays).
+        for (const g of mine) { delete g.homeScore; delete g.awayScore; }
+      }
+    }
+
     for (const g of games.values()) {
       if (g.outcome === 'D') { bump(g.homeTeamId, 'd'); bump(g.awayTeamId, 'd'); }
       else if (g.outcome === 'H') { bump(g.homeTeamId, 'w'); bump(g.awayTeamId, 'l'); }
@@ -161,5 +190,33 @@ export function parsePhaseResults(html: string): PhaseTableResults[] {
     out.push({ divisionId, heading, games: [...games.values()], verifiedTeamIds: verified, unverifiedTeamIds: unverified });
   });
 
+  return out;
+}
+
+interface ScoredResult { date: string; homeTeamId: number; awayTeamId: number; homeScore: number; awayScore: number }
+
+const MONTHS: Record<string, string> = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+
+/** Reads the "Results" table (class FTable) of a Spawtz division standings page: date header rows, then game rows with a score. */
+function parseResultsSection($: cheerio.CheerioAPI): ScoredResult[] {
+  const out: ScoredResult[] = [];
+  $('table.FTable').each((_, table) => {
+    let date: string | null = null;
+    $(table).find('tr').each((__, tr) => {
+      const $tr = $(tr);
+      const head = $tr.find('td[colspan]').first().text().replace(/\s+/g, ' ').trim();
+      const dm = head.match(/(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/);
+      if (dm && $tr.hasClass('FHeader')) {
+        const mm = MONTHS[dm[2].toLowerCase()];
+        date = mm ? `${dm[3]}-${mm}-${dm[1].padStart(2, '0')}` : null;
+        return;
+      }
+      const home = $tr.find('td.FHomeTeam a').first().attr('href')?.match(/TeamId=(\d+)/i);
+      const away = $tr.find('td.FAwayTeam a').first().attr('href')?.match(/TeamId=(\d+)/i);
+      const sc = $tr.find('td.FScore').first().text().replace(/\s+/g, ' ').trim().match(/^(\d{1,3}) - (\d{1,3})$/);
+      if (!date || !home || !away || !sc) return;
+      out.push({ date, homeTeamId: +home[1], awayTeamId: +away[1], homeScore: +sc[1], awayScore: +sc[2] });
+    });
+  });
   return out;
 }
