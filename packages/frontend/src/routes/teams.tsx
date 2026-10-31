@@ -96,7 +96,7 @@ function TeamsPage() {
                             style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                           >
                             <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                              <TeamJersey name={team.name} teamId={team.id} size={32} />
+                              <TeamJersey name={team.name} teamId={team.id} size={32} decorative />
                               <Text fw={500}>{team.name}</Text>
                             </Group>
                           </Link>
