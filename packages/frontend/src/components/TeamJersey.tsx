@@ -8,6 +8,8 @@ interface Props {
   teamId?: number;
   /** Explicit colours (used by the editor to preview unsaved choices). Wins over a saved kit. */
   colours?: { primary: string; secondary: string };
+  /** Hide from screen readers when the team name is written right next to it. */
+  decorative?: boolean;
   size?: number;
 }
 
@@ -20,7 +22,7 @@ const V_NECK = 'M0.41,0.13 L0.59,0.13 L0.50,0.30 Z';
 const CREW_NECK = 'M0.40,0.12 A0.10,0.09 0 1,0 0.60,0.12 A0.10,0.09 0 1,0 0.40,0.12 Z';
 
 /** Team jersey drawn from the team name: same name, same jersey. Initials are dropped when tiny. */
-export function TeamJersey({ name, teamId, colours, size = 32 }: Props) {
+export function TeamJersey({ name, teamId, colours, decorative = false, size = 32 }: Props) {
   const saved = useTeamKit(teamId);
   const kit = colours ?? saved;
   const uid = useId().replace(/:/g, '');
@@ -39,8 +41,7 @@ export function TeamJersey({ name, teamId, colours, size = 32 }: Props) {
       viewBox="0 0 1 1"
       width={size}
       height={size}
-      role="img"
-      aria-label={`${name} jersey`}
+      {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': `${name} jersey` })}
       style={{ flex: 'none', display: 'block' }}
     >
       <defs>
