@@ -3,6 +3,7 @@ import { regionsRouter } from './regions.routes.js';
 import { leaguesRouter } from './leagues.routes.js';
 import { divisionsRouter } from './divisions.routes.js';
 import { teamsRouter } from './teams.routes.js';
+import { kitsRouter } from './kits.routes.js';
 import { fixturesRouter } from './fixtures.routes.js';
 import { adminRouter } from './admin.routes.js';
 
@@ -12,6 +13,7 @@ router.use('/regions', regionsRouter);
 router.use('/leagues', leaguesRouter);
 router.use('/divisions', divisionsRouter);
 router.use('/teams', teamsRouter);
+router.use('/kits', kitsRouter);
 router.use('/fixtures', fixturesRouter);
 router.use('/admin', adminRouter);
 

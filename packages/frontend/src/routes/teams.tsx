@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { useTeams } from '../hooks/useTeams';
 import { Team } from '@trytag/shared';
+import { TeamJersey } from '../components/TeamJersey';
 
 function TeamsPage() {
   const [search, setSearch] = useState('');
@@ -88,13 +89,16 @@ function TeamsPage() {
                   {filteredTeams.length > 0 ? (
                     filteredTeams.map((team) => (
                       <Card withBorder key={team.id}>
-                        <Group justify="space-between">
+                        <Group justify="space-between" wrap="nowrap">
                           <Link
                             to="/teams/$teamId"
                             params={{ teamId: String(team.id) }}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                           >
-                            <Text fw={500}>{team.name}</Text>
+                            <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                              <TeamJersey name={team.name} teamId={team.id} size={32} />
+                              <Text fw={500}>{team.name}</Text>
+                            </Group>
                           </Link>
                           <ActionIcon
                             variant="transparent"

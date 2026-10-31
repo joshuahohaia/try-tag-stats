@@ -18,6 +18,8 @@ import { currentSeasonAwards } from '../utils/awards';
 import { displayPlayerName } from '../utils/format';
 import { FixtureCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
+import { TeamJersey } from '../components/TeamJersey';
+import { KitSection } from '../components/KitEditor';
 import { Skeleton } from '@mantine/core';
 import { PositionHistoryChart } from '../components/charts';
 import { FixturesList } from '../components';
@@ -255,8 +257,12 @@ function TeamDetailPage() {
         <Stack gap="md">
           <Group justify="space-between" align="flex-start">
             <div>
-              <Title order={1} mb="xs">{teamProfile.name}</Title>
+              <Group gap="sm" mb="xs" wrap="wrap" align="center">
+                <TeamJersey name={teamProfile.name} teamId={teamProfile.id} size={44} />
+                <Title order={1} style={{ flex: '1 1 240px', minWidth: 0, overflowWrap: 'anywhere' }}>{teamProfile.name}</Title>
+              </Group>
               <Text c="dimmed">Team Profile</Text>
+              <KitSection teamId={teamProfile.id} name={teamProfile.name} />
               {teamProfile.profileStale && teamProfile.profileFetchedAt && (
                 <Text size="xs" c="orange.8" mt={4}>
                   Could not refresh from Spawtz just now. Form, Position History and Statistics are from a copy last read{' '}
