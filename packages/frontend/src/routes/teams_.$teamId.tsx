@@ -14,6 +14,7 @@ import {
   HoverCard,
   Table,
 } from '@mantine/core';
+import { currentSeasonAwards } from '../utils/awards';
 import { FixtureCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { Skeleton } from '@mantine/core';
@@ -245,6 +246,7 @@ function TeamDetailPage() {
   }
 
   const isFav = isFavorite(teamProfile.id);
+  const seasonAwards = currentSeasonAwards(teamProfile.playerAwards, teamProfile.standings);
 
   return (
     <ScrollArea h="100%" type="auto">
@@ -343,15 +345,21 @@ function TeamDetailPage() {
                 <Stack gap="xs" mt="md">
                   {teamProfile.recentFixtures && teamProfile.recentFixtures.length > 0 && (
                     <Group gap="xs">
-                      <Text size="sm" c="dimmed">Form from Spawtz team page:</Text>
+                      <Text size="sm" c="dimmed">Form (first-phase results):</Text>
                       <FormBadges fixtures={teamProfile.recentFixtures} teamId={teamProfile.id} />
                     </Group>
                   )}
+                  <Text size="sm">
+                    {teamProfile.standings[0].phaseName}: played {teamProfile.standings[0].played},{' '}
+                    {teamProfile.standings[0].wins}W {teamProfile.standings[0].draws}D {teamProfile.standings[0].losses}L,{' '}
+                    {teamProfile.standings[0].pointsFor}-{teamProfile.standings[0].pointsAgainst} (match results not itemised)
+                  </Text>
                   <Text size="xs" c="dimmed">
-                    Form, Position History and Statistics below come from the Spawtz team page, and Player of the
-                    Match awards from Spawtz division statistics, which Spawtz does not give for later phases. Spawtz
-                    does not say which phase they cover, so they may not include {teamProfile.standings[0].phaseName}{' '}
-                    games.
+                    The form above comes from the Spawtz team page, whose results table lists first-phase games. It
+                    does not include {teamProfile.standings[0].phaseName} games, so the latest results are missing from
+                    it. Statistics below also come from that page, and its Last 3 row can include{' '}
+                    {teamProfile.standings[0].phaseName} games whose scores are not shown here. Player of the Match
+                    awards come from Spawtz division statistics.
                   </Text>
                 </Stack>
               )}
@@ -368,16 +376,17 @@ function TeamDetailPage() {
             )}
           </SimpleGrid>
 
-          {teamProfile.playerAwards && teamProfile.playerAwards.length > 0 && (
+          {seasonAwards.length > 0 && (
             <Card withBorder>
               <Title order={3} mb="md">
                 <IconAward size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
                 Player of the Match Awards
+                <Text span size="sm" c="dimmed" ml="xs">({teamProfile.standings?.[0]?.seasonName})</Text>
               </Title>
               <Stack gap="sm">
-                {teamProfile.playerAwards.map((award, idx) => (
-                  <Group key={idx} justify="space-between">
-                    <Text fw={500}>{award.player?.name || 'Unknown Player'}</Text>
+                {seasonAwards.map((award) => (
+                  <Group key={award.playerId} justify="space-between">
+                    <Text fw={500}>{award.name}</Text>
                     <Group gap={4}>
                       <IconTrophy size={16} color="gold" />
                       <Text fw={700}>{award.awardCount}</Text>
