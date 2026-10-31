@@ -6,7 +6,7 @@ import { buildHeadToHead, type HeadToHeadResult, type SeasonResults } from './he
 import { logger } from '../utils/logger.js';
 
 /** Pilot scope: only these Spawtz league ids are read. */
-export const PILOT_LEAGUE_EXTERNAL_IDS = [747]; // Battersea Park Astro
+export const PILOT_LEAGUE_EXTERNAL_IDS = [747, 655]; // Battersea Park Astro, Clapham Junction (Sunday)
 
 /** Limits that keep visitor-triggered reads small. */
 export const LIMITS = {
