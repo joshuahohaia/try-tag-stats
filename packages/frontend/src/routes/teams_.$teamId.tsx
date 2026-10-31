@@ -256,7 +256,7 @@ function TeamDetailPage() {
               <Text c="dimmed">Team Profile</Text>
               {teamProfile.profileStale && teamProfile.profileFetchedAt && (
                 <Text size="xs" c="orange.8" mt={4}>
-                  Spawtz is not responding. Form, Position History and Statistics are from an older copy read{' '}
+                  Could not refresh from Spawtz just now. Form, Position History and Statistics are from a copy last read{' '}
                   {formatDistanceToNow(new Date(teamProfile.profileFetchedAt), { addSuffix: true })} (
                   {new Date(teamProfile.profileFetchedAt).toLocaleString()}).
                 </Text>
