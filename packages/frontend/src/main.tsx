@@ -8,6 +8,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 import '@mantine/core/styles.css';
 import './styles/global.css';
+import { initAnalytics, trackPageView } from './utils/analytics';
 
 // Cache time constants
 const ONE_HOUR = 1000 * 60 * 60;
@@ -31,6 +32,17 @@ const persister = createSyncStoragePersister({
 });
 
 const router = createRouter({ routeTree });
+
+// Optional GoatCounter page views (off unless VITE_GOATCOUNTER_URL is set). Report each completed
+// navigation once, by pathname only.
+if (initAnalytics()) {
+  let lastPath = '';
+  router.subscribe('onResolved', ({ toLocation }) => {
+    if (toLocation.pathname === lastPath) return;
+    lastPath = toLocation.pathname;
+    trackPageView(toLocation.pathname);
+  });
+}
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
