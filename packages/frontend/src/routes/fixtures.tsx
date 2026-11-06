@@ -8,16 +8,21 @@ import {
   SegmentedControl,
   ScrollArea,
   Button,
+  Card,
+  Group,
+  Select,
 } from '@mantine/core';
 import { FixtureCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
 import { useState, useMemo } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
 import { useFavoriteTeams } from '../hooks/useFavorites';
 import { useDivisions, useDivisionsStandings, useDivisionsStatistics } from '../hooks/useDivisions';
+import { useLeaguesSummary } from '../hooks/useLeagues';
+import { useUpcomingFixtures } from '../hooks/useFixtures';
 import { FixturesList } from '../components';
 import { apiClient, extractData } from '../api/client';
 import type { FixtureWithTeams, StandingWithDivision } from '@trytag/shared';
@@ -34,9 +39,17 @@ function FixturesPage() {
   const [view, setView] = useState('upcoming');
   const { favorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
+  const navigate = useNavigate();
+  const { data: leaguesSummary } = useLeaguesSummary();
 
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
   const hasFavorites = favorites.length > 0;
+
+  // Visitors without favourites get the global upcoming list instead of an empty page.
+  // Global recent results are not possible: the database only stores scheduled
+  // fixtures, and scores are scraped per favourite team, so the Recent view stays
+  // favourites-only until that data exists.
+  const globalUpcoming = useUpcomingFixtures(undefined, 20);
 
   // Fetch team profiles to get recent fixtures (the /fixtures endpoint doesn't return scraped data properly)
   const teamQueries = useQueries({
@@ -91,8 +104,12 @@ function FixturesPage() {
     };
   }, [teamQueries, hasFavorites]);
 
-  const fixtures = view === 'upcoming' ? upcomingFixtures : recentFixtures;
-  const isLoading = isLoadingTeams;
+  const fixtures = hasFavorites
+    ? view === 'upcoming'
+      ? upcomingFixtures
+      : recentFixtures
+    : (globalUpcoming.data ?? []);
+  const isLoading = hasFavorites ? isLoadingTeams : globalUpcoming.isLoading;
 
   const divisionIds = useMemo(() => {
     if (!fixtures) return [];
@@ -110,48 +127,81 @@ function FixturesPage() {
           <div>
             <Title order={1} mb="xs">Fixtures</Title>
             {!isMobile && (
-              <Text c="dimmed">View upcoming matches and recent results for Your Favourite Teams</Text>
+              <Text c="dimmed">
+                {hasFavorites
+                  ? 'View upcoming matches and recent results for your favourite teams'
+                  : 'Upcoming matches across every league'}
+              </Text>
             )}
           </div>
 
-          <SegmentedControl
-            value={view}
-            onChange={setView}
-            data={[
-              { value: 'upcoming', label: 'Upcoming' },
-              { value: 'recent', label: 'Recent Results' },
-            ]}
-          />
+          {hasFavorites && (
+            <SegmentedControl
+              value={view}
+              onChange={setView}
+              data={[
+                { value: 'upcoming', label: 'Upcoming' },
+                { value: 'recent', label: 'Recent Results' },
+              ]}
+            />
+          )}
         </Stack>
       </Container>
 
       <ScrollArea flex={1} type="auto">
         <Container size="xl" p="md">
-          {!hasFavorites ? (
-            <Stack align="center" py="xl">
-              <Text c="dimmed">You haven't added any favourite teams yet.</Text>
-              <Button component={Link} to="/leagues" variant="light">Browse Leagues</Button>
-            </Stack>
-          ) : isErrorTeams ? (
+          {hasFavorites && isErrorTeams ? (
             <QueryError onRetry={() => teamQueries.forEach((q) => q.refetch())} />
+          ) : !hasFavorites && globalUpcoming.isError ? (
+            <QueryError onRetry={() => globalUpcoming.refetch()} />
           ) : isLoading || standingsLoading || statsLoading || divisionsLoading ? (
             <Stack gap="md">
               <SlowLoadingHint show={showSlowHint} />
               <FixtureCardSkeleton count={5} />
             </Stack>
           ) : fixtures && fixtures.length > 0 ? (
-            <FixturesList
-              key={view}
-              fixtures={fixtures}
-              standings={standings}
-              statistics={statistics}
-              divisions={divisions}
-              favoriteTeamIds={favoriteIds}
-              defaultSort={view === 'upcoming' ? 'upcoming' : 'latest'}
-            />
+            <Stack gap="md">
+              {!hasFavorites && (
+                <Card withBorder bg="green.0" padding="sm">
+                  <Group justify="space-between" wrap="wrap">
+                    <Text size="sm">
+                      Fixtures across every league. Add favourite teams to see their results too.
+                    </Text>
+                    <Group gap="xs" wrap="nowrap">
+                      <Select
+                        placeholder="Browse by league"
+                        size="xs"
+                        data={(leaguesSummary ?? [])
+                          .slice()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((l) => ({ value: String(l.id), label: l.name }))}
+                        onChange={(value) =>
+                          value &&
+                          navigate({ to: '/leagues/$leagueId', params: { leagueId: value } })
+                        }
+                      />
+                      <Button component={Link} to="/teams" variant="light" size="xs">
+                        Find teams
+                      </Button>
+                    </Group>
+                  </Group>
+                </Card>
+              )}
+              <FixturesList
+                key={view}
+                fixtures={fixtures}
+                standings={standings}
+                statistics={statistics}
+                divisions={divisions}
+                favoriteTeamIds={favoriteIds}
+                defaultSort={view === 'upcoming' ? 'upcoming' : 'latest'}
+              />
+            </Stack>
           ) : (
             <Text c="dimmed" ta="center" py="xl">
-              No {view} fixtures found for Your Favourite Teams
+              {hasFavorites
+                ? `No ${view} fixtures found for your favourite teams`
+                : 'No upcoming fixtures found'}
             </Text>
           )}
         </Container>
@@ -159,7 +209,7 @@ function FixturesPage() {
 
       <Container size="xl" w="100%" p="md" flex={0}>
         <Text c="dimmed" size="sm">
-          Showing {fixtures?.length || 0} {view} fixtures
+          Showing {fixtures?.length || 0} {hasFavorites ? view : 'upcoming'} fixtures
         </Text>
       </Container>
     </Stack>
