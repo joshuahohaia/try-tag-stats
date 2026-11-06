@@ -207,13 +207,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
             </Link>
             <Text c="dimmed" size="xs">
               {currentDivision.name}
-              {currentDivision.laterPhaseName ? ' (first phase)' : ''}
             </Text>
-            {currentDivision.laterPhaseName && (
-              <Text c="dimmed" size="xs">
-                First-phase totals only. No Player of the Match table is stored for {currentDivision.laterPhaseName}.
-              </Text>
-            )}
           </div>
 
           {isLoading ? (
