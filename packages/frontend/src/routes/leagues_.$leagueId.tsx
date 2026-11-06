@@ -25,6 +25,7 @@ import { useQueries } from '@tanstack/react-query';
 import type { StandingWithTeam } from '@trytag/shared';
 import { apiClient, extractData } from '../api/client';
 import { pickDefaultDivision, summarisePhases } from '../utils/defaultDivision';
+import { nextSeasonFallback } from '../utils/seasonFallback';
 import { useLeague, useLeagueDivisions, useLeagueSeasons } from '../hooks/useLeagues';
 import {
   useDivisionStandings,
@@ -83,10 +84,10 @@ function LeagueContent({ leagueId }: { leagueId: number }) {
       if (!triedSeasons.has(selectedSeasonId)) {
         setTriedSeasons((prev) => new Set([...prev, selectedSeasonId]));
 
-        // Find another season we haven't tried
-        const otherSeason = seasons.find(
-          (s) => !triedSeasons.has(String(s.id)) && String(s.id) !== selectedSeasonId
-        );
+        // Find another season we haven't tried, newest first: the current season can
+        // be created before it has divisions, and list order can start with a season
+        // from a year ago (see nextSeasonFallback).
+        const otherSeason = nextSeasonFallback(seasons, triedSeasons, selectedSeasonId);
         if (otherSeason) {
           setSelectedSeasonId(String(otherSeason.id));
         }
