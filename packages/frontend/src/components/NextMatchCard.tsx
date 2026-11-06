@@ -230,6 +230,11 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                   )}
                 </Group>
               </Group>
+              {calendarUrl && (
+                <Text size="xs" c="dimmed">
+                  Calendar entry ends 1 hour after start (estimate)
+                </Text>
+              )}
             </Stack>
           );
         })}
