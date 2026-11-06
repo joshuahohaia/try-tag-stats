@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Team } from '@trytag/shared';
+import { trackEvent } from '../utils/analytics';
 
 interface FavoriteTeam {
   id: number;
@@ -59,8 +60,10 @@ const useFavoritesStore = create<FavoritesStore>()(
         const { isFavorite, addTeam, removeTeam } = get();
         if (isFavorite(team.id)) {
           removeTeam(team.id);
+          trackEvent('favourite-remove');
         } else {
           addTeam(team, leagueId);
+          trackEvent('favourite-add');
         }
       },
 
