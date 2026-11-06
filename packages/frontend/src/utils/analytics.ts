@@ -39,8 +39,22 @@ function counter(): GoatCounter | null {
   return gc && typeof gc.count === 'function' ? (gc as GoatCounter) : null;
 }
 
+// count.js loads asynchronously, so the first page view can be reported before it is ready.
+// Hold those page views and send them once the script has loaded.
+let pendingPaths: string[] = [];
+
 export function trackPageView(pathname: string): void {
-  counter()?.count({ path: pagePath(pathname) });
+  const path = pagePath(pathname);
+  const gc = counter();
+  if (gc) gc.count({ path });
+  else pendingPaths.push(path);
+}
+
+function flushPending(): void {
+  const gc = counter();
+  const paths = pendingPaths;
+  pendingPaths = [];
+  if (gc) for (const path of paths) gc.count({ path });
 }
 
 export function trackEvent(name: AnalyticsEvent): void {
@@ -56,6 +70,7 @@ export function initAnalytics(): boolean {
   script.async = true;
   script.src = COUNT_JS;
   script.dataset.goatcounter = endpoint;
+  script.onload = flushPending;
   document.head.appendChild(script);
   return true;
 }
