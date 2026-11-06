@@ -25,6 +25,7 @@ import { useHeadToHead } from '../hooks/useHeadToHead';
 import { MeetingsOnRecord } from '../components/MeetingsOnRecord';
 import { displayPlayerName, formatDate, formatTime } from '../utils/format';
 import { buildShareText, whatsappShareUrl } from '../utils/shareMatch';
+import { trackEvent } from '../utils/analytics';
 import type { TeamComparisonData, FixtureWithTeams } from '@trytag/shared';
 
 function FormBadges({ form }: { form: string }) {
@@ -469,6 +470,7 @@ function FixtureDetailPage() {
                 size={44}
                 aria-label="Share to WhatsApp"
                 title="Share to WhatsApp"
+                onClick={() => trackEvent('share-whatsapp')}
               >
                 <IconBrandWhatsapp size={18} />
               </ActionIcon>
