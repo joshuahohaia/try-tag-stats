@@ -26,7 +26,7 @@ import { useSlowLoading } from '../hooks/useSlowLoading';
 import { FixturesList } from '../components';
 import { NextMatchCard } from '../components/NextMatchCard';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconHistory, IconFlame } from '@tabler/icons-react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiClient, extractData } from '../api/client';
@@ -267,6 +267,7 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 }
 
 function HomePage() {
+  const navigate = useNavigate();
   const { favorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
 
@@ -510,7 +511,11 @@ function HomePage() {
                   <IconHistory size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
                   Recent Results
                 </Title>
-                <Button variant="subtle" component={Link} to="/fixtures" size="xs">
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => navigate({ to: '/fixtures', search: { view: 'recent' } })}
+                >
                   View All
                 </Button>
               </Group>
