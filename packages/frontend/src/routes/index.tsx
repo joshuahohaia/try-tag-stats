@@ -25,7 +25,7 @@ import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
 import { FixturesList } from '../components';
 import { NextMatchCard } from '../components/NextMatchCard';
-import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconHistory, IconFlame } from '@tabler/icons-react';
+import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
@@ -55,6 +55,7 @@ interface ActiveDivision {
 function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivision[]; favoriteIds: number[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentDivision = divisions[currentIndex];
+  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(
     currentDivision ? [currentDivision.id] : []
@@ -72,12 +73,12 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
 
   return (
     <Card withBorder>
-      <Group justify="space-between" mb="md">
-        <Title fz={15} order={3}>Active League Standings</Title>
+      <Group justify="space-between" wrap="nowrap" mb="md">
+        <Title fz={15} order={3} style={{ whiteSpace: 'nowrap' }}>Active League Standings</Title>
         {divisions.length > 1 && (
-          <Group gap="xs">
+          <Group gap="xs" wrap="nowrap">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
-            <Text size="sm" fw={500}>
+            <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
               {currentIndex + 1} / {divisions.length}
             </Text>
             <ActionIcon variant="light" onClick={handleNext}><IconChevronRight size={18} /></ActionIcon>
@@ -96,6 +97,45 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
 
           {standingsLoading ? (
             <StandingsTableSkeleton rows={5} compact />
+          ) : isMobile ? (
+            /* Phones: summary columns that fit the card width instead of a
+               clipped sideways-scrolling table; the league page keeps the full table. */
+            <Table highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Team</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pld</Table.Th>
+                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pts</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {standings?.map((row) => {
+                  const isFavorite = favoriteIds.includes(row.teamId);
+                  return (
+                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-warning-0)' : undefined}>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
+                        <Link
+                          to="/teams/$teamId"
+                          params={{ teamId: String(row.teamId) }}
+                          style={{ color: 'inherit', textDecoration: 'none' }}
+                        >
+                          <Group gap={4} wrap="nowrap" align="flex-start">
+                            <TeamJersey name={row.team.name} teamId={row.teamId} size={16} decorative />
+                            <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
+                              {row.team.name}
+                            </Text>
+                          </Group>
+                        </Link>
+                      </Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.played}</Table.Td>
+                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={700}>{row.totalPoints}</Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
           ) : (
             <Table.ScrollContainer minWidth={380}>
             <Table highlightOnHover withTableBorder>
@@ -184,15 +224,12 @@ function PlayerStatsWidget({ divisions }: { divisions: ActiveDivision[] }) {
 
   return (
     <Card withBorder>
-      <Group justify="space-between" mb="md">
-        <Group gap="xs">
-          <IconAward size={20} color="gold" />
-          <Title fz={15} order={3}>Player of Match Leaders</Title>
-        </Group>
+      <Group justify="space-between" wrap="nowrap" mb="md">
+        <Title fz={15} order={3} style={{ whiteSpace: 'nowrap' }}>Player of Match Leaders</Title>
         {divisions.length > 1 && (
-          <Group gap="xs">
+          <Group gap="xs" wrap="nowrap">
             <ActionIcon variant="light" onClick={handlePrev}><IconChevronLeft size={18} /></ActionIcon>
-            <Text size="sm" fw={500}>
+            <Text size="sm" fw={500} style={{ whiteSpace: 'nowrap' }}>
               {currentIndex + 1} / {divisions.length}
             </Text>
             <ActionIcon variant="light" onClick={handleNext}><IconChevronRight size={18} /></ActionIcon>
@@ -472,11 +509,8 @@ function HomePage() {
 
           <SimpleGrid cols={hasFavorites ? { base: 1, md: 2 } : 1}>
             <Card withBorder>
-              <Group justify="space-between" mb="md">
-                <Title fz={15} order={3} >
-                  <IconCalendar size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Upcoming Fixtures
-                </Title>
+              <Group justify="space-between" wrap="nowrap" mb="md">
+                <Title fz={15} order={3}>Upcoming Fixtures</Title>
                 <Button variant="subtle" component={Link} to="/fixtures" size="xs">
                   View All
                 </Button>
@@ -506,11 +540,8 @@ function HomePage() {
 
             {hasFavorites && (
             <Card withBorder>
-              <Group justify="space-between" mb="md">
-                <Title fz={15} order={3}>
-                  <IconHistory size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Recent Results
-                </Title>
+              <Group justify="space-between" wrap="nowrap" mb="md">
+                <Title fz={15} order={3}>Recent Results</Title>
                 <Button
                   variant="subtle"
                   size="xs"
@@ -543,10 +574,7 @@ function HomePage() {
           {/* Team Form Widget */}
           {teamFormData.length > 0 && (
             <Card withBorder>
-              <Title fz={15} order={3} mb="md">
-                <IconFlame size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                Team Form
-              </Title>
+              <Title fz={15} order={3} mb="md">Team Form</Title>
               <Stack gap="sm">
                 {teamFormData.map((team) => (
                   <Group key={team.id} justify="space-between" wrap="nowrap" gap="md">
@@ -636,10 +664,7 @@ function HomePage() {
             <PlayerStatsWidget divisions={statsDivisions} />
           ) : (
             <Card withBorder>
-              <Title fz={15} order={3} mb="md">
-                <IconTrophy size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                Quick Links
-              </Title>
+              <Title fz={15} order={3} mb="md">Quick Links</Title>
               <Stack gap="sm">
                 <Button
                   variant="light"
