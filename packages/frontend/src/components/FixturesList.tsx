@@ -13,7 +13,7 @@ import { useMemo } from 'react';
 import type { FixtureWithTeams, StandingWithTeam, PlayerAwardWithDetails, Division } from '@trytag/shared';
 import { TeamJersey } from './TeamJersey';
 import { getFixtureInsights } from '../utils/fixtures';
-import { matchPath } from '../utils/matchLookup';
+import { isResolvedTeam, matchPath } from '../utils/matchLookup';
 import { formatFixtureDate, fixtureCalendarDate, formatTime, venueCalendarDate } from '../utils/format';
 
 interface FixturesListProps {
@@ -131,15 +131,27 @@ export function FixturesList({
             <Badge variant="light">{fixture.status}</Badge>
           );
 
-        // Link to fixture detail for DB fixtures, or external link for scraped data
+        // Link to fixture detail for DB fixtures, or the internal match page for scraped
+        // data. Later-phase games have no stored fixture either, but the match page rebuilds
+        // them from the team profile as long as the home side resolves to a known team.
         const canLinkToFixture = fixture.id > 0;
         const isScrapedFixture = fixture.id <= 0 && !laterPhase;
+        const canLinkLaterPhase = laterPhase && isResolvedTeam(fixture.homeTeam);
 
         const handleCardClick = () => {
           if (canLinkToFixture) {
             navigate({ to: '/fixtures/$fixtureId', params: { fixtureId: String(fixture.id) } });
-          } else if (isScrapedFixture) {
+          } else if (isScrapedFixture || canLinkLaterPhase) {
             navigate(matchPath(fixture));
+          }
+        };
+
+        const handleCardKeyDown = (e: React.KeyboardEvent) => {
+          // Only the card itself: keys from nested controls (team links, icons) must not navigate.
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleCardClick();
           }
         };
 
@@ -148,9 +160,17 @@ export function FixturesList({
           navigate({ to: '/teams/$teamId', params: { teamId: String(teamId) } });
         };
 
+        const handleTeamKeyDown = (e: React.KeyboardEvent, teamId: number) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate({ to: '/teams/$teamId', params: { teamId: String(teamId) } });
+          }
+        };
+
         const divisionName = divisions?.find(d => d.id === fixture.divisionId)?.name;
 
-        const isClickable = canLinkToFixture || isScrapedFixture;
+        const isClickable = canLinkToFixture || isScrapedFixture || canLinkLaterPhase;
 
         return (
           <Card
@@ -158,6 +178,10 @@ export function FixturesList({
             withBorder
             padding={compact ? 'xs' : 'sm'}
             style={isClickable ? { cursor: 'pointer' } : {}}
+            onClick={isClickable ? handleCardClick : undefined}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onKeyDown={isClickable ? handleCardKeyDown : undefined}
           >
             <Stack gap={compact ? 'xs' : 'sm'}>
               {/* Scores always sit top right. Status badges (with insight icons) sit under the names on
@@ -178,7 +202,10 @@ export function FixturesList({
                       size="sm"
                       style={{ cursor: 'pointer' }}
                       c="blue"
+                      role="link"
+                      tabIndex={0}
                       onClick={(e) => handleTeamClick(e, fixture.homeTeam.id)}
+                      onKeyDown={(e) => handleTeamKeyDown(e, fixture.homeTeam.id)}
                     >
                       {fixture.homeTeam.name}
                     </Text>
@@ -191,17 +218,21 @@ export function FixturesList({
                       size="sm"
                       style={{ cursor: 'pointer' }}
                       c="blue"
+                      role="link"
+                      tabIndex={0}
                       onClick={(e) => handleTeamClick(e, fixture.awayTeam.id)}
+                      onKeyDown={(e) => handleTeamKeyDown(e, fixture.awayTeam.id)}
                     >
                       {fixture.awayTeam.name}
                     </Text>
                   </Group>
                 </Stack>
-                <div onClick={handleCardClick} style={{ cursor: isClickable ? 'pointer' : undefined, flexShrink: 0 }}>
+                <div style={{ flexShrink: 0 }}>
                   <Group gap="xs" wrap="nowrap" align="center">
                     {fixtureBadge}
                     {insightIcons.length > 0 && (
-                      <Group gap={6} wrap="nowrap" align="center">
+                      // Insight icons open a hover/tap note, so they must not trigger the card's navigation.
+                      <Group gap={6} wrap="nowrap" align="center" onClick={(e) => e.stopPropagation()}>
                         {insightIcons}
                       </Group>
                     )}
@@ -209,11 +240,7 @@ export function FixturesList({
                 </div>
               </Flex>
               <Group justify="space-between" align="flex-start" wrap="nowrap">
-                <Stack
-                  gap={0}
-                  onClick={handleCardClick}
-                  style={{ cursor: isClickable ? 'pointer' : undefined, flex: 1 }}
-                >
+                <Stack gap={0} style={{ flex: 1 }}>
                   <Text size="sm" c="dimmed">
                     {formatFixtureDate(fixture.fixtureDate)}
                     {fixture.fixtureTime && ` at ${formatTime(fixture.fixtureTime)}`}
@@ -229,7 +256,7 @@ export function FixturesList({
                   {!compact && fixture.pitch && (
                     <Text size="xs" c="dimmed">{fixture.pitch}</Text>
                   )}
-                  {!laterPhase && (
+                  {isClickable && (
                     <Text size="xs" c="blue" mt={2}>
                       View match details →
                     </Text>

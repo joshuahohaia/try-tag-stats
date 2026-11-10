@@ -16,7 +16,7 @@ import { FixtureCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
 import { useFavoriteTeams } from '../hooks/useFavorites';
@@ -36,7 +36,13 @@ interface TeamProfile {
 }
 
 function FixturesPage() {
-  const [view, setView] = useState('upcoming');
+  const { view: searchView } = Route.useSearch();
+  const [view, setView] = useState<string>(searchView ?? 'upcoming');
+
+  // Follow the URL when it changes under a mounted page (e.g. dashboard "View All" links).
+  useEffect(() => {
+    setView(searchView ?? 'upcoming');
+  }, [searchView]);
   const { favorites } = useFavoriteTeams();
   const isMobile = useMediaQuery('(max-width: 48em)');
   const navigate = useNavigate();
@@ -217,5 +223,9 @@ function FixturesPage() {
 }
 
 export const Route = createFileRoute('/fixtures')({
+  // ?view=recent opens straight onto Recent Results (dashboard "View All" links here).
+  validateSearch: (search: Record<string, unknown>): { view?: 'upcoming' | 'recent' } => ({
+    view: search.view === 'recent' ? 'recent' : undefined,
+  }),
   component: FixturesPage,
 });

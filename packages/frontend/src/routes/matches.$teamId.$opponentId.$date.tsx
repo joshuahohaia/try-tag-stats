@@ -14,10 +14,23 @@ function spawtzTeamPage(externalTeamId: number | null | undefined) {
 
 function MatchSummary({ fixture }: { fixture: FixtureWithTeams }) {
   const played = fixture.status === 'completed' && fixture.homeScore !== null;
+  // A completed game without a score can still carry the outcome (later-phase games
+  // whose score Spawtz does not list). Orientation is home side vs away side.
+  const outcomeOnly = fixture.status === 'completed' && fixture.homeScore === null && !!fixture.outcome;
+  const outcomeLabel = !outcomeOnly
+    ? null
+    : fixture.outcome === 'D'
+      ? 'Draw'
+      : fixture.outcome === 'H'
+        ? `${fixture.homeTeam.name} won`
+        : `${fixture.awayTeam.name} won`;
   const own = fixture.homeScore ?? 0;
   const opp = fixture.awayScore ?? 0;
   const color = !played ? 'gray' : own > opp ? 'green' : own < opp ? 'red' : 'gray';
   const link = spawtzTeamPage(fixture.homeTeam.externalTeamId);
+  // Later-phase scores come from the division results table; first-phase scores from the
+  // team page. Say which, so the provenance is honest.
+  const laterPhase = fixture.id <= 0 && !!fixture.outcome;
   return (
     <Card withBorder>
       <Stack gap="md">
@@ -37,6 +50,10 @@ function MatchSummary({ fixture }: { fixture: FixtureWithTeams }) {
           </Stack>
           {played ? (
             <Badge size="xl" variant="filled" color={color}>{fixture.homeScore} - {fixture.awayScore}</Badge>
+          ) : outcomeLabel ? (
+            <Badge size="lg" variant="filled" color="gray" title="The score could not be read from Spawtz for this game">
+              {outcomeLabel}
+            </Badge>
           ) : (
             <Badge size="lg" variant="light">{fixture.status}</Badge>
           )}
@@ -50,7 +67,14 @@ function MatchSummary({ fixture }: { fixture: FixtureWithTeams }) {
         </Stack>
         {played && (
           <Text size="xs" c="dimmed">
-            Score is shown from {fixture.homeTeam.name}'s point of view, as listed on their Try Tag Rugby team page.
+            {laterPhase
+              ? 'Score from the division results table on Try Tag Rugby.'
+              : `Score is shown from ${fixture.homeTeam.name}'s point of view, as listed on their Try Tag Rugby team page.`}
+          </Text>
+        )}
+        {outcomeOnly && (
+          <Text size="xs" c="dimmed">
+            The score could not be read from Spawtz for this game.
           </Text>
         )}
         {link && (
