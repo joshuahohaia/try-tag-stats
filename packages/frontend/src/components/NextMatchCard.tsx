@@ -137,9 +137,11 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
           return (
             <Stack key={`${fixture.id}-${fixture.fixtureDate}`} gap={4}>
               {idx > 0 && <Divider />}
-              <Group justify="space-between" wrap="nowrap" align="flex-start">
-                <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-                  <Group gap="xs" wrap="nowrap">
+              <Stack gap={2} style={{ minWidth: 0 }}>
+                {/* Date row carries the actions so team names and venue get the
+                    full card width on phones instead of being squeezed. */}
+                <Group justify="space-between" wrap="nowrap" align="center">
+                  <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
                     <Text size="sm" fw={700}>
                       {weekdayLabel(fixture.fixtureDate)}
                       {time ? ` at ${time}` : ''}
@@ -150,91 +152,86 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                       </Badge>
                     )}
                   </Group>
-                  <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
-                    {teamLine(fixture.homeTeamId, fixture.homeTeam.name)}
-                    <Text size="xs" c="dimmed">
-                      v
-                    </Text>
-                    {teamLine(fixture.awayTeamId, fixture.awayTeam.name)}
+                  <Group gap={4} wrap="nowrap">
+                    {hasMatchPage && (
+                      <Tooltip label="Share to WhatsApp">
+                        <ActionIcon
+                          component="a"
+                          href={whatsappShareUrl(
+                            buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`)
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="subtle"
+                          aria-label="Share to WhatsApp"
+                          onClick={() => trackEvent('share-whatsapp')}
+                        >
+                          <IconBrandWhatsapp size={18} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {calendarUrl && (
+                      <Tooltip label="Add to Google Calendar (end time is a 1-hour estimate)">
+                        <ActionIcon
+                          component="a"
+                          href={calendarUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="subtle"
+                          aria-label="Add to Google Calendar"
+                        >
+                          <IconCalendarPlus size={18} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {hasMatchPage && (
+                      <Tooltip label="Match details">
+                        <ActionIcon
+                          variant="subtle"
+                          aria-label="Match details"
+                          onClick={() =>
+                            navigate({
+                              to: '/fixtures/$fixtureId',
+                              params: { fixtureId: String(fixture.id) },
+                            })
+                          }
+                        >
+                          <IconChevronRight size={18} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
                   </Group>
-                  {(venueName || fixture.pitch) && (
-                    <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
-                      <IconMapPin size={14} style={{ flexShrink: 0 }} />
-                      <Text size="xs" c="dimmed" truncate>
-                        {venueName ? (
-                          <Text
-                            component="a"
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="xs"
-                            c="dimmed"
-                            td="underline"
-                          >
-                            {venueName}
-                          </Text>
-                        ) : null}
-                        {venueName && fixture.pitch ? ' · ' : ''}
-                        {fixture.pitch}
-                      </Text>
-                    </Group>
-                  )}
-                </Stack>
-                <Group gap={4} wrap="nowrap">
-                  {hasMatchPage && (
-                    <Tooltip label="Share to WhatsApp">
-                      <ActionIcon
-                        component="a"
-                        href={whatsappShareUrl(
-                          buildShareText(fixture, `${window.location.origin}/fixtures/${fixture.id}`)
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="subtle"
-                        aria-label="Share to WhatsApp"
-                        onClick={() => trackEvent('share-whatsapp')}
-                      >
-                        <IconBrandWhatsapp size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                  {calendarUrl && (
-                    <Tooltip label="Add to Google Calendar (end time is a 1-hour estimate)">
-                      <ActionIcon
-                        component="a"
-                        href={calendarUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="subtle"
-                        aria-label="Add to Google Calendar"
-                      >
-                        <IconCalendarPlus size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                  {hasMatchPage && (
-                    <Tooltip label="Match details">
-                      <ActionIcon
-                        variant="subtle"
-                        aria-label="Match details"
-                        onClick={() =>
-                          navigate({
-                            to: '/fixtures/$fixtureId',
-                            params: { fixtureId: String(fixture.id) },
-                          })
-                        }
-                      >
-                        <IconChevronRight size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
                 </Group>
-              </Group>
-              {calendarUrl && (
-                <Text size="xs" c="dimmed">
-                  Calendar entry ends 1 hour after start (estimate)
-                </Text>
-              )}
+                <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                  {teamLine(fixture.homeTeamId, fixture.homeTeam.name)}
+                  <Text size="xs" c="dimmed">
+                    v
+                  </Text>
+                  {teamLine(fixture.awayTeamId, fixture.awayTeam.name)}
+                </Group>
+                {(venueName || fixture.pitch) && (
+                  <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <IconMapPin size={14} style={{ flexShrink: 0 }} />
+                    <Text size="xs" c="dimmed" truncate>
+                      {venueName ? (
+                        <Text
+                          component="a"
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="xs"
+                          c="dimmed"
+                          td="underline"
+                        >
+                          {venueName}
+                        </Text>
+                      ) : null}
+                      {venueName && fixture.pitch ? ' · ' : ''}
+                      {fixture.pitch}
+                    </Text>
+                  </Group>
+                )}
+              </Stack>
             </Stack>
           );
         })}

@@ -459,96 +459,6 @@ function HomePage() {
                 />
               )}
 
-              {/* Team Form Widget */}
-              {teamFormData.length > 0 && (
-                <Card withBorder>
-                  <Title fz={15} order={3} mb="md">
-                    <IconFlame size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                    Team Form
-                  </Title>
-                  <Stack gap="sm">
-                    {teamFormData.map((team) => (
-                      <Group key={team.id} justify="space-between" wrap="nowrap" gap="md">
-                        {/* Team name and position */}
-                        <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: isMobile ? 1 : undefined, width: isMobile ? undefined : 180 }}>
-                          {team.position && (
-                            <Badge size="sm" variant="light" color="gray">
-                              {team.position}
-                            </Badge>
-                          )}
-                          <Link
-                            to="/teams/$teamId"
-                            params={{ teamId: String(team.id) }}
-                            style={{ textDecoration: 'none', overflow: 'hidden' }}
-                          >
-                            <Text size="sm" fw={500} c="blue" truncate>
-                              {team.name}
-                            </Text>
-                          </Link>
-                        </Group>
-
-                        {/* Stats - only on desktop */}
-                        {!isMobile && (
-                          <Group gap="lg" wrap="nowrap" style={{ flex: 1 }}>
-                            <Group gap={4}>
-                              <Text size="xs" c="green" fw={600}>{team.wins}W</Text>
-                              <Text size="xs" c="dimmed">-</Text>
-                              <Text size="xs" c="red" fw={600}>{team.losses}L</Text>
-                              <Text size="xs" c="dimmed">-</Text>
-                              <Text size="xs" c="dimmed" fw={600}>{team.draws}D</Text>
-                            </Group>
-                            <Text size="xs" fw={600}>{team.totalPoints} pts</Text>
-                            <Text size="xs" c={team.pointDifference >= 0 ? 'green' : 'red'} fw={500}>
-                              {team.pointDifference >= 0 ? '+' : ''}{team.pointDifference}
-                            </Text>
-                          </Group>
-                        )}
-
-                        {/* Form badges */}
-                        <Group gap={4} wrap="nowrap">
-                          {team.form.map((f, idx) => {
-                            const color = f.result === 'W' ? 'green' : f.result === 'L' ? 'red' : 'gray';
-                            const isMostRecent = idx === team.form.length - 1;
-                            return (
-                              <HoverCard key={idx} width={180} withArrow shadow="md">
-                                <HoverCard.Target>
-                                  <Badge
-                                    circle
-                                    size="lg"
-                                    variant="filled"
-                                    color={color}
-                                    style={{
-                                      cursor: 'pointer',
-                                      outline: isMostRecent ? '2px solid var(--mantine-color-brand-3)' : 'none',
-                                      outlineOffset: '2px',
-                                    }}
-                                  >
-                                    {f.result}
-                                  </Badge>
-                                </HoverCard.Target>
-                                <HoverCard.Dropdown>
-                                  <Text size="xs">
-                                    {isMostRecent ? '(Latest) ' : ''}
-                                    {f.result === 'W' ? 'Won' : f.result === 'L' ? 'Lost' : 'Drew'} {f.score} vs {f.opponent}
-                                  </Text>
-                                </HoverCard.Dropdown>
-                              </HoverCard>
-                            );
-                          })}
-                          {team.form.length === 0 && (
-                            <Text size="xs" c="dimmed">No results</Text>
-                          )}
-                        </Group>
-                      </Group>
-                    ))}
-                  </Stack>
-                  {statsDivisions.some((d) => d.laterPhaseName) && (
-                    <Text size="xs" c="dimmed" mt="sm">
-                      Form comes from the Spawtz team page, which lists first-phase results. It does not include later-phase games.
-                    </Text>
-                  )}
-                </Card>
-              )}
 
               {/* Active League Standings */}
               {activeDivisions.length > 0 ? (
@@ -625,6 +535,97 @@ function HomePage() {
             </Card>
             )}
           </SimpleGrid>
+          {/* Team Form Widget */}
+          {teamFormData.length > 0 && (
+            <Card withBorder>
+              <Title fz={15} order={3} mb="md">
+                <IconFlame size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                Team Form
+              </Title>
+              <Stack gap="sm">
+                {teamFormData.map((team) => (
+                  <Group key={team.id} justify="space-between" wrap="nowrap" gap="md">
+                    {/* Team name and position */}
+                    <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: isMobile ? 1 : undefined, width: isMobile ? undefined : 180 }}>
+                      {team.position && (
+                        <Badge size="sm" variant="light" color="gray">
+                          {team.position}
+                        </Badge>
+                      )}
+                      <Link
+                        to="/teams/$teamId"
+                        params={{ teamId: String(team.id) }}
+                        style={{ textDecoration: 'none', overflow: 'hidden' }}
+                      >
+                        <Text size="sm" fw={500} c="blue" truncate>
+                          {team.name}
+                        </Text>
+                      </Link>
+                    </Group>
+
+                    {/* Stats - only on desktop */}
+                    {!isMobile && (
+                      <Group gap="lg" wrap="nowrap" style={{ flex: 1 }}>
+                        <Group gap={4}>
+                          <Text size="xs" c="green" fw={600}>{team.wins}W</Text>
+                          <Text size="xs" c="dimmed">-</Text>
+                          <Text size="xs" c="red" fw={600}>{team.losses}L</Text>
+                          <Text size="xs" c="dimmed">-</Text>
+                          <Text size="xs" c="dimmed" fw={600}>{team.draws}D</Text>
+                        </Group>
+                        <Text size="xs" fw={600}>{team.totalPoints} pts</Text>
+                        <Text size="xs" c={team.pointDifference >= 0 ? 'green' : 'red'} fw={500}>
+                          {team.pointDifference >= 0 ? '+' : ''}{team.pointDifference}
+                        </Text>
+                      </Group>
+                    )}
+
+                    {/* Form badges */}
+                    <Group gap={4} wrap="nowrap">
+                      {team.form.map((f, idx) => {
+                        const color = f.result === 'W' ? 'green' : f.result === 'L' ? 'red' : 'gray';
+                        const isMostRecent = idx === team.form.length - 1;
+                        return (
+                          <HoverCard key={idx} width={180} withArrow shadow="md">
+                            <HoverCard.Target>
+                              <Badge
+                                circle
+                                size="lg"
+                                variant="filled"
+                                color={color}
+                                style={{
+                                  cursor: 'pointer',
+                                  outline: isMostRecent ? '2px solid var(--mantine-color-brand-3)' : 'none',
+                                  outlineOffset: '2px',
+                                }}
+                              >
+                                {f.result}
+                              </Badge>
+                            </HoverCard.Target>
+                            <HoverCard.Dropdown>
+                              <Text size="xs">
+                                {isMostRecent ? '(Latest) ' : ''}
+                                {f.result === 'W' ? 'Won' : f.result === 'L' ? 'Lost' : 'Drew'} {f.score} vs {f.opponent}
+                              </Text>
+                            </HoverCard.Dropdown>
+                          </HoverCard>
+                        );
+                      })}
+                      {team.form.length === 0 && (
+                        <Text size="xs" c="dimmed">No results</Text>
+                      )}
+                    </Group>
+                  </Group>
+                ))}
+              </Stack>
+              {statsDivisions.some((d) => d.laterPhaseName) && (
+                <Text size="xs" c="dimmed" mt="sm">
+                  Form comes from the Spawtz team page, which lists first-phase results. It does not include later-phase games.
+                </Text>
+              )}
+            </Card>
+          )}
+
 
           {hasFavorites && activeDivisions.length > 0 ? (
             <PlayerStatsWidget divisions={statsDivisions} />
