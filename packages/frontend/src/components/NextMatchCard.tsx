@@ -6,12 +6,10 @@ import {
   Group,
   Stack,
   Text,
-  Title,
   Tooltip,
 } from '@mantine/core';
 import {
   IconBrandWhatsapp,
-  IconCalendarEvent,
   IconCalendarPlus,
   IconChevronRight,
   IconMapPin,
@@ -109,10 +107,10 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
 
   return (
     <Card withBorder>
-      <Title fz={15} order={3} mb="xs">
-        <IconCalendarEvent size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-        Next Match
-      </Title>
+      {/* Quiet label instead of an icon title: the date is the real heading. */}
+      <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: 0.6 }} mb="sm">
+        Next match
+      </Text>
       <Stack gap="sm">
         {nextFixtures.map((fixture, idx) => {
           const favoriteId = favoriteIds.find(
@@ -152,7 +150,7 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                       </Badge>
                     )}
                   </Group>
-                  <Group gap={4} wrap="nowrap">
+                  <Group gap={8} wrap="nowrap">
                     {hasMatchPage && (
                       <Tooltip label="Share to WhatsApp">
                         <ActionIcon
@@ -163,10 +161,12 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                           target="_blank"
                           rel="noopener noreferrer"
                           variant="subtle"
+                          color="gray"
+                          size="sm"
                           aria-label="Share to WhatsApp"
                           onClick={() => trackEvent('share-whatsapp')}
                         >
-                          <IconBrandWhatsapp size={18} />
+                          <IconBrandWhatsapp size={16} />
                         </ActionIcon>
                       </Tooltip>
                     )}
@@ -178,9 +178,11 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                           target="_blank"
                           rel="noopener noreferrer"
                           variant="subtle"
+                          color="gray"
+                          size="sm"
                           aria-label="Add to Google Calendar"
                         >
-                          <IconCalendarPlus size={18} />
+                          <IconCalendarPlus size={16} />
                         </ActionIcon>
                       </Tooltip>
                     )}
@@ -188,6 +190,8 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                       <Tooltip label="Match details">
                         <ActionIcon
                           variant="subtle"
+                          color="gray"
+                          size="sm"
                           aria-label="Match details"
                           onClick={() =>
                             navigate({
@@ -196,7 +200,7 @@ export function NextMatchCard({ fixtures, favoriteIds, divisions }: NextMatchCar
                             })
                           }
                         >
-                          <IconChevronRight size={18} />
+                          <IconChevronRight size={16} />
                         </ActionIcon>
                       </Tooltip>
                     )}
