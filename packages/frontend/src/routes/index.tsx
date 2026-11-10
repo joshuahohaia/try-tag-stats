@@ -559,7 +559,7 @@ function HomePage() {
             </>
           )}
 
-          <SimpleGrid cols={{ base: 1, md: 2 }}>
+          <SimpleGrid cols={hasFavorites ? { base: 1, md: 2 } : 1}>
             <Card withBorder>
               <Group justify="space-between" mb="md">
                 <Title fz={15} order={3} >
@@ -582,7 +582,7 @@ function HomePage() {
                   divisions={divisions}
                   favoriteTeamIds={favoriteIds}
                   compact
-                  hideDivision
+                  hideDivision={hasFavorites}
                 />
               ) : (
                 <Text c="dimmed">
@@ -593,6 +593,7 @@ function HomePage() {
               )}
             </Card>
 
+            {hasFavorites && (
             <Card withBorder>
               <Group justify="space-between" mb="md">
                 <Title fz={15} order={3}>
@@ -619,13 +620,10 @@ function HomePage() {
                   defaultSort="latest"
                 />
               ) : (
-                <Text c="dimmed">
-                  {hasFavorites
-                    ? "No recent results for your favourite teams."
-                    : "No recent results found."}
-                </Text>
+                <Text c="dimmed">No recent results for your favourite teams.</Text>
               )}
             </Card>
+            )}
           </SimpleGrid>
 
           {hasFavorites && activeDivisions.length > 0 ? (
