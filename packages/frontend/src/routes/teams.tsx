@@ -7,11 +7,13 @@ import { TeamCardSkeleton } from '../components/skeletons';
 import { QueryError } from '../components/QueryError';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
-import { useMediaQuery } from '@mantine/hooks';
+import { useDebouncedValue, useMediaQuery } from '@mantine/hooks';
 import { IconSearch, IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useState, useEffect, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { useFavoriteTeams } from '../hooks/useFavorites';
-import { useTeams } from '../hooks/useTeams';
+import { useTeams, type TeamProfile } from '../hooks/useTeams';
+import { apiClient, extractData } from '../api/client';
 import { Team } from '@trytag/shared';
 import { TeamJersey } from '../components/TeamJersey';
 
@@ -41,9 +43,63 @@ function TeamsPage() {
     });
   }, [teams, favoriteSet]);
 
+  const [debouncedSearch] = useDebouncedValue(search, 300);
+
   const filteredTeams = sortedTeams.filter((team) =>
     team.name.toLowerCase().includes(search.toLowerCase())
   );
+  const contextFilteredTeams = useMemo(
+    () =>
+      sortedTeams.filter((team) =>
+        team.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      ),
+    [sortedTeams, debouncedSearch]
+  );
+
+  // Team names aren't unique, so search results carry their current league and
+  // division. Profiles are only fetched for the first few visible results once
+  // the search text settles (debounced, so typing does not fan out a request
+  // per keystroke), and share the team cache the rest of the app uses.
+  const CONTEXT_RESULT_LIMIT = 8;
+  const isSearching = debouncedSearch.trim().length > 0;
+  const contextTeams = useMemo(
+    () => (isSearching ? contextFilteredTeams.slice(0, CONTEXT_RESULT_LIMIT) : []),
+    [isSearching, contextFilteredTeams]
+  );
+  const contextQueries = useQueries({
+    queries: contextTeams.map((team) => ({
+      queryKey: ['teams', team.id],
+      queryFn: async () => {
+        const response = await apiClient.get<{ success: boolean; data: TeamProfile }>(
+          `/teams/${team.id}`
+        );
+        return extractData(response);
+      },
+      staleTime: 1000 * 60 * 5,
+    })),
+  });
+  const contextByTeamId = useMemo(() => {
+    const map = new Map<number, { loading: boolean; label: string }>();
+    contextTeams.forEach((team, i) => {
+      const query = contextQueries[i];
+      if (!query || query.isLoading) {
+        map.set(team.id, { loading: true, label: '' });
+        return;
+      }
+      // A failed profile lookup shows no subtitle rather than a wrong label.
+      if (query.isError) return;
+      const current = query.data?.standings?.[0];
+      if (!current) {
+        map.set(team.id, { loading: false, label: 'No current league' });
+        return;
+      }
+      const label = current.phaseName
+        ? `${current.leagueName} · ${current.divisionName} (${current.phaseName})`
+        : `${current.leagueName} · ${current.divisionName}`;
+      map.set(team.id, { loading: false, label });
+    });
+    return map;
+  }, [contextTeams, contextQueries]);
 
   const handleFavoriteClick = (team: Team) => {
     toggleFavorite(team);
@@ -97,7 +153,16 @@ function TeamsPage() {
                           >
                             <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
                               <TeamJersey name={team.name} teamId={team.id} size={32} decorative />
-                              <Text fw={500}>{team.name}</Text>
+                              <Stack gap={0} style={{ minWidth: 0 }}>
+                                <Text fw={500} truncate>{team.name}</Text>
+                                {isSearching && contextByTeamId.has(team.id) && (
+                                  <Text size="xs" c="dimmed" truncate>
+                                    {contextByTeamId.get(team.id)!.loading
+                                      ? 'Loading league…'
+                                      : contextByTeamId.get(team.id)!.label}
+                                  </Text>
+                                )}
+                              </Stack>
                             </Group>
                           </Link>
                           <ActionIcon
