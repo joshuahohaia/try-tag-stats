@@ -24,6 +24,7 @@ import { TeamJersey } from '../components/TeamJersey';
 import { SlowLoadingHint } from '../components/SlowLoadingHint';
 import { useSlowLoading } from '../hooks/useSlowLoading';
 import { FixturesList } from '../components';
+import { NextMatchCard } from '../components/NextMatchCard';
 import { IconTrophy, IconCalendar, IconStar, IconChevronLeft, IconChevronRight, IconAward, IconHistory, IconFlame } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
@@ -448,6 +449,16 @@ function HomePage() {
           )}
           {hasFavorites && (
             <>
+              {/* Next match first: the pre-game task (when, where, who) is the main
+                  reason a player opens the site. */}
+              {upcomingFixtures && (
+                <NextMatchCard
+                  fixtures={upcomingFixtures}
+                  favoriteIds={favoriteIds}
+                  divisions={divisions}
+                />
+              )}
+
               {/* Team Form Widget */}
               {teamFormData.length > 0 && (
                 <Card withBorder>
