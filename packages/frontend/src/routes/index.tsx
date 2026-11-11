@@ -55,7 +55,6 @@ interface ActiveDivision {
 function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivision[]; favoriteIds: number[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentDivision = divisions[currentIndex];
-  const isMobile = useMediaQuery('(max-width: 48em)');
 
   const { data: standings, isLoading: standingsLoading } = useDivisionsStandings(
     currentDivision ? [currentDivision.id] : []
@@ -97,45 +96,6 @@ function ActiveLeaguesWidget({ divisions, favoriteIds }: { divisions: ActiveDivi
 
           {standingsLoading ? (
             <StandingsTableSkeleton rows={5} compact />
-          ) : isMobile ? (
-            /* Phones: summary columns that fit the card width instead of a
-               clipped sideways-scrolling table; the league page keeps the full table. */
-            <Table highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pos</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Team</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pld</Table.Th>
-                  <Table.Th style={{ fontSize: rem(10), padding: rem(4) }}>Pts</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {standings?.map((row) => {
-                  const isFavorite = favoriteIds.includes(row.teamId);
-                  return (
-                    <Table.Tr key={row.id} bg={isFavorite ? 'var(--mantine-color-warning-0)' : undefined}>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={isFavorite ? 700 : 400}>{row.position}</Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>
-                        <Link
-                          to="/teams/$teamId"
-                          params={{ teamId: String(row.teamId) }}
-                          style={{ color: 'inherit', textDecoration: 'none' }}
-                        >
-                          <Group gap={4} wrap="nowrap" align="flex-start">
-                            <TeamJersey name={row.team.name} teamId={row.teamId} size={16} decorative />
-                            <Text fw={isFavorite ? 700 : 500} c={isFavorite ? 'brand.9' : 'inherit'} size="xs">
-                              {row.team.name}
-                            </Text>
-                          </Group>
-                        </Link>
-                      </Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }}>{row.played}</Table.Td>
-                      <Table.Td style={{ fontSize: rem(10), padding: rem(4) }} fw={700}>{row.totalPoints}</Table.Td>
-                    </Table.Tr>
-                  );
-                })}
-              </Table.Tbody>
-            </Table>
           ) : (
             <Table.ScrollContainer minWidth={380}>
             <Table highlightOnHover withTableBorder>
